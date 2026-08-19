@@ -1,0 +1,17 @@
+site_name: Campus Game-Wit's Quest
+theme:
+  name: material
+  palette:
+    scheme: default
+  features:
+    - navigation.tabs
+    - search.suggest
+
+nav:
+  - Home: index.md
+  - Dev Plan: dev-plan.md
+  - System Design: system-design.md
+  - UI Design: ui-design.md
+  - Decisions: decisions.md
+  - Meeting Minutes:
+    - Meeting-minutes-1: meeting-minutes-1.md
