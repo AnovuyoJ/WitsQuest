@@ -12,6 +12,37 @@ export async function signIn(email: string, password: string) {
   return supabase.auth.signInWithPassword({ email, password });
 }
 
+// Fires off Google OAuth
+export async function signInWithGoogle() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "google",
+    options: {
+      // Sends the student right back to the app homepage once Google verifies them
+      redirectTo: `${window.location.origin}`,
+    },
+  });
+  return { data, error };
+}
+
+// Fires off GitHub OAuth
+export async function signInWithGithub() {
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: "github",
+    options: {
+      redirectTo: `${window.location.origin}`,
+    },
+  });
+  return { data, error };
+}
+
+// Sends a link to the user's email so they can reset a lost password
+export async function sendPasswordReset(email: string) {
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+    // Page where the user picks a brand-new password after clicking their email link
+    redirectTo: `${window.location.origin}/reset-password`,
+  });
+  return { data, error };
+}
 
 
 
