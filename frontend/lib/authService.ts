@@ -44,6 +44,15 @@ export async function sendPasswordReset(email: string) {
   return { data, error };
 }
 
+//updates password in the database for the user who is currently logged in. This function should only be called after the user has successfully logged in and has a valid session. It uses the supabase.auth.updateUser method to update the user's password in the database.
+
+export async function updatePassword(newPassword: string) {
+  const { data, error } = await supabase.auth.updateUser({
+    password: newPassword,
+  });
+  return { data, error };
+}
+
 
 
 
