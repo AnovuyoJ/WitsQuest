@@ -11,7 +11,8 @@ nav:
   - Home: index.md
   - Dev Plan: dev-plan.md
   - System Design: system-design.md
-  - UI Design: ui-design.md
+  - UI Design:
+    - Authentication UI: authentication-ui.md
   - Decisions: decisions.md
   - Meeting Minutes:
     - Meeting-minutes-1: meeting-minutes-1.md

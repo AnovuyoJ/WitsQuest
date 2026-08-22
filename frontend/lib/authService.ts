@@ -17,7 +17,6 @@ export async function signInWithGoogle() {
   const { data, error } = await supabase.auth.signInWithOAuth({
     provider: "google",
     options: {
-      // Sends the student right back to the app homepage once Google verifies them
       redirectTo: `${window.location.origin}`,
     },
   });
@@ -38,14 +37,12 @@ export async function signInWithGithub() {
 // Sends a link to the user's email so they can reset a lost password
 export async function sendPasswordReset(email: string) {
   const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    // Page where the user picks a brand-new password after clicking their email link
     redirectTo: `${window.location.origin}/reset-password`,
   });
   return { data, error };
 }
 
-//updates password in the database for the user who is currently logged in. This function should only be called after the user has successfully logged in and has a valid session. It uses the supabase.auth.updateUser method to update the user's password in the database.
-
+// Updates password in the database for the currently logged in user
 export async function updatePassword(newPassword: string) {
   const { data, error } = await supabase.auth.updateUser({
     password: newPassword,
@@ -53,6 +50,6 @@ export async function updatePassword(newPassword: string) {
   return { data, error };
 }
 
-
-
-
+export async function signOut() {
+  return supabase.auth.signOut();
+}

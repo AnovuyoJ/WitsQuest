@@ -1,64 +1,49 @@
 "use client";
 
-import { useState } from "react";
+import ProfileMenuContainer from "@/components/ProfileMenuContainer";
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
 
 export default function DashboardPage() {
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-
-  async function handleSignOut() {
-    setIsLoggingOut(true);
-    window.location.href = "/login";
-  }
-
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-gray-50 p-4">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl bg-white shadow-[0_2px_40px_-8px_rgba(4,54,115,0.25)]">
-        {/* Signature Wits Gold-to-Blue bar */}
-        <div
-          style={{ background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})` }}
-          className="h-1.5 w-full"
-        />
+    <div>
+      <header className="mb-8">
+        <div className="flex items-center justify-between">
 
-        <div className="px-8 pb-8 pt-8 text-center">
-          <Monogram />
+          {/* Wits Quest title */}
+          <div>
+            <div className="flex items-baseline gap-2.5">
+              <h1
+                className="font-serif text-3xl tracking-tight"
+                style={{ color: WITS_BLUE }}
+              >
+                Campus Game
+              </h1>
 
-          <h1 className="mt-5 font-serif text-2xl font-semibold text-[#0A1F3D]">
-            Map Under Construction
-          </h1>
+              <span
+                className="text-sm font-medium uppercase tracking-widest"
+                style={{ color: WITS_GOLD }}
+              >
+                Wits Quest
+              </span>
+            </div>
 
-          <p className="mt-2 text-xs text-gray-500">
-            Check back soon for campus navigation features.
-          </p>
+            <div
+              className="mt-2 h-[3px] w-16 rounded-full"
+              style={{
+                background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})`,
+              }}
+            />
+          </div>
 
-          <button
-            onClick={handleSignOut}
-            disabled={isLoggingOut}
-            style={{ background: WITS_BLUE }}
-            className="mt-6 w-full rounded-xl py-3 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
-          >
-            {isLoggingOut ? "Signing out…" : "Sign out"}
-          </button>
+          {/* Profile icon */}
+          <ProfileMenuContainer />
+
         </div>
-      </div>
-    </main>
-  );
-}
+      </header>
 
-function Monogram() {
-  return (
-    <div
-      className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
-      style={{
-        background: `linear-gradient(155deg, ${WITS_BLUE} 0%, #0A1F3D 100%)`,
-        boxShadow: `0 0 0 3px ${WITS_GOLD}33`,
-      }}
-    >
-      <span className="font-serif text-lg tracking-wide" style={{ color: WITS_GOLD }}>
-        WQ
-      </span>
+      {/* Rest of dashboard content goes here */}
     </div>
   );
 }
