@@ -28,7 +28,7 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`flex h-screen flex-col justify-between py-6 transition-all duration-200 ${
+      className={`sticky top-0 flex h-screen shrink-0 flex-col justify-between py-6 transition-all duration-200 ${
         collapsed ? "w-[76px]" : "w-[240px]"
       }`}
       style={{ background: WITS_BLUE }}
