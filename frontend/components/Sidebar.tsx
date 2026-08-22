@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
 
 const WITS_BLUE = "#043673";
@@ -14,14 +16,15 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", icon: <HomeIcon />, href: "/dashboard" },
+  { label: "Events", icon: <MapPinIcon />, href: "/dashboard/events" },
   { label: "Notifications", icon: <BellIcon />, href: "/notifications" },
 ];
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
-  const [activeHref, setActiveHref] = useState("/dashboard");
   const [darkMode, setDarkMode] = useState(false);
   const [query, setQuery] = useState("");
+  const pathname = usePathname();
 
   return (
     <aside
@@ -65,11 +68,11 @@ export default function Sidebar() {
 
         <nav className="mt-2 flex flex-col gap-1.5">
           {navItems.map((item) => {
-            const isActive = activeHref === item.href;
+            const isActive = pathname === item.href;
             return (
-              <button
+              <Link
                 key={item.href}
-                onClick={() => setActiveHref(item.href)}
+                href={item.href}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
                   isActive ? "text-white" : "text-white/60 hover:bg-white/5 hover:text-white/90"
                 }`}
@@ -85,7 +88,7 @@ export default function Sidebar() {
                     style={{ background: WITS_GOLD }}
                   />
                 )}
-              </button>
+              </Link>
             );
           })}
         </nav>
@@ -159,6 +162,15 @@ function HomeIcon() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M3 10.5 12 3l9 7.5" />
       <path d="M5 9.5V21h14V9.5" />
+    </svg>
+  );
+}
+
+function MapPinIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M12 22s7-7.5 7-12.5A7 7 0 0 0 5 9.5C5 14.5 12 22 12 22Z" />
+      <circle cx="12" cy="9.5" r="2.5" />
     </svg>
   );
 }
