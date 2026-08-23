@@ -51,15 +51,8 @@ export default function EventsPage() {
 
       const loadedEvents = data ?? [];
 
-      // Get user's current location
       if (!navigator.geolocation) {
-        setEvents(
-          loadedEvents.map((event) => ({
-            ...event,
-            distanceMeters: null,
-          }))
-        );
-
+        setEvents(loadedEvents.map((event) => ({ ...event, distanceMeters: null })));
         setLoading(false);
         return;
       }
@@ -69,7 +62,6 @@ export default function EventsPage() {
           const userLatitude = position.coords.latitude;
           const userLongitude = position.coords.longitude;
 
-          // Calculate distance for every event
           const eventsWithDistance = loadedEvents
             .map((event) => ({
               ...event,
@@ -80,33 +72,17 @@ export default function EventsPage() {
                 event.longitude
               ),
             }))
-            // Closest event first
-            .sort(
-              (a, b) =>
-                (a.distanceMeters ?? Infinity) -
-                (b.distanceMeters ?? Infinity)
-            );
+            .sort((a, b) => (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity));
 
           setEvents(eventsWithDistance);
           setLoading(false);
         },
         (error) => {
           console.error("Location error:", error);
-
-          // Still show events if location isn't available
-          setEvents(
-            loadedEvents.map((event) => ({
-              ...event,
-              distanceMeters: null,
-            }))
-          );
-
+          setEvents(loadedEvents.map((event) => ({ ...event, distanceMeters: null })));
           setLoading(false);
         },
-        {
-          enableHighAccuracy: true,
-          timeout: 10000,
-        }
+        { enableHighAccuracy: true, timeout: 10000 }
       );
     }
 
@@ -114,200 +90,123 @@ export default function EventsPage() {
   }, []);
 
   function formatDistance(distance: number | null) {
-    if (distance === null) {
-      return "Distance unavailable";
-    }
-
-    if (distance < 1000) {
-      return `${Math.round(distance)}m away`;
-    }
-
+    if (distance === null) return "Distance unavailable";
+    if (distance < 1000) return `${Math.round(distance)}m away`;
     return `${(distance / 1000).toFixed(1)}km away`;
   }
 
   function isEventActive(event: Event) {
     const now = new Date();
-
-    return (
-      now >= new Date(event.starts_at) &&
-      now <= new Date(event.ends_at)
-    );
+    return now >= new Date(event.starts_at) && now <= new Date(event.ends_at);
   }
 
   return (
     <div>
       {/* Header */}
-      <header className="mb-8">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-baseline gap-2.5">
-              <h1
-                className="font-serif text-3xl tracking-tight"
-                style={{ color: WITS_BLUE }}
-              >
-                Events & Locations
-              </h1>
-
-              <span
-                className="text-sm font-medium uppercase tracking-widest"
-                style={{ color: WITS_GOLD }}
-              >
-                Wits Quest
-              </span>
-            </div>
-
-            <div
-              className="mt-2 h-[3px] w-16 rounded-full"
-              style={{
-                background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})`,
-              }}
-            />
-          </div>
+      <header className="mb-6">
+        <div className="flex items-baseline gap-2.5">
+          <h1 className="font-serif text-2xl tracking-tight" style={{ color: WITS_BLUE }}>
+            Events &amp; Locations
+          </h1>
+          <span
+            className="text-xs font-medium uppercase tracking-widest"
+            style={{ color: WITS_GOLD }}
+          >
+            Wits Quest
+          </span>
         </div>
+        <div
+          className="mt-2 h-[3px] w-14 rounded-full"
+          style={{ background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})` }}
+        />
+        <p className="mt-3 text-sm text-gray-500">Events closest to your current location.</p>
       </header>
 
-      {/* Nearby Events */}
-      <div className="mb-6">
-        <h2
-          className="font-serif text-2xl"
-          style={{ color: WITS_BLUE }}
-        >
-          Nearby Events
-        </h2>
-
-        <p className="mt-1 text-sm text-gray-500">
-          Events closest to your current location.
-        </p>
-      </div>
-
-      {/* Loading */}
       {loading && (
-        <div className="py-12 text-center">
-          <p className="text-sm text-gray-500">
-            Finding nearby events...
-          </p>
+        <div className="py-10 text-center">
+          <p className="text-sm text-gray-500">Finding nearby events...</p>
         </div>
       )}
 
-      {/* No events */}
       {!loading && events.length === 0 && (
-        <div className="rounded-2xl bg-white p-8 text-center shadow">
-          <p
-            className="font-serif text-xl"
-            style={{ color: WITS_BLUE }}
-          >
+        <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
+          <p className="font-serif text-lg" style={{ color: WITS_BLUE }}>
             No events available
           </p>
-
-          <p className="mt-2 text-sm text-gray-500">
-            Check back later for new campus quests.
-          </p>
+          <p className="mt-1 text-sm text-gray-500">Check back later for new campus quests.</p>
         </div>
       )}
 
-      {/* Event cards */}
       {!loading && events.length > 0 && (
-        <div className="grid gap-6 md:grid-cols-2">
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => {
             const active = isEventActive(event);
 
             return (
               <div
                 key={event.id}
-                className="overflow-hidden rounded-2xl bg-white shadow-[0_2px_30px_-8px_rgba(4,54,115,0.2)]"
+                className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_16px_-4px_rgba(4,54,115,0.15)]"
               >
-                <div className="p-6">
-                  {/* Title */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <h3
-                        className="font-serif text-2xl"
-                        style={{ color: WITS_BLUE }}
-                      >
+                <div className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <h3 className="truncate font-serif text-base" style={{ color: WITS_BLUE }}>
                         {event.title}
                       </h3>
-
                       {event.description && (
-                        <p className="mt-2 text-sm leading-6 text-gray-500">
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">
                           {event.description}
                         </p>
                       )}
                     </div>
 
-                    {/* Map icon */}
                     <div
-                      className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
-                      style={{
-                        background: `${WITS_BLUE}10`,
-                        color: WITS_BLUE,
-                      }}
+                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
+                      style={{ background: `${WITS_BLUE}10`, color: WITS_BLUE }}
                     >
-                      <MapPinIcon />
+                      <MapPinIcon size={16} />
                     </div>
                   </div>
 
-                  {/* Distance */}
                   <div
-                    className="mt-5 flex items-center gap-3 rounded-xl px-4 py-3"
-                    style={{
-                      background: `${WITS_BLUE}08`,
-                    }}
+                    className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2"
+                    style={{ background: `${WITS_BLUE}08` }}
                   >
-                    <MapPinIcon />
-
-                    <div>
-                      <p
-                        className="text-sm font-semibold"
-                        style={{ color: WITS_BLUE }}
-                      >
+                    <MapPinIcon size={14} />
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold" style={{ color: WITS_BLUE }}>
                         {formatDistance(event.distanceMeters)}
                       </p>
-
-                      <p className="text-xs text-gray-500">
-                        Verification radius:{" "}
-                        {event.radius_meters}m
+                      <p className="text-[11px] text-gray-500">
+                        Radius: {event.radius_meters}m
                       </p>
                     </div>
                   </div>
 
-                  {/* Active status */}
-                  <div className="mt-4 flex items-center gap-2">
+                  <div className="mt-3 flex items-center gap-1.5">
                     <span
-                      className={`h-2.5 w-2.5 rounded-full ${
-                        active
-                          ? "bg-green-500"
-                          : "bg-gray-300"
-                      }`}
+                      className={`h-2 w-2 rounded-full ${active ? "bg-green-500" : "bg-gray-300"}`}
                     />
-
-                    <span className="text-xs font-medium text-gray-500">
-                      {active
-                        ? "Event is active"
-                        : "Event is inactive"}
+                    <span className="text-[11px] font-medium text-gray-500">
+                      {active ? "Active" : "Inactive"}
                     </span>
                   </div>
                 </div>
 
-                {/* Verification */}
                 {active && (
-                  <div className="border-t border-gray-100 bg-gray-50 p-6">
+                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
                     <EventLocationCheck
+                      compact
                       eventId={event.id}
                       eventTitle={event.title}
-                      onVerified={() =>
-                        alert(
-                          `You've arrived at ${event.title}!`
-                        )
-                      }
+                      onVerified={() => alert(`You've arrived at ${event.title}!`)}
                     />
                   </div>
                 )}
 
                 {!active && (
-                  <div className="border-t border-gray-100 bg-gray-50 px-6 py-4">
-                    <p className="text-center text-sm text-gray-500">
-                      This event is not currently active.
-                    </p>
+                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5">
+                    <p className="text-center text-xs text-gray-500">Not currently active.</p>
                   </div>
                 )}
               </div>
@@ -319,11 +218,11 @@ export default function EventsPage() {
   );
 }
 
-function MapPinIcon() {
+function MapPinIcon({ size = 20 }: { size?: number }) {
   return (
     <svg
-      width="20"
-      height="20"
+      width={size}
+      height={size}
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
