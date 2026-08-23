@@ -2,7 +2,7 @@ import { supabaseAdmin } from "./supabaseAdminClient";
 
 export type SubmitAnswerResult =
   | { outcome: "no-verification" }
-  | { outcome: "already-awarded"; correctAnswer: string; wasCorrect: boolean }
+  | { outcome: "already-answered"; correctAnswer: string; wasCorrect: boolean }
   | { outcome: "answered"; correct: boolean; correctAnswer: string; cardAwarded: boolean };
 
 function normalize(value: string): string {
@@ -15,7 +15,9 @@ function normalize(value: string): string {
  * Rules enforced here:
  * - Player must have already passed location verification for this event
  * - The game (not the player's device) decides correctness
- * - A correct answer awards the card exactly once, even on repeat attempts
+ * - A player can only attempt each event's challenge once — enforced via
+ *   challenge_attempts, independently of whether a card exists to award
+ * - A correct answer awards the card exactly once (only when card_id is set)
  */
 export async function submitAnswer(
   playerId: string,
@@ -46,26 +48,45 @@ export async function submitAnswer(
     throw new Error("No challenge found for this event.");
   }
 
-  // 3. If the player already has a card from this event, don't re-award —
-  // just tell them what happened, without changing anything.
-  const { data: existingCard } = await supabaseAdmin
-    .from("player_cards")
-    .select("id")
+  // 3. Check if this player has already attempted this event's challenge —
+  // this is the real "once only" gate, independent of card availability.
+  const { data: existingAttempt } = await supabaseAdmin
+    .from("challenge_attempts")
+    .select("correct")
     .eq("player_id", playerId)
     .eq("event_id", eventId)
     .maybeSingle();
 
+  if (existingAttempt) {
+    return {
+      outcome: "already-answered",
+      correctAnswer: challenge.correct_answer,
+      wasCorrect: existingAttempt.correct,
+    };
+  }
+
   const isCorrect = normalize(submittedAnswer) === normalize(challenge.correct_answer);
 
-  if (existingCard) {
+  // 4. Record the attempt (correct or not) — this is what blocks replays.
+  // The unique constraint on (player_id, event_id) also protects against
+  // two near-simultaneous requests both slipping through.
+  const { error: attemptError } = await supabaseAdmin.from("challenge_attempts").insert({
+    player_id: playerId,
+    event_id: eventId,
+    correct: isCorrect,
+  });
+
+  if (attemptError) {
+    // Someone else's request won the race and inserted first — treat this
+    // as already answered rather than awarding twice.
     return {
-      outcome: "already-awarded",
+      outcome: "already-answered",
       correctAnswer: challenge.correct_answer,
       wasCorrect: isCorrect,
     };
   }
 
-  // 4. Award the card only on a correct, first-time answer
+  // 5. Award the card only on a correct answer, and only if a card exists yet
   let cardAwarded = false;
 
   if (isCorrect && challenge.card_id) {
@@ -75,8 +96,6 @@ export async function submitAnswer(
       card_id: challenge.card_id,
     });
 
-    // Unique constraint (player_id, event_id) protects against a race
-    // condition where two requests land at nearly the same time.
     cardAwarded = !insertError;
   }
 
