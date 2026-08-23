@@ -24,3 +24,49 @@ body {
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/* Add this to frontend/app/globals.css */
+
+/* Firefox */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #043673 #f1f1f1;
+}
+
+/* Chrome, Edge, Safari */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #043673;
+  border-radius: 9999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #c9a24b;
+}
+
+/* Used on the sidebar's nav list so it scrolls with a thinner,
+   less intrusive bar than the page's main scrollbar. */
+.scroll-thin::-webkit-scrollbar {
+  width: 4px;
+}
+
+.scroll-thin {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.scroll-thin::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+.scroll-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
