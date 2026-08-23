@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import EventLocationCheck from "@/components/EventLocationCheck";
 import { supabase } from "@/lib/supabaseClient";
 import { haversineDistanceMeters } from "@/lib/distance";
+import ChallengeCard from "@/components/ChallengeCard";
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
@@ -26,6 +27,7 @@ type EventWithDistance = Event & {
 export default function EventsPage() {
   const [events, setEvents] = useState<EventWithDistance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [verifiedEventIds, setVerifiedEventIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function loadEvents() {
@@ -195,12 +197,18 @@ export default function EventsPage() {
 
                 {active && (
                   <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-                    <EventLocationCheck
-                      compact
-                      eventId={event.id}
-                      eventTitle={event.title}
-                      onVerified={() => alert(`You've arrived at ${event.title}!`)}
-                    />
+                    {verifiedEventIds.has(event.id) ? (
+                      <ChallengeCard eventId={event.id} />
+                    ) : (
+                      <EventLocationCheck
+                        compact
+                        eventId={event.id}
+                        eventTitle={event.title}
+                        onVerified={() =>
+                          setVerifiedEventIds((prev) => new Set(prev).add(event.id))
+                        }
+                      />
+                    )}
                   </div>
                 )}
 
