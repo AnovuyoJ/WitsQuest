@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { signIn } from "@/lib/authService";
+// 1. Importing OAuth and password reset functions alongside signIn
+import {
+  signIn,
+  signInWithGithub,
+  signInWithGoogle,
+  sendPasswordReset,
+} from "@/lib/authService";
 
 type FormErrors = {
   email?: string;
@@ -17,7 +23,49 @@ export default function SignInForm() {
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
+  const [resetSuccess, setResetSuccess] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // 2. Social sign-in handlers for Google & GitHub
+  async function handleGoogleSignIn() {
+    setServerError(null);
+    setResetSuccess(null);
+    const { error } = await signInWithGoogle();
+    if (error) {
+      setServerError("Couldn't connect with Google right now. Please try again!");
+    }
+  }
+
+  async function handleGithubSignIn() {
+    setServerError(null);
+    setResetSuccess(null);
+    const { error } = await signInWithGithub();
+    if (error) {
+      setServerError("Couldn't connect with GitHub right now. Please try again!");
+    }
+  }
+
+  // 3. Handles triggering password reset email directly without needing a separate page
+  async function handleForgotPassword() {
+    setServerError(null);
+    setResetSuccess(null);
+
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!email || !emailPattern.test(email)) {
+      setErrors({ email: "Please enter your email above so we know where to send the reset link." });
+      return;
+    }
+
+    setIsSubmitting(true);
+    const { error } = await sendPasswordReset(email);
+    setIsSubmitting(false);
+
+    if (error) {
+      setServerError("Couldn't send the password reset email. Please double-check your address.");
+    } else {
+      setResetSuccess("Password reset link sent! Check your inbox to pick a new password.");
+    }
+  }
 
   function validate(): boolean {
     const nextErrors: FormErrors = {};
@@ -38,6 +86,7 @@ export default function SignInForm() {
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
     setServerError(null);
+    setResetSuccess(null);
 
     if (!validate()) return;
 
@@ -54,7 +103,7 @@ export default function SignInForm() {
       return;
     }
 
-    // Sign-in succeeded — redirect wherever the app sends authenticated users.
+    // Sign-in succeeded — redirect to campus dashboard
     window.location.href = "/dashboard";
   }
 
@@ -64,7 +113,7 @@ export default function SignInForm() {
       noValidate
       className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-[0_2px_40px_-8px_rgba(4,54,115,0.25)]"
     >
-      {/* Gold-to-blue accent bar — matches SignUpForm's signature touch */}
+      {/* Gold-to-blue accent bar */}
       <div
         style={{ background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})` }}
         className="h-1.5 w-full"
@@ -79,15 +128,32 @@ export default function SignInForm() {
           <p className="mt-1.5 text-[13px] text-gray-500">Sign in to continue your quest</p>
         </div>
 
+        {/* Server error feedback banner */}
         {serverError && (
           <div className="mb-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
             {serverError}
           </div>
         )}
 
+        {/* Success feedback banner when password reset email is sent */}
+        {resetSuccess && (
+          <div className="mb-5 rounded-xl bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+            {resetSuccess}
+          </div>
+        )}
+
+        {/* 4. Connected click triggers to the social login buttons */}
         <div className="mb-4 flex flex-col gap-2.5">
-          <OAuthButton label="Continue with Google" icon={<GoogleIcon />} />
-          <OAuthButton label="Continue with GitHub" icon={<GitHubIcon />} />
+          <OAuthButton
+            label="Continue with Google"
+            icon={<GoogleIcon />}
+            onClick={handleGoogleSignIn}
+          />
+          <OAuthButton
+            label="Continue with GitHub"
+            icon={<GitHubIcon />}
+            onClick={handleGithubSignIn}
+          />
         </div>
 
         <div className="my-6 flex items-center gap-3">
@@ -104,7 +170,7 @@ export default function SignInForm() {
           type="email"
           value={email}
           onChange={setEmail}
-          placeholder="name@gmail.coms"
+          placeholder="name@gmail.com"
           error={errors.email}
         />
 
@@ -112,10 +178,17 @@ export default function SignInForm() {
           <label htmlFor="password" className="block text-[13px] font-medium text-gray-600">
             Password
           </label>
-          <a href="/forgot-password" className="text-[12px] font-medium" style={{ color: WITS_BLUE }}>
+          {/* 5. Triggering in-line password reset instead of dead link */}
+          <button
+            type="button"
+            onClick={handleForgotPassword}
+            className="text-[12px] font-medium hover:underline"
+            style={{ color: WITS_BLUE }}
+          >
             Forgot password?
-          </a>
+          </button>
         </div>
+
         <div className="mb-6">
           <input
             id="password"
@@ -148,7 +221,7 @@ export default function SignInForm() {
   );
 }
 
-// --- Monogram badge — matches SignUpForm ---
+// --- Monogram badge ---
 function Monogram() {
   return (
     <div
@@ -200,10 +273,20 @@ function Field({
   );
 }
 
-function OAuthButton({ label, icon }: { label: string; icon: React.ReactNode }) {
+// 6. Updated OAuthButton to handle clicks
+function OAuthButton({
+  label,
+  icon,
+  onClick,
+}: {
+  label: string;
+  icon: React.ReactNode;
+  onClick?: () => void;
+}) {
   return (
     <button
       type="button"
+      onClick={onClick}
       className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
     >
       {icon}
