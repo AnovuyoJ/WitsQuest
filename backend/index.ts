@@ -5,6 +5,7 @@ import verifyLocationRouter from "./routes/events/verifyLocation";
 import submitAnswerRouter from "./routes/events/submitAnswer";
 
 dotenv.config();
+dotenv.config({ path: ".env.local" });
 
 const app = express();
 const PORT = process.env.PORT || 5000;
