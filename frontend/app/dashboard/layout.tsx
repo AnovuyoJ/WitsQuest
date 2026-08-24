@@ -1,18 +1,39 @@
+"use client";
+
+import { useState } from "react";
+import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
+import AdminSidebar from "@/components/AdminSidebar";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
-  return (
-    <div className="flex min-h-screen">
-      <Sidebar />
+  const [darkMode, setDarkMode] = useState(false);
+  const pathname = usePathname();
+  const isAdminArea = pathname.startsWith("/dashboard/admin");
 
-      <div className="min-w-0 flex-1">
-        <main className="p-8">
-          {children}
-        </main>
+  return (
+    <div
+      className={`min-h-screen transition-colors duration-200 ${
+        darkMode ? "bg-[#0b1220] text-white" : "bg-[#f5f7fb] text-slate-900"
+      }`}
+    >
+      <div className="flex min-h-screen">
+        {isAdminArea ? (
+          <AdminSidebar darkMode={darkMode} onToggleDarkMode={() => setDarkMode((value) => !value)} />
+        ) : (
+          <Sidebar darkMode={darkMode} onToggleDarkMode={() => setDarkMode((value) => !value)} />
+        )}
+
+        <div
+          className={`min-w-0 flex-1 transition-colors duration-200 ${
+            darkMode ? "bg-[#0b1220] text-white" : "bg-[#f5f7fb] text-slate-900"
+          }`}
+        >
+          <main className={`${darkMode ? "bg-[#0b1220]" : "bg-[#f5f7fb]"}`}>{children}</main>
+        </div>
       </div>
     </div>
   );
