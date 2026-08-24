@@ -16,15 +16,27 @@ type NavItem = {
 
 const navItems: NavItem[] = [
   { label: "Dashboard", icon: <HomeIcon />, href: "/dashboard" },
+  { label: "Cards", icon: <CardIcon />, href: "/dashboard/cards" },
   { label: "Events", icon: <MapPinIcon />, href: "/dashboard/events" },
+  { label: "Map", icon: <MapIcon />, href: "/dashboard/map" },
   { label: "Notifications", icon: <BellIcon />, href: "/notifications" },
 ];
 
-export default function Sidebar() {
+type SidebarProps = {
+  darkMode: boolean;
+  onToggleDarkMode: () => void;
+};
+
+export default function Sidebar({ darkMode, onToggleDarkMode }: SidebarProps) {
   const [collapsed, setCollapsed] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
   const [query, setQuery] = useState("");
   const pathname = usePathname();
+
+  const dashboardItem = navItems.find((item) => item.href === "/dashboard");
+  const childNavItems = navItems
+    .filter((item) => item.href !== "/dashboard")
+    .sort((a, b) => a.label.localeCompare(b.label));
+  const dashboardActive = pathname === "/dashboard" || pathname.startsWith("/dashboard/");
 
   return (
     <aside
@@ -67,30 +79,45 @@ export default function Sidebar() {
         )}
 
         <nav className="mt-2 flex flex-col gap-1.5">
-          {navItems.map((item) => {
-            const isActive = pathname === item.href;
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive ? "text-white" : "text-white/60 hover:bg-white/5 hover:text-white/90"
-                }`}
-                style={isActive ? { background: "rgba(255,255,255,0.12)" } : undefined}
-              >
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-                  {item.icon}
-                </span>
-                {!collapsed && <span className="truncate">{item.label}</span>}
-                {isActive && (
-                  <span
-                    className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{ background: WITS_GOLD }}
-                  />
-                )}
-              </Link>
-            );
-          })}
+          {dashboardItem && (
+            <Link
+              key={dashboardItem.href}
+              href={dashboardItem.href}
+              className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                dashboardActive ? "text-white" : "text-white/60 hover:bg-white/5 hover:text-white/90"
+              }`}
+              style={dashboardActive ? { background: "rgba(255,255,255,0.12)" } : undefined}
+            >
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center">{dashboardItem.icon}</span>
+              {!collapsed && <span className="truncate">{dashboardItem.label}</span>}
+              {dashboardActive && (
+                <span
+                  className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
+                  style={{ background: WITS_GOLD }}
+                />
+              )}
+            </Link>
+          )}
+
+          {!collapsed && (
+            <div className="ml-4 mt-1 space-y-1 border-l border-white/15 pl-3">
+              {childNavItems.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className={`flex items-center gap-2 rounded-lg px-2 py-1.5 text-sm transition-colors ${
+                      isActive ? "text-white" : "text-white/60 hover:bg-white/5 hover:text-white/90"
+                    }`}
+                  >
+                    <span className="flex h-4 w-4 shrink-0 items-center justify-center">{item.icon}</span>
+                    <span className="truncate">{item.label}</span>
+                  </Link>
+                );
+              })}
+            </div>
+          )}
         </nav>
       </div>
 
@@ -100,7 +127,7 @@ export default function Sidebar() {
 
         {collapsed ? (
           <button
-            onClick={() => setDarkMode((d) => !d)}
+            onClick={onToggleDarkMode}
             aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
             className="flex items-center justify-center rounded-xl px-3 py-2.5 text-white/60 transition-colors hover:bg-white/5 hover:text-white/90"
           >
@@ -121,7 +148,7 @@ export default function Sidebar() {
             </span>
             <span className="text-sm text-white/60">{darkMode ? "Dark mode" : "Light mode"}</span>
             <button
-              onClick={() => setDarkMode((d) => !d)}
+              onClick={onToggleDarkMode}
               aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
               className="relative ml-auto flex h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition-colors"
               style={{ background: darkMode ? WITS_GOLD : "rgba(255,255,255,0.2)" }}
@@ -171,6 +198,27 @@ function MapPinIcon() {
     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M12 22s7-7.5 7-12.5A7 7 0 0 0 5 9.5C5 14.5 12 22 12 22Z" />
       <circle cx="12" cy="9.5" r="2.5" />
+    </svg>
+  );
+}
+
+function MapIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M3 6.5 9 3l6 3.5L21 3v14.5L15 21l-6-3.5L3 21V6.5Z" />
+      <path d="M9 3v14.5" />
+      <path d="M15 6.5V21" />
+    </svg>
+  );
+}
+
+function CardIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="5" width="7" height="11" rx="2" />
+      <rect x="14" y="8" width="7" height="11" rx="2" />
+      <path d="M10 8h4" />
+      <path d="M10 12h4" />
     </svg>
   );
 }

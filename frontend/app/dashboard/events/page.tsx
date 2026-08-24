@@ -1,60 +1,44 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import EventLocationCheck from "@/components/EventLocationCheck";
-import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
 import { haversineDistanceMeters } from "@/lib/distance";
-import ChallengeCard from "@/components/ChallengeCard";
+import {
+  ADMIN_CHALLENGE_UPDATED_EVENT,
+  getLocationCoordinates,
+  getPublishedChallenges,
+  type SavedChallenge,
+} from "@/lib/adminChallenges";
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
 
-type Event = {
-  id: string;
-  title: string;
-  description: string | null;
-  latitude: number;
-  longitude: number;
-  radius_meters: number;
-  starts_at: string;
-  ends_at: string;
-};
-
-type EventWithDistance = Event & {
+type PublishedChallengeWithDistance = SavedChallenge & {
   distanceMeters: number | null;
 };
 
 export default function EventsPage() {
-  const [events, setEvents] = useState<EventWithDistance[]>([]);
+  const router = useRouter();
+  const [events, setEvents] = useState<PublishedChallengeWithDistance[]>([]);
   const [loading, setLoading] = useState(true);
-  const [verifiedEventIds, setVerifiedEventIds] = useState<Set<string>>(new Set());
+  const [showScoringInfo, setShowScoringInfo] = useState(false);
 
   useEffect(() => {
-    async function loadEvents() {
-      const { data, error } = await supabase
-        .from("events")
-        .select(`
-          id,
-          title,
-          description,
-          latitude,
-          longitude,
-          radius_meters,
-          starts_at,
-          ends_at
-        `)
-        .order("starts_at", { ascending: true });
+    const syncPublishedEvents = () => {
+      const publishedChallenges = getPublishedChallenges();
 
-      if (error) {
-        console.error("Error loading events:", error);
+      setLoading(true);
+
+      if (publishedChallenges.length === 0) {
+        setEvents([]);
         setLoading(false);
         return;
       }
 
-      const loadedEvents = data ?? [];
-
       if (!navigator.geolocation) {
-        setEvents(loadedEvents.map((event) => ({ ...event, distanceMeters: null })));
+        setEvents(
+          publishedChallenges.map((challenge) => ({ ...challenge, distanceMeters: null }))
+        );
         setLoading(false);
         return;
       }
@@ -64,31 +48,64 @@ export default function EventsPage() {
           const userLatitude = position.coords.latitude;
           const userLongitude = position.coords.longitude;
 
-          const eventsWithDistance = loadedEvents
-            .map((event) => ({
-              ...event,
-              distanceMeters: haversineDistanceMeters(
-                userLatitude,
-                userLongitude,
-                event.latitude,
-                event.longitude
-              ),
-            }))
+          const eventsWithDistance = publishedChallenges
+            .map((challenge) => {
+              const coordinates = getLocationCoordinates(challenge.location);
+
+              return {
+                ...challenge,
+                distanceMeters: haversineDistanceMeters(
+                  userLatitude,
+                  userLongitude,
+                  coordinates.latitude,
+                  coordinates.longitude
+                ),
+              };
+            })
             .sort((a, b) => (a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity));
 
           setEvents(eventsWithDistance);
           setLoading(false);
         },
-        (error) => {
-          console.error("Location error:", error);
-          setEvents(loadedEvents.map((event) => ({ ...event, distanceMeters: null })));
+        () => {
+          setEvents(
+            publishedChallenges.map((challenge) => ({ ...challenge, distanceMeters: null }))
+          );
           setLoading(false);
         },
         { enableHighAccuracy: true, timeout: 10000 }
       );
-    }
+    };
 
-    loadEvents();
+    syncPublishedEvents();
+
+    const handleStorage = (event: StorageEvent) => {
+      if (event.key === "wits-admin-challenges") {
+        syncPublishedEvents();
+      }
+    };
+
+    const handleChallengeUpdate = () => syncPublishedEvents();
+    const handleFocus = () => syncPublishedEvents();
+
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener(ADMIN_CHALLENGE_UPDATED_EVENT, handleChallengeUpdate);
+    window.addEventListener("focus", handleFocus);
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        syncPublishedEvents();
+      }
+    };
+
+    document.addEventListener("visibilitychange", handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener(ADMIN_CHALLENGE_UPDATED_EVENT, handleChallengeUpdate);
+      window.removeEventListener("focus", handleFocus);
+      document.removeEventListener("visibilitychange", handleVisibilityChange);
+    };
   }, []);
 
   function formatDistance(distance: number | null) {
@@ -97,129 +114,133 @@ export default function EventsPage() {
     return `${(distance / 1000).toFixed(1)}km away`;
   }
 
-  function isEventActive(event: Event) {
-    const now = new Date();
-    return now >= new Date(event.starts_at) && now <= new Date(event.ends_at);
-  }
-
   return (
     <div>
       {/* Header */}
       <header className="mb-6">
-        <div className="flex items-baseline gap-2.5">
-          <h1 className="font-serif text-2xl tracking-tight" style={{ color: WITS_BLUE }}>
-            Events &amp; Locations
-          </h1>
-          <span
-            className="text-xs font-medium uppercase tracking-widest"
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="flex items-baseline gap-2.5">
+              <h1 className="font-serif text-2xl tracking-tight" style={{ color: WITS_BLUE }}>
+                Events &amp; Locations
+              </h1>
+              <span
+                className="text-xs font-medium uppercase tracking-widest"
+                style={{ color: WITS_GOLD }}
+              >
+                Wits Quest
+              </span>
+            </div>
+            <div
+              className="mt-2 h-[3px] w-14 rounded-full"
+              style={{ background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})` }}
+            />
+          </div>
+
+          <button
+            type="button"
+            aria-label="Show scoring rules"
+            onClick={() => setShowScoringInfo((value) => !value)}
+            className="flex h-9 w-9 items-center justify-center rounded-full border border-[#C9A24B]/40 bg-[#C9A24B]/10 text-sm font-bold shadow-sm transition hover:scale-105"
             style={{ color: WITS_GOLD }}
           >
-            Wits Quest
-          </span>
+            ?
+          </button>
         </div>
-        <div
-          className="mt-2 h-[3px] w-14 rounded-full"
-          style={{ background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})` }}
-        />
         <p className="mt-3 text-sm text-gray-500">Events closest to your current location.</p>
+
+        {showScoringInfo && (
+          <div className="mt-3 rounded-2xl border border-[#C9A24B]/30 bg-[#C9A24B]/8 p-4 shadow-sm">
+            <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#C9A24B]">
+              Card scoring rules
+            </p>
+            <ul className="mt-2 space-y-1 text-sm text-slate-700">
+              <li>Gold = 100 points</li>
+              <li>Black = 50 points</li>
+              <li>Blue = 20 points</li>
+            </ul>
+          </div>
+        )}
       </header>
 
       {loading && (
         <div className="py-10 text-center">
-          <p className="text-sm text-gray-500">Finding nearby events...</p>
+          <p className="text-sm text-gray-500">Loading published events...</p>
         </div>
       )}
 
       {!loading && events.length === 0 && (
         <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
           <p className="font-serif text-lg" style={{ color: WITS_BLUE }}>
-            No events available
+            No published events yet
           </p>
-          <p className="mt-1 text-sm text-gray-500">Check back later for new campus quests.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Admins must publish a mapped quest before it appears here.
+          </p>
         </div>
       )}
 
       {!loading && events.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => {
-            const active = isEventActive(event);
-
-            return (
-              <div
-                key={event.id}
-                className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_16px_-4px_rgba(4,54,115,0.15)]"
-              >
-                <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="min-w-0">
-                      <h3 className="truncate font-serif text-base" style={{ color: WITS_BLUE }}>
-                        {event.title}
-                      </h3>
-                      {event.description && (
-                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">
-                          {event.description}
-                        </p>
-                      )}
-                    </div>
-
-                    <div
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                      style={{ background: `${WITS_BLUE}10`, color: WITS_BLUE }}
-                    >
-                      <MapPinIcon size={16} />
-                    </div>
-                  </div>
-
-                  <div
-                    className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2"
-                    style={{ background: `${WITS_BLUE}08` }}
-                  >
-                    <MapPinIcon size={14} />
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold" style={{ color: WITS_BLUE }}>
-                        {formatDistance(event.distanceMeters)}
-                      </p>
-                      <p className="text-[11px] text-gray-500">
-                        Radius: {event.radius_meters}m
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-3 flex items-center gap-1.5">
+        <div className="space-y-4">
+          {events.map((event) => (
+            <button
+              key={event.id}
+              type="button"
+              onClick={() =>
+                router.push(`/dashboard/triviaquestions?event=${encodeURIComponent(event.id)}`)
+              }
+              className="block w-full rounded-[24px] bg-white p-5 text-left shadow-[0_2px_18px_-8px_rgba(4,54,115,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_12px_24px_-15px_rgba(4,54,115,0.35)]"
+            >
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                <div className="min-w-0">
+                  <div className="mb-2 flex items-center gap-2">
                     <span
-                      className={`h-2 w-2 rounded-full ${active ? "bg-green-500" : "bg-gray-300"}`}
-                    />
-                    <span className="text-[11px] font-medium text-gray-500">
-                      {active ? "Active" : "Inactive"}
+                      className="rounded-full px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white"
+                      style={{ background: event.card?.accent ?? WITS_BLUE }}
+                    >
+                      {event.card?.badge ?? event.difficulty}
+                    </span>
+                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
+                      {event.points} pts
                     </span>
                   </div>
+                  <h3 className="font-serif text-xl" style={{ color: WITS_BLUE }}>
+                    {event.title}
+                  </h3>
                 </div>
 
-                {active && (
-                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-                    {verifiedEventIds.has(event.id) ? (
-                      <ChallengeCard eventId={event.id} />
-                    ) : (
-                      <EventLocationCheck
-                        compact
-                        eventId={event.id}
-                        eventTitle={event.title}
-                        onVerified={() =>
-                          setVerifiedEventIds((prev) => new Set(prev).add(event.id))
-                        }
-                      />
-                    )}
-                  </div>
-                )}
-
-                {!active && (
-                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5">
-                    <p className="text-center text-xs text-gray-500">Not currently active.</p>
-                  </div>
-                )}
+                <div
+                  className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl"
+                  style={{ background: `${WITS_BLUE}12`, color: WITS_BLUE }}
+                >
+                  <MapPinIcon size={20} />
+                </div>
               </div>
-            );
-          })}
+
+              {event.description && (
+                <p className="mt-3 text-sm leading-6 text-slate-600">{event.description}</p>
+              )}
+
+              <div className="mt-4 flex flex-wrap items-center gap-2 text-xs text-slate-500">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1.5">
+                  <MapPinIcon size={12} />
+                  {event.location}
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-slate-100 px-2.5 py-1.5">
+                  {formatDistance(event.distanceMeters)}
+                </span>
+              </div>
+
+              <div className="mt-4 rounded-2xl border border-[#043673]/10 bg-[#043673]/5 p-3 text-left">
+                <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-slate-500">
+                  Open challenge
+                </p>
+                <span className="mt-2 block text-sm font-medium text-[#043673]">
+                  Tap to answer this event’s question
+                </span>
+              </div>
+            </button>
+          ))}
         </div>
       )}
     </div>
