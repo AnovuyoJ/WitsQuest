@@ -34,4 +34,8 @@ This architecture was chosen to satisfy the project rquirement of maintaining no
 
 ## Authentication System 
 
-Superbase Auth ???
+Wits Quest uses Supabase Auth as its identity provider, supporting three sign-in methods:
+
+Email/password via signUp() and signIn() in lib/authService.ts, using Supabase's built-in signUp / signInWithPassword
+Google OAuth via signInWithGoogle(), using Supabase's OAuth provider integration
+GitHub OAuth via signInWithGithub(), same pattern

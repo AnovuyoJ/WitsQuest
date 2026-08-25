@@ -1,13 +1,16 @@
 "use client";
 
 import ProfileMenuContainer from "@/components/ProfileMenuContainer";
+import { useRouter } from "next/navigation";
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
 
 export default function DashboardPage() {
+  const router = useRouter();
+
   return (
-    <div className="min-h-full">
+    <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
       {/* Header */}
       <header className="mb-10">
         <div className="flex items-center justify-between">
@@ -36,7 +39,6 @@ export default function DashboardPage() {
             />
           </div>
 
-          {/* Logged-in user's profile */}
           <ProfileMenuContainer />
         </div>
       </header>
@@ -47,20 +49,19 @@ export default function DashboardPage() {
           className="font-serif text-2xl"
           style={{ color: WITS_BLUE }}
         >
-          Welcome to Campus Quest
+          Welcome to Wits Quest
         </h2>
 
         <p className="mt-2 max-w-2xl text-gray-500">
-          Explore Wits, join quests, create your own adventures, and
-          discover what is happening around campus.
+          Explore campus, discover nearby events, complete location-based
+          challenges, and collect reward cards along the way.
         </p>
       </section>
 
-      {/* Quest Cards */}
+      {/* Main Actions */}
       <div className="grid gap-6 md:grid-cols-2">
-        {/* Campus Quest */}
+        {/* Events */}
         <div className="group rounded-2xl bg-white p-7 shadow-[0_2px_30px_-8px_rgba(4,54,115,0.2)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_35px_-10px_rgba(4,54,115,0.3)]">
-          {/* Map Icon */}
           <div
             className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl"
             style={{
@@ -75,25 +76,26 @@ export default function DashboardPage() {
             className="font-serif text-2xl"
             style={{ color: WITS_BLUE }}
           >
-            Campus Quest
+            Explore Events
           </h3>
 
           <p className="mt-2 text-sm leading-6 text-gray-500">
-            Explore campus and complete challenges at different locations
-            around Wits.
+            Find active events around campus, check how close you are, and
+            unlock challenges when you reach the event location.
           </p>
 
           <button
+            type="button"
+            onClick={() => router.push("/dashboard/events")}
             className="mt-6 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all hover:brightness-110"
             style={{ background: WITS_BLUE }}
           >
-            Join Quest
+            View Events
           </button>
         </div>
 
-        {/* Wits Quest */}
+        {/* Cards */}
         <div className="group rounded-2xl bg-white p-7 shadow-[0_2px_30px_-8px_rgba(4,54,115,0.2)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_35px_-10px_rgba(201,162,75,0.3)]">
-          {/* Star Icon */}
           <div
             className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl"
             style={{
@@ -108,24 +110,26 @@ export default function DashboardPage() {
             className="font-serif text-2xl"
             style={{ color: WITS_BLUE }}
           >
-            Wits Quest
+            My Collection
           </h3>
 
           <p className="mt-2 text-sm leading-6 text-gray-500">
-            Discover exciting quests and activities happening across the
-            university.
+            View the reward cards you have earned by successfully completing
+            challenges across campus.
           </p>
 
           <button
+            type="button"
+            onClick={() => router.push("/dashboard/cards")}
             className="mt-6 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all hover:brightness-110"
             style={{ background: WITS_GOLD }}
           >
-            Create Quest
+            View My Cards
           </button>
         </div>
       </div>
 
-      {/* Explore Wits */}
+      {/* Explore Section */}
       <section className="mt-8 rounded-2xl bg-white p-6 shadow-[0_2px_30px_-8px_rgba(4,54,115,0.15)]">
         <div className="flex items-start gap-4">
           <div
@@ -143,12 +147,13 @@ export default function DashboardPage() {
               className="font-semibold"
               style={{ color: WITS_BLUE }}
             >
-              Explore Wits
+              Start exploring Wits
             </h3>
 
             <p className="mt-1 text-sm leading-6 text-gray-500">
-              Check the Events section to discover campus activities and
-              location-based challenges.
+              Open the Events page to see what is available nearby. When you
+              reach an event location, verify your position and complete its
+              challenge to earn rewards.
             </p>
           </div>
         </div>
@@ -157,7 +162,10 @@ export default function DashboardPage() {
   );
 }
 
-/* Map icon */
+/* -------------------------------------------------- */
+/* Map Icon */
+/* -------------------------------------------------- */
+
 function MapIcon() {
   return (
     <svg
@@ -178,7 +186,10 @@ function MapIcon() {
   );
 }
 
-/* Star / Quest icon */
+/* -------------------------------------------------- */
+/* Star / Quest Icon */
+/* -------------------------------------------------- */
+
 function QuestIcon() {
   return (
     <svg
@@ -197,7 +208,10 @@ function QuestIcon() {
   );
 }
 
-/* Compass icon */
+/* -------------------------------------------------- */
+/* Compass Icon */
+/* -------------------------------------------------- */
+
 function CompassIcon() {
   return (
     <svg

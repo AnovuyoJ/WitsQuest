@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import EventLocationCheck from "@/components/EventLocationCheck";
+import ChallengeCard from "@/components/ChallengeCard";
 import { supabase } from "@/lib/supabaseClient";
 import { haversineDistanceMeters } from "@/lib/distance";
 
@@ -26,21 +27,17 @@ type EventWithDistance = Event & {
 export default function EventsPage() {
   const [events, setEvents] = useState<EventWithDistance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [verifiedEventIds, setVerifiedEventIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     async function loadEvents() {
+      // This is the actual database — the same "events" table your
+      // admin console writes to. No localStorage involved anywhere here.
       const { data, error } = await supabase
         .from("events")
-        .select(`
-          id,
-          title,
-          description,
-          latitude,
-          longitude,
-          radius_meters,
-          starts_at,
-          ends_at
-        `)
+        .select(
+          "id, title, description, latitude, longitude, radius_meters, starts_at, ends_at"
+        )
         .order("starts_at", { ascending: true });
 
       if (error) {
@@ -101,8 +98,7 @@ export default function EventsPage() {
   }
 
   return (
-    <div>
-      {/* Header */}
+    <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
       <header className="mb-6">
         <div className="flex items-baseline gap-2.5">
           <h1 className="font-serif text-2xl tracking-tight" style={{ color: WITS_BLUE }}>
@@ -133,7 +129,9 @@ export default function EventsPage() {
           <p className="font-serif text-lg" style={{ color: WITS_BLUE }}>
             No events available
           </p>
-          <p className="mt-1 text-sm text-gray-500">Check back later for new campus quests.</p>
+          <p className="mt-1 text-sm text-gray-500">
+            Check back later for new campus quests.
+          </p>
         </div>
       )}
 
@@ -141,6 +139,7 @@ export default function EventsPage() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {events.map((event) => {
             const active = isEventActive(event);
+            const verified = verifiedEventIds.has(event.id);
 
             return (
               <div
@@ -159,7 +158,6 @@ export default function EventsPage() {
                         </p>
                       )}
                     </div>
-
                     <div
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
                       style={{ background: `${WITS_BLUE}10`, color: WITS_BLUE }}
@@ -195,12 +193,18 @@ export default function EventsPage() {
 
                 {active && (
                   <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
-                    <EventLocationCheck
-                      compact
-                      eventId={event.id}
-                      eventTitle={event.title}
-                      onVerified={() => alert(`You've arrived at ${event.title}!`)}
-                    />
+                    {verified ? (
+                      <ChallengeCard eventId={event.id} />
+                    ) : (
+                      <EventLocationCheck
+                        compact
+                        eventId={event.id}
+                        eventTitle={event.title}
+                        onVerified={() =>
+                          setVerifiedEventIds((prev) => new Set(prev).add(event.id))
+                        }
+                      />
+                    )}
                   </div>
                 )}
 

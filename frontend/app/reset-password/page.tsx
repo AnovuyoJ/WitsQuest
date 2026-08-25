@@ -80,7 +80,7 @@ export default function ResetPasswordPage() {
                 You can now log in to Wits Quest using your new password.
               </p>
               <a
-                href="/login"
+                href="/Login"
                 style={{ background: WITS_BLUE }}
                 className="inline-block w-full rounded-xl py-3.5 text-center text-sm font-semibold text-white transition-all hover:brightness-110"
               >
