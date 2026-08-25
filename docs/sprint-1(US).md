@@ -1,0 +1,24 @@
+### User Stories:
+
+- As a user, I want to delete my account so that my personal data is permanently removed from the platform.
+- As a new user I want to create an account using my email and password so that I can access Wit's Quest.
+- As a user who forgot my password, I want to reset it via email so that I can regain access to my account.
+- As a signed-in user, I want to log out of my account so that my session is securely ended.
+- As a user, I want to sign in using my Google or GitHub account so that I don't need to create a separate password.
+- As a player, I want to see which events are nearby, too far away, or expired so that I know which events I can participate in.
+- As a player, I want to submit an answer to a challenge's question so that the game can mark it and award me the card if I'm correct.
+- As the game system, I want to verify a player's reported location against an event's radius so that only players who are physically present can attempt the challenge.
+- As a player, I want to see my current location on a campus map so that I know where I am relative to events.
+- As a player, I want to see nearby events on the map so that I know what's in reach.
+- As a player, I want to see which events are too far away or have expired so that I don't waste time trying to reach them.
+- As a player, I want to attempt a trivia challenge when I reach an event so that I can test my knowledge and earn a card.
+- As a player, I want challenges to be presented in varied formats so that the game doesn't feel repetitive.
+- As a player, I want to see the correct answer after submitting so that I learn something regardless of outcome.
+- As a player, I want to receive a card when I answer correctly so that I'm rewarded for reaching the event.
+- As a player, I want to view my card collection so that I can see what I've earned.
+- As a player, I want to select a deck and battle the computer so that I can use my collected cards.
+- As a player, I want the game to enforce match rules so that outcomes are fair and consistent.
+- As a player, I want to see my past match results so that I can track how I've done.
+- As a content author, I want to place events on the map so that players have things to discover.
+- As a content author, I want to write questions and answers for an event so that it has content to challenge players with.
+- As a content author, I want to define cards and their attributes so that they can be awarded and used in battles.
