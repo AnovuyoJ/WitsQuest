@@ -39,7 +39,7 @@ We branch off `main` for all work (`name/short-feature-description`), and merge 
 - Brendan Griffiths (Lecturer)
 - Branden Ingram (Lecturer)
 - Calvin Rea (Client)
-- Anovuyo Jafta
+- Anovuyo Dlamini
 - Busisiwe Dlamini
 - Thabo Maleke
 - Lerato Sikhumbana
