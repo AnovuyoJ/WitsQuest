@@ -24,37 +24,23 @@ const QUESTION_CATEGORIES = [
   "Student Leadership",
   "Other",
 ];
-const WITS_LOCATIONS = [
+export const WITS_LOCATIONS = [
   "Great Hall",
-  "Wits Art Museum",
   "Solomon Mahlangu House",
+  "Wits Art Museum",
   "Origins Centre",
+  "The Matrix",
+  "Wits Science Stadium",
+  "Flower Hall",
+  "Hall 29",
+  "Library Law Building",
+  "Wits Theatre",
+  "FNB Building",
+  "University Corner",
   "Chamber of Mines",
   "Old Main Building",
-  "Wits Science Stadium",
-  "Barnato Hall",
-  "Muller Hall",
-  "The Clock Tower",
-  "Wits Health Sciences Building",
-  "Library Law Building",
-  "Braamfontein Campus",
-  "M1 Main Gate",
-  "University Corner",
-  "Wits Theatre",
-  "The Matrix",
-  "Moses Mabhida Road",
-  "M2 Access Route",
-  "Wits Student Union",
-  "Wits Business School",
-  "The Great Hall",
-  "Bennet & Bloom",
-  "FNB Building",
-  "Wits Village",
-  "Wits West Campus",
-  "School of Governance",
-  "Education Campus",
-  "Bunting Road",
-];
+  "MSL"
+] as const;
 
 function getGitHubUsernameCandidates(user: any): string[] {
   if (!user) return [];
@@ -92,8 +78,6 @@ type ChallengeFormState = {
   answer: string;
   options: string;
   difficulty: "Easy" | "Medium" | "Hard";
-  points: string;
-  openToEveryone: boolean;
   category: string;
   customCategory: string;
 };
@@ -106,8 +90,6 @@ const initialFormState: ChallengeFormState = {
   answer: "",
   options: "",
   difficulty: "Medium",
-  points: "20",
-  openToEveryone: true,
   category: "Landmarks",
   customCategory: "",
 };
@@ -184,7 +166,6 @@ export default function AdminEventsPage() {
     const description = formState.description.trim();
     const question = formState.question.trim();
     const answer = formState.answer.trim();
-    const points = Number(formState.points) || 0;
     const finalCategory = formState.category === "Other" ? formState.customCategory.trim() || "Other" : formState.category;
 
     if (!title || !location || !description || !question || !answer || !finalCategory) {
@@ -208,8 +189,6 @@ export default function AdminEventsPage() {
         .map((option) => option.trim())
         .filter(Boolean),
       difficulty: formState.difficulty,
-      points,
-      openToEveryone: formState.openToEveryone,
       createdAt: new Date().toISOString(),
       published: false,
       card: null,
@@ -401,27 +380,6 @@ export default function AdminEventsPage() {
               />
             </label>
 
-            <label className="md:col-span-1 block text-sm font-medium text-slate-700">
-              Points
-              <input
-                type="number"
-                min="5"
-                max="100"
-                value={formState.points}
-                onChange={(event) => updateField("points", event.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-              />
-            </label>
-
-            <label className="md:col-span-2 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700">
-              Open to everyone
-              <input
-                type="checkbox"
-                checked={formState.openToEveryone}
-                onChange={(event) => updateField("openToEveryone", event.target.checked)}
-                className="h-4 w-4 accent-[#043673]"
-              />
-            </label>
           </div>
 
           <button
@@ -458,7 +416,7 @@ export default function AdminEventsPage() {
                   <p className="mt-2 text-xs text-slate-500">{challenge.location}</p>
                   <p className="mt-2 text-sm text-slate-600">{challenge.question}</p>
                   <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
-                    <span>{challenge.points} pts</span>
+                    <span>{challenge.difficulty}</span>
                     <span>{challenge.category}</span>
                   </div>
                 </div>
