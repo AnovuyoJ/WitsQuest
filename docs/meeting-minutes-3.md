@@ -5,6 +5,7 @@
 Busisiwe Dlamini 
 Lerato Sikhumbana (Took minutes)
 Anovuyo Dlamini
+THabo Maleke
 
 **Discussion:**
 
@@ -16,6 +17,7 @@ Anovuyo Dlamini
 2.Sprint 2
 
 - We would like to have completed the remaining basic features, and do the intermediate features by the second sprints' marking.
+- Will dicuss more after marking.
 
 
 
