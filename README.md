@@ -17,7 +17,7 @@ Full setup instructions are in our documentation.
 Quick start:
 
 ```bash
-git clone <your-gitea-repo-url>
+git clone https://sdp.ms.wits.ac.za/bugs-bunnies/WitsQuest
 cd WitsQuest
 npm install
 npm run dev
