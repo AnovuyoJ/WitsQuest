@@ -2,8 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import {
-  getCardThemeByRarity,
-  getCardTierByPoints,
+  getCardThemeByDifficulty,
   loadSavedChallenges,
   saveSavedChallenges,
   type SavedChallenge,
@@ -59,13 +58,10 @@ export default function AdminCardsPage() {
   const cardPreview = useMemo(() => {
     if (!selectedChallenge) return null;
 
-    const points = selectedChallenge.points || 20;
-    const rarity = getCardTierByPoints(points);
-    const theme = getCardThemeByRarity(rarity);
+    const theme = getCardThemeByDifficulty(selectedChallenge.difficulty);
 
     return {
-      rarity,
-      points,
+      rarity: theme.rarity,
       title: cardTitle.trim() || selectedChallenge.title,
       description: cardDescription.trim() || selectedChallenge.description,
       accent: theme.accent,
@@ -83,9 +79,7 @@ export default function AdminCardsPage() {
 
     const title = cardTitle.trim() || selectedChallenge.title;
     const description = cardDescription.trim() || selectedChallenge.description;
-    const points = Number(selectedChallenge.points) || 20;
-    const rarity = getCardTierByPoints(points);
-    const theme = getCardThemeByRarity(rarity);
+    const theme = getCardThemeByDifficulty(selectedChallenge.difficulty);
 
     const card: SavedChallengeCard = {
       id: typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -93,12 +87,11 @@ export default function AdminCardsPage() {
         : `${Date.now()}`,
       eventId: selectedChallenge.id,
       title,
-      rarity,
+      rarity: theme.rarity,
       description,
       accent: theme.accent,
       badge: theme.badge,
       strength: theme.strength,
-      points,
       tag: selectedChallenge.category || "General",
     };
 
@@ -201,7 +194,7 @@ export default function AdminCardsPage() {
                     </div>
 
                     <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-slate-500">
-                      <span>{challenge.points} pts</span>
+                      <span>{challenge.difficulty}</span>
                       <span className="rounded-full border border-[#043673]/15 bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#043673]">
                         {challenge.category}
                       </span>
@@ -247,7 +240,7 @@ export default function AdminCardsPage() {
                         </span>
                       </div>
                       <span className="shrink-0 text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                        {challenge.points} pts
+                        {challenge.difficulty}
                       </span>
                     </button>
                   );
@@ -263,7 +256,7 @@ export default function AdminCardsPage() {
               <div className="mb-6 flex items-center justify-between gap-3">
                 <h2 className="font-serif text-xl text-[#043673]">Card definition</h2>
                 <span className="rounded-full bg-[#043673]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#043673]">
-                  {selectedChallenge.points} pts
+                  {selectedChallenge.difficulty}
                 </span>
               </div>
 
@@ -313,7 +306,6 @@ export default function AdminCardsPage() {
                       <p className="mt-2 max-w-xs text-sm text-white/80">{cardPreview.description}</p>
                     </div>
                     <div className="mt-6 flex items-center justify-between text-sm">
-                      <span>{cardPreview.points} pts</span>
                       <span>{cardPreview.strength}</span>
                     </div>
                   </div>

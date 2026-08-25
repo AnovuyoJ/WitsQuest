@@ -45,7 +45,6 @@ export default function TriviaQuestionsPage() {
           answer: challenge.answer,
           explanation: `${challenge.title} challenge: ${challenge.description}`,
           difficulty: challenge.difficulty,
-          points: challenge.points,
         }}
       />
     </div>

@@ -7,7 +7,6 @@ export type TriviaQuestion = {
   answer: string;
   explanation: string;
   difficulty: Difficulty;
-  points: number;
 };
 
 export type TriviaEvent = {
@@ -26,7 +25,6 @@ export type EarnedCard = {
   initials: string;
   prompt: string;
   difficulty: Difficulty;
-  points: number;
   earnedAt: string;
 };
 
@@ -87,7 +85,6 @@ const greatHallQuestions: TriviaQuestion[] = [
     answer: "Walking between the front center columns of the Great Hall",
     explanation: "The Great Hall superstition warns students against walking between the front central columns before graduation.",
     difficulty: "Easy",
-    points: 100,
   },
   {
     id: "great-hall-2",
@@ -101,7 +98,6 @@ const greatHallQuestions: TriviaQuestion[] = [
     answer: "Classical Greek Revival (Neoclassical)",
     explanation: "The Great Hall's portico reflects a neoclassical style inspired by classical Greek architecture.",
     difficulty: "Easy",
-    points: 100,
   },
   {
     id: "great-hall-3",
@@ -110,7 +106,6 @@ const greatHallQuestions: TriviaQuestion[] = [
     answer: "1920s",
     explanation: "The Great Hall was officially completed and opened in the 1920s, with the building opening in 1925.",
     difficulty: "Medium",
-    points: 200,
   },
   {
     id: "great-hall-4",
@@ -124,7 +119,6 @@ const greatHallQuestions: TriviaQuestion[] = [
     answer: "William Cullen Library",
     explanation: "The Great Hall faces William Cullen Library across the Library Lawns, making it a central civic landmark.",
     difficulty: "Medium",
-    points: 200,
   },
   {
     id: "great-hall-5",
@@ -138,7 +132,6 @@ const greatHallQuestions: TriviaQuestion[] = [
     answer: "Emley & Williamson (Frank Emley)",
     explanation: "Frank Emley and Emley & Williamson were responsible for the design of the Great Hall and associated early campus work.",
     difficulty: "Hard",
-    points: 300,
   },
 ];
 
@@ -150,7 +143,6 @@ const solomonMahlanguHouseQuestions: TriviaQuestion[] = [
     answer: "Senate House",
     explanation: "Before being renamed, the building was officially known as Senate House.",
     difficulty: "Easy",
-    points: 100,
   },
   {
     id: "solomon-mahlangu-house-2",
@@ -159,7 +151,6 @@ const solomonMahlanguHouseQuestions: TriviaQuestion[] = [
     answer: "Solomon Kalushi Mahlangu",
     explanation: "The building is named after Solomon Kalushi Mahlangu, a key anti-apartheid martyr.",
     difficulty: "Easy",
-    points: 100,
   },
   {
     id: "solomon-mahlangu-house-3",
@@ -168,7 +159,6 @@ const solomonMahlanguHouseQuestions: TriviaQuestion[] = [
     answer: "The Concourse",
     explanation: "Students commonly refer to the wide ground-floor through-space as the Concourse.",
     difficulty: "Medium",
-    points: 200,
   },
   {
     id: "solomon-mahlangu-house-4",
@@ -177,7 +167,6 @@ const solomonMahlanguHouseQuestions: TriviaQuestion[] = [
     answer: "Fees Must Fall",
     explanation: "The building became a major rally point and meeting place during the Fees Must Fall movement.",
     difficulty: "Medium",
-    points: 200,
   },
   {
     id: "solomon-mahlangu-house-5",
@@ -191,7 +180,6 @@ const solomonMahlanguHouseQuestions: TriviaQuestion[] = [
     answer: "The Wits University Senate",
     explanation: "The Senate traditionally held formal debates and meetings in the upper council chambers.",
     difficulty: "Hard",
-    points: 300,
   },
 ];
 
@@ -203,7 +191,6 @@ const chamberOfMinesQuestions: TriviaQuestion[] = [
     answer: "Mining Engineering",
     explanation: "The building is closely tied to Mining Engineering and the mining sciences at Wits.",
     difficulty: "Easy",
-    points: 100,
   },
   {
     id: "chamber-of-mines-2",
@@ -217,7 +204,6 @@ const chamberOfMinesQuestions: TriviaQuestion[] = [
     answer: "An underground mine shaft replica",
     explanation: "The basement includes a full-scale mock underground mine shaft for practical teaching and training.",
     difficulty: "Easy",
-    points: 100,
   },
   {
     id: "chamber-of-mines-3",
@@ -231,7 +217,6 @@ const chamberOfMinesQuestions: TriviaQuestion[] = [
     answer: "The Chamber of Mines of South Africa",
     explanation: "The original construction was sponsored and funded by the Chamber of Mines of South Africa.",
     difficulty: "Medium",
-    points: 200,
   },
   {
     id: "chamber-of-mines-4",
@@ -245,7 +230,6 @@ const chamberOfMinesQuestions: TriviaQuestion[] = [
     answer: "To absorb heavy vibrations from industrial rock-crushing and testing machinery",
     explanation: "The reinforced structure absorbs the vibration and load from heavy mining machinery and rock-testing equipment.",
     difficulty: "Medium",
-    points: 200,
   },
   {
     id: "chamber-of-mines-5",
@@ -259,7 +243,6 @@ const chamberOfMinesQuestions: TriviaQuestion[] = [
     answer: "Metallurgical Engineering",
     explanation: "Metallurgical Engineering is the related materials discipline that shares the same facilities in the building.",
     difficulty: "Hard",
-    points: 300,
   },
 ];
 
@@ -276,7 +259,6 @@ const witsArtMuseumQuestions: TriviaQuestion[] = [
     answer: "Jan Smuts Avenue and Jorissen Street",
     explanation: "WAM is located on the corner of Jan Smuts Avenue and Jorissen Street in Braamfontein.",
     difficulty: "Easy",
-    points: 100,
   },
   {
     id: "wits-art-museum-2",
@@ -290,7 +272,6 @@ const witsArtMuseumQuestions: TriviaQuestion[] = [
     answer: "A car dealership and service station",
     explanation: "The building originally operated as a Lawson Motors car dealership and service station before becoming WAM.",
     difficulty: "Easy",
-    points: 100,
   },
   {
     id: "wits-art-museum-3",
@@ -304,7 +285,6 @@ const witsArtMuseumQuestions: TriviaQuestion[] = [
     answer: "Sub-Saharan African art",
     explanation: "WAM's permanent collections are strongly centred on historical, modern, and contemporary art from Sub-Saharan Africa.",
     difficulty: "Medium",
-    points: 200,
   },
   {
     id: "wits-art-museum-4",
@@ -313,7 +293,6 @@ const witsArtMuseumQuestions: TriviaQuestion[] = [
     answer: "2012",
     explanation: "The newly redeveloped WAM gallery space officially opened in 2012.",
     difficulty: "Medium",
-    points: 200,
   },
   {
     id: "wits-art-museum-5",
@@ -327,7 +306,6 @@ const witsArtMuseumQuestions: TriviaQuestion[] = [
     answer: "Over 15,000 artworks",
     explanation: "WAM's subterranean vault collections hold more than 15,000 African artworks.",
     difficulty: "Hard",
-    points: 300,
   },
 ];
 

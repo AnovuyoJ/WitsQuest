@@ -57,7 +57,6 @@ export default function CardsPage() {
               </div>
 
               <div className="mt-6 flex items-center justify-between text-sm">
-                <span>{card.points} pts</span>
                 <span>{card.strength}</span>
               </div>
             </div>

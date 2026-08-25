@@ -236,7 +236,7 @@ export default function AdminDashboardPage() {
                 >
                   <span className="truncate font-medium">{challenge.title}</span>
                   <span className="shrink-0 text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                    {challenge.points} pts
+                    {challenge.difficulty}
                   </span>
                 </Link>
               ))}
@@ -260,11 +260,11 @@ export default function AdminDashboardPage() {
                 <Link
                   key={challenge.id}
                   href="/dashboard/admin/cards"
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 transition hover:border-[#043673]/40 hover:bg-[#043673]/5"
+                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2 text-sm text-slate-700 transition hover:border-[#043673]/5"
                 >
                   <span className="truncate font-medium">{challenge.title}</span>
                   <span className="shrink-0 text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                    {challenge.points} pts
+                    {challenge.difficulty}
                   </span>
                 </Link>
               ))}

@@ -152,12 +152,12 @@ export default function EventsPage() {
         {showScoringInfo && (
           <div className="mt-3 rounded-2xl border border-[#C9A24B]/30 bg-[#C9A24B]/8 p-4 shadow-sm">
             <p className="text-[10px] font-semibold uppercase tracking-[0.22em] text-[#C9A24B]">
-              Card scoring rules
+              Card colours
             </p>
             <ul className="mt-2 space-y-1 text-sm text-slate-700">
-              <li>Gold = 100 points</li>
-              <li>Black = 50 points</li>
-              <li>Blue = 20 points</li>
+              <li>Blue = Easy</li>
+              <li>Black = Medium</li>
+              <li>Gold = Hard</li>
             </ul>
           </div>
         )}
@@ -199,9 +199,6 @@ export default function EventsPage() {
                       style={{ background: event.card?.accent ?? WITS_BLUE }}
                     >
                       {event.card?.badge ?? event.difficulty}
-                    </span>
-                    <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-slate-500">
-                      {event.points} pts
                     </span>
                   </div>
                   <h3 className="font-serif text-xl" style={{ color: WITS_BLUE }}>
