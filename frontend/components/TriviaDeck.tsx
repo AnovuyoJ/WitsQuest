@@ -25,7 +25,6 @@ export default function TriviaDeck({
   question: TriviaQuestion | null;
 }) {
   const router = useRouter();
-  const [score, setScore] = useState(0);
   const [feedback, setFeedback] = useState<string | null>(null);
   const [revealed, setRevealed] = useState(false);
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
@@ -56,11 +55,10 @@ export default function TriviaDeck({
       const challenge = loadSavedChallenges().find((item) => item.id === eventId) ?? null;
       const cardAwarded = challenge ? awardCollectedCardForChallenge(challenge) : false;
 
-      setScore((previous) => previous + question.points);
       setFeedback(
         cardAwarded && challenge?.card
-          ? `Correct! +${question.points} pts. You earned the ${challenge.card.badge} card.`
-          : `Correct! +${question.points} pts`
+          ? `Correct! You earned the ${challenge.card.badge} card.`
+          : "Correct!"
       );
     } else {
       setFeedback(`Not quite. The correct answer is: ${question.answer}`);
@@ -78,9 +76,6 @@ export default function TriviaDeck({
           <h3 className="mt-2 font-serif text-2xl text-[#043673]">{eventTitle}</h3>
           <p className="mt-1 text-sm text-gray-500">{eventLocation}</p>
         </div>
-        <div className="rounded-full bg-[#043673]/5 px-3 py-1.5 text-sm font-semibold text-[#043673]">
-          Score: {score}
-        </div>
       </div>
 
       <div className="rounded-2xl border border-[#043673]/10 bg-[#043673]/5 p-5">
@@ -88,7 +83,6 @@ export default function TriviaDeck({
           <span className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] ${difficultyColors[question.difficulty]}`}>
             {question.difficulty}
           </span>
-          <span className="text-sm font-semibold text-[#043673]">+{question.points} pts</span>
         </div>
         <p className="text-lg font-medium leading-7 text-[#0A1F3D]">{question.prompt}</p>
       </div>
@@ -130,7 +124,7 @@ export default function TriviaDeck({
 
       <div className="mt-6 flex items-center justify-between gap-3">
         <span className="text-[10px] font-semibold uppercase tracking-[0.18em] text-slate-500">
-          {eventCatalog[eventId]?.activeWindow ?? "Open to everyone"}
+          {eventCatalog[eventId]?.activeWindow ?? "Campus quest"}
         </span>
 
         <button
