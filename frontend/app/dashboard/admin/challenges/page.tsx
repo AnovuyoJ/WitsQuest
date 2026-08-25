@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
@@ -78,7 +78,7 @@ function isAdminGitHubUser(user: any) {
   );
 }
 
-export default function AdminChallengesPage() {
+function AdminChallengesContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -1127,5 +1127,19 @@ export default function AdminChallengesPage() {
         </section>
       </div>
     </div>
+  );
+}
+
+export default function AdminChallengesPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
+          Loading...
+        </div>
+      }
+    >
+      <AdminChallengesContent />
+    </Suspense>
   );
 }
