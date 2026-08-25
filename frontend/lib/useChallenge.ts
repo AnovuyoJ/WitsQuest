@@ -1,107 +1,544 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useState,
+} from "react";
+
 import { supabase } from "@/lib/supabaseClient";
 
-type Challenge = {
+export type Challenge = {
   id: string;
+  event_id: string;
   question_text: string;
-  question_type: "multiple_choice" | "text" | "true_false";
+  question_type:
+    | "multiple_choice"
+    | "text"
+    | "true_false";
   options: string[] | null;
+  correct_answer: string;
+  card_id: string | null;
 };
 
-type SubmitResult = {
+export type ChallengeResult = {
   correct: boolean;
   correctAnswer: string;
-  cardAwarded: boolean;
   alreadyCompleted: boolean;
+  cardAwarded: boolean;
 };
 
 type ChallengeState =
-  | { status: "loading" }
-  | { status: "ready"; challenge: Challenge }
-  | { status: "submitting"; challenge: Challenge }
-  | { status: "result"; challenge: Challenge; result: SubmitResult }
-  | { status: "error"; message: string };
+  | {
+      status: "loading";
+    }
+  | {
+      status: "ready";
+      challenge: Challenge;
+    }
+  | {
+      status: "submitting";
+      challenge: Challenge;
+    }
+  | {
+      status: "result";
+      challenge: Challenge;
+      result: ChallengeResult;
+    }
+  | {
+      status: "error";
+      message: string;
+    };
 
 export function useChallenge(eventId: string) {
-  const [state, setState] = useState<ChallengeState>({ status: "loading" });
+  const [state, setState] =
+    useState<ChallengeState>({
+      status: "loading",
+    });
 
-  useEffect(() => {
-    async function loadChallenge() {
-      const { data, error } = await supabase
-        .from("challenges")
-        .select("id, question_text, question_type, options")
-        .eq("event_id", eventId)
-        .single();
+  /*
+   * Find the reward card for this event.
+   */
+  async function getRewardCard() {
+    const { data, error } = await supabase
+      .from("cards")
+      .select("id, event_id, title")
+      .eq("event_id", eventId)
+      .maybeSingle();
 
-      if (error || !data) {
-        setState({ status: "error", message: "No challenge found for this event." });
+    if (error) {
+      console.error(
+        "REWARD CARD LOOKUP ERROR:",
+        error
+      );
+
+      throw error;
+    }
+
+    return data;
+  }
+
+  /*
+   * Check whether this player actually
+   * owns the event reward card.
+   */
+  async function playerOwnsCard(
+    playerId: string,
+    cardId: string
+  ) {
+    const { data, error } = await supabase
+      .from("player_cards")
+      .select("id")
+      .eq("player_id", playerId)
+      .eq("card_id", cardId)
+      .maybeSingle();
+
+    if (error) {
+      console.error(
+        "PLAYER CARD CHECK ERROR:",
+        error
+      );
+
+      throw error;
+    }
+
+    return Boolean(data);
+  }
+
+  /*
+   * Award the reward card.
+   */
+  async function awardCard(
+    playerId: string,
+    cardId: string
+  ) {
+    const alreadyOwns =
+      await playerOwnsCard(
+        playerId,
+        cardId
+      );
+
+    if (alreadyOwns) {
+      return false;
+    }
+
+    const { error } = await supabase
+      .from("player_cards")
+      .insert({
+        player_id: playerId,
+        event_id: eventId,
+        card_id: cardId,
+      });
+
+    if (error) {
+      console.error(
+        "CARD AWARD ERROR:",
+        error
+      );
+
+      throw error;
+    }
+
+    console.log(
+      "CARD AWARDED SUCCESSFULLY:",
+      {
+        playerId,
+        eventId,
+        cardId,
+      }
+    );
+
+    return true;
+  }
+
+  /*
+   * Load challenge.
+   */
+  const loadChallenge =
+    useCallback(async () => {
+      if (!eventId) {
+        setState({
+          status: "error",
+          message:
+            "No event was selected.",
+        });
+
         return;
       }
 
-      setState({ status: "ready", challenge: data as Challenge });
-    }
+      setState({
+        status: "loading",
+      });
 
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
+
+      if (userError || !user) {
+        setState({
+          status: "error",
+          message:
+            "You must be signed in to attempt this challenge.",
+        });
+
+        return;
+      }
+
+      /*
+       * Load first challenge for event.
+       */
+      const {
+        data: challengeData,
+        error: challengeError,
+      } = await supabase
+        .from("challenges")
+        .select(`
+          id,
+          event_id,
+          question_text,
+          question_type,
+          options,
+          correct_answer,
+          card_id
+        `)
+        .eq("event_id", eventId)
+        .order("created_at", {
+          ascending: true,
+        })
+        .limit(1)
+        .maybeSingle();
+
+      if (challengeError) {
+        console.error(
+          "CHALLENGE LOAD ERROR:",
+          challengeError
+        );
+
+        setState({
+          status: "error",
+          message:
+            challengeError.message,
+        });
+
+        return;
+      }
+
+      if (!challengeData) {
+        setState({
+          status: "error",
+          message:
+            "This event does not have a challenge yet.",
+        });
+
+        return;
+      }
+
+      const challenge =
+        challengeData as Challenge;
+
+      /*
+       * Has this player answered correctly before?
+       */
+      const {
+        data: completedAttempts,
+        error: completedError,
+      } = await supabase
+        .from("challenge_attempts")
+        .select("id")
+        .eq("player_id", user.id)
+        .eq("event_id", eventId)
+        .eq("correct", true)
+        .limit(1);
+
+      if (completedError) {
+        console.error(
+          "COMPLETION CHECK ERROR:",
+          completedError
+        );
+
+        setState({
+          status: "error",
+          message:
+            completedError.message,
+        });
+
+        return;
+      }
+
+      /*
+       * If they previously completed it,
+       * make sure they actually received
+       * the card.
+       */
+      if (
+        completedAttempts &&
+        completedAttempts.length > 0
+      ) {
+        try {
+          const rewardCard =
+            await getRewardCard();
+
+          if (!rewardCard) {
+            setState({
+              status: "result",
+              challenge,
+              result: {
+                correct: true,
+                correctAnswer:
+                  challenge.correct_answer,
+                alreadyCompleted: true,
+                cardAwarded: false,
+              },
+            });
+
+            return;
+          }
+
+          const ownsCard =
+            await playerOwnsCard(
+              user.id,
+              rewardCard.id
+            );
+
+          /*
+           * Completed previously but card
+           * was never awarded.
+           *
+           * Repair that missing award now.
+           */
+          if (!ownsCard) {
+            const awarded =
+              await awardCard(
+                user.id,
+                rewardCard.id
+              );
+
+            setState({
+              status: "result",
+              challenge,
+              result: {
+                correct: true,
+                correctAnswer:
+                  challenge.correct_answer,
+                alreadyCompleted: true,
+                cardAwarded: awarded,
+              },
+            });
+
+            return;
+          }
+
+          setState({
+            status: "result",
+            challenge,
+            result: {
+              correct: true,
+              correctAnswer:
+                challenge.correct_answer,
+              alreadyCompleted: true,
+              cardAwarded: false,
+            },
+          });
+
+          return;
+        } catch (error) {
+          setState({
+            status: "error",
+            message:
+              error instanceof Error
+                ? error.message
+                : "Could not check your reward card.",
+          });
+
+          return;
+        }
+      }
+
+      setState({
+        status: "ready",
+        challenge,
+      });
+    }, [eventId]);
+
+  useEffect(() => {
     loadChallenge();
-  }, [eventId]);
+  }, [loadChallenge]);
 
-  async function submit(answer: string) {
-    if (state.status !== "ready") return;
-
-    setState({ status: "submitting", challenge: state.challenge });
-
-    const {
-      data: { session },
-    } = await supabase.auth.getSession();
-
-    if (!session) {
-      setState({ status: "error", message: "You need to be signed in to answer." });
+  /*
+   * Submit answer.
+   */
+  async function submit(
+    submittedAnswer: string
+  ) {
+    if (state.status !== "ready") {
       return;
     }
 
-    try {
-      const res = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/submit-answer`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${session.access_token}`,
-          },
-          body: JSON.stringify({ answer }),
-        }
-      );
+    const challenge =
+      state.challenge;
 
-      const body = await res.json();
+    const answer =
+      submittedAnswer
+        .trim()
+        .toLowerCase();
 
-      if (res.status === 403) {
+    const expected =
+      challenge.correct_answer
+        .trim()
+        .toLowerCase();
+
+    if (!answer) {
+      return;
+    }
+
+    setState({
+      status: "submitting",
+      challenge,
+    });
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
+
+    if (userError || !user) {
+      setState({
+        status: "error",
+        message:
+          "You must be signed in.",
+      });
+
+      return;
+    }
+
+    const correct =
+      answer === expected;
+
+    /*
+     * Wrong answer.
+     */
+    if (!correct) {
+      const { error } = await supabase
+        .from("challenge_attempts")
+        .insert({
+          player_id: user.id,
+          event_id: eventId,
+          correct: false,
+        });
+
+      if (error) {
+        console.error(
+          "ATTEMPT INSERT ERROR:",
+          error
+        );
+
         setState({
           status: "error",
-          message: "You need to verify your location at this event before answering.",
+          message:
+            error.message,
         });
-        return;
-      }
 
-      if (!res.ok) {
-        setState({ status: "error", message: body.message || "Something went wrong." });
         return;
       }
 
       setState({
         status: "result",
-        challenge: state.challenge,
+        challenge,
         result: {
-          correct: body.correct,
-          correctAnswer: body.correctAnswer,
-          cardAwarded: body.cardAwarded,
-          alreadyCompleted: body.alreadyCompleted,
+          correct: false,
+          correctAnswer:
+            challenge.correct_answer,
+          alreadyCompleted: false,
+          cardAwarded: false,
         },
       });
-    } catch {
-      setState({ status: "error", message: "Could not reach the server. Try again." });
+
+      return;
+    }
+
+    /*
+     * CORRECT ANSWER
+     */
+    try {
+      const rewardCard =
+        await getRewardCard();
+
+      if (!rewardCard) {
+        console.error(
+          "No card exists for event:",
+          eventId
+        );
+
+        setState({
+          status: "error",
+          message:
+            "Your answer is correct, but this event does not have a reward card yet.",
+        });
+
+        return;
+      }
+
+      /*
+       * Award the card FIRST.
+       */
+      const cardAwarded =
+        await awardCard(
+          user.id,
+          rewardCard.id
+        );
+
+      /*
+       * Only after the reward succeeds do
+       * we record successful completion.
+       */
+      const {
+        error: attemptError,
+      } = await supabase
+        .from("challenge_attempts")
+        .insert({
+          player_id: user.id,
+          event_id: eventId,
+          correct: true,
+        });
+
+      if (attemptError) {
+        console.error(
+          "SUCCESS ATTEMPT ERROR:",
+          attemptError
+        );
+      }
+
+      setState({
+        status: "result",
+        challenge,
+        result: {
+          correct: true,
+          correctAnswer:
+            challenge.correct_answer,
+          alreadyCompleted: false,
+          cardAwarded,
+        },
+      });
+    } catch (error) {
+      console.error(
+        "REWARD PROCESS ERROR:",
+        error
+      );
+
+      setState({
+        status: "error",
+        message:
+          error instanceof Error
+            ? `Correct answer, but reward failed: ${error.message}`
+            : "Correct answer, but the reward could not be awarded.",
+      });
     }
   }
 
-  return { state, submit };
+  return {
+    state,
+    submit,
+    reload: loadChallenge,
+  };
 }

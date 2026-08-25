@@ -47,6 +47,11 @@ const navItems: NavItem[] = [
     icon: <AdminIcon />,
     href: "/dashboard/admin",
   },
+  {
+    label: "Games",
+    icon: <GameIcon />,
+    href: "/dashboard/games",
+  },
 ];
 
 type SidebarProps = {
@@ -444,6 +449,33 @@ function MapIcon() {
       <path d="M3 6.5 9 3l6 3.5L21 3v14.5L15 21l-6-3.5L3 21V6.5Z" />
       <path d="M9 3v14.5" />
       <path d="M15 6.5V21" />
+    </svg>
+  );
+}
+function GameIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      {/* Left sword */}
+      <path d="M14.5 5.5 18 2l1 1-3.5 3.5" />
+      <path d="m13 7 4 4" />
+      <path d="M17 11 8 20" />
+      <path d="m6 18 2 2" />
+
+      {/* Right sword */}
+      <path d="M9.5 5.5 6 2 5 3l3.5 3.5" />
+      <path d="m11 7-4 4" />
+      <path d="m7 11 9 9" />
+      <path d="m18 18-2 2" />
     </svg>
   );
 }

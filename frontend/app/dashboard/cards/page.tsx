@@ -1,555 +1,282 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  COLLECTED_CARDS_UPDATED_EVENT,
-  loadCollectedCards,
-  type CollectedCard,
-} from "@/lib/adminChallenges";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabaseClient";
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
 
-type GroupBy = "tag" | "rarity";
-type CompareAttribute = "points" | "rarity" | "strength";
-
-const rarityScore = {
-  Blue: 1,
-  Black: 2,
-  Gold: 3,
+type Card = {
+  id: string;
+  title: string;
+  rarity: "Blue" | "Black" | "Gold";
+  description: string | null;
+  accent: string | null;
+  badge: string | null;
+  strength: string | null;
+  points: number;
+  tag: string | null;
 };
 
-const strengthScore: Record<string, number> = {
-  Easy: 1,
-  Medium: 2,
-  Hard: 3,
+type PlayerCard = {
+  id: string;
+  player_id: string;
+  event_id: string;
+  card_id: string;
+  awarded_at: string | null;
+  cards: Card | null;
 };
 
 export default function CardsPage() {
-  const [cards, setCards] = useState<CollectedCard[]>([]);
-
-  const [groupBy, setGroupBy] =
-    useState<GroupBy>("tag");
-
-  const [selectedDeck, setSelectedDeck] =
-    useState<string | null>(null);
-
-  const [compareAttribute, setCompareAttribute] =
-    useState<CompareAttribute>("points");
-
-  const [round, setRound] = useState(0);
+  const [cards, setCards] = useState<PlayerCard[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const syncCards = () =>
-      setCards(loadCollectedCards());
+    async function loadCards() {
+      setLoading(true);
+      setError(null);
 
-    syncCards();
+      /*
+       * Get logged-in player
+       */
+      const {
+        data: { user },
+        error: userError,
+      } = await supabase.auth.getUser();
 
-    window.addEventListener(
-      COLLECTED_CARDS_UPDATED_EVENT,
-      syncCards
-    );
+      if (userError) {
+        console.error("USER ERROR:", userError);
 
-    return () => {
-      window.removeEventListener(
-        COLLECTED_CARDS_UPDATED_EVENT,
-        syncCards
-      );
-    };
-  }, []);
-
-  /*
-   * --------------------------------------------------
-   * CREATE DECKS
-   * --------------------------------------------------
-   */
-
-  const decks = useMemo(() => {
-    const grouped: Record<
-      string,
-      CollectedCard[]
-    > = {};
-
-    cards.forEach((card) => {
-      const key =
-        groupBy === "tag"
-          ? card.tag || "General"
-          : card.rarity;
-
-      if (!grouped[key]) {
-        grouped[key] = [];
+        setError("Could not load your account.");
+        setLoading(false);
+        return;
       }
 
-      grouped[key].push(card);
-    });
+      if (!user) {
+        setError("You must be signed in to view your cards.");
+        setLoading(false);
+        return;
+      }
 
-    return grouped;
-  }, [cards, groupBy]);
+      /*
+       * Get cards actually owned by this player
+       */
+      const { data, error } = await supabase
+        .from("player_cards")
+        .select(`
+          id,
+          player_id,
+          event_id,
+          card_id,
+          awarded_at,
+          cards (
+            id,
+            title,
+            rarity,
+            description,
+            accent,
+            badge,
+            strength,
+            points,
+            tag
+          )
+        `)
+        .eq("player_id", user.id)
+        .order("awarded_at", {
+          ascending: false,
+        });
 
-  const selectedDeckCards =
-    selectedDeck && decks[selectedDeck]
-      ? decks[selectedDeck]
-      : [];
+      if (error) {
+        console.error("CARD LOAD ERROR:", error);
 
-  /*
-   * --------------------------------------------------
-   * ROUND COMPARISON
-   * --------------------------------------------------
-   */
+        setError(
+          `Could not load your cards: ${error.message}`
+        );
 
-  const currentCard =
-    selectedDeckCards.length > 0
-      ? selectedDeckCards[
-          round % selectedDeckCards.length
-        ]
-      : null;
+        setLoading(false);
+        return;
+      }
 
-  const opponentCard =
-    selectedDeckCards.length > 1
-      ? selectedDeckCards[
-          (round + 1) %
-            selectedDeckCards.length
-        ]
-      : null;
+      console.log("PLAYER CARDS:", data);
 
-  function getComparisonValue(
-    card: CollectedCard,
-    attribute: CompareAttribute
-  ) {
-    if (attribute === "points") {
-      return card.points;
-    }
-
-    if (attribute === "rarity") {
-      return rarityScore[card.rarity] ?? 0;
-    }
-
-    return strengthScore[card.strength] ?? 0;
-  }
-
-  function getWinner() {
-    if (!currentCard || !opponentCard) {
-      return null;
-    }
-
-    const firstValue =
-      getComparisonValue(
-        currentCard,
-        compareAttribute
+      setCards(
+        (data ?? []) as unknown as PlayerCard[]
       );
 
-    const secondValue =
-      getComparisonValue(
-        opponentCard,
-        compareAttribute
-      );
-
-    if (firstValue > secondValue) {
-      return currentCard.id;
+      setLoading(false);
     }
 
-    if (secondValue > firstValue) {
-      return opponentCard.id;
-    }
-
-    return "draw";
-  }
-
-  const winner = getWinner();
-
-  function nextRound() {
-    setRound((current) => current + 1);
-  }
-
-  function openDeck(name: string) {
-    setSelectedDeck(name);
-    setRound(0);
-  }
-
-  function closeDeck() {
-    setSelectedDeck(null);
-    setRound(0);
-  }
+    loadCards();
+  }, []);
 
   return (
     <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
       {/* HEADER */}
 
       <header className="mb-8">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.28em] text-[#C9A24B]">
+        <p
+          className="text-[10px] font-semibold uppercase tracking-[0.28em]"
+          style={{ color: WITS_GOLD }}
+        >
           Collection
         </p>
 
-        <h1 className="mt-2 font-serif text-3xl text-[#043673]">
+        <h1
+          className="mt-2 font-serif text-3xl"
+          style={{ color: WITS_BLUE }}
+        >
           My Cards
         </h1>
 
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-          Build decks from the cards you have earned
-          and compare their attributes round by round.
+        <p className="mt-2 text-sm text-slate-500">
+          View the reward cards you have earned by completing
+          challenges around campus.
         </p>
       </header>
 
+      {/* LOADING */}
+
+      {loading && (
+        <div className="rounded-[28px] bg-white p-10 text-center shadow-sm">
+          <p className="text-sm text-slate-500">
+            Loading your collection...
+          </p>
+        </div>
+      )}
+
+      {/* ERROR */}
+
+      {!loading && error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
       {/* NO CARDS */}
 
-      {cards.length === 0 ? (
+      {!loading && !error && cards.length === 0 && (
         <div className="rounded-[28px] border border-dashed border-slate-300 bg-white/60 p-10 text-center shadow-[0_2px_20px_-10px_rgba(4,54,115,0.12)]">
-          <p className="font-serif text-xl text-[#043673]">
-            Your collection is empty
-          </p>
+          <div
+            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
+            style={{
+              background: `${WITS_BLUE}10`,
+              color: WITS_BLUE,
+            }}
+          >
+            <CardIcon />
+          </div>
+
+          <h2
+            className="mt-5 font-serif text-xl"
+            style={{ color: WITS_BLUE }}
+          >
+            No cards collected yet
+          </h2>
 
           <p className="mt-2 text-sm text-slate-500">
-            Complete a challenge correctly to earn
-            your first card.
+            Answer a challenge correctly to earn your first card.
           </p>
         </div>
-      ) : selectedDeck ? (
-        /*
-         * ==================================================
-         * SELECTED DECK
-         * ==================================================
-         */
+      )}
 
-        <div className="space-y-6">
-          {/* Deck Header */}
+      {/* CARDS */}
 
-          <section className="flex flex-col gap-4 rounded-[28px] bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)] md:flex-row md:items-center md:justify-between">
-            <div>
-              <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#C9A24B]">
-                Selected deck
-              </p>
-
-              <h2 className="mt-2 font-serif text-2xl text-[#043673]">
-                {selectedDeck}
-              </h2>
-
-              <p className="mt-1 text-sm text-slate-500">
-                {selectedDeckCards.length}{" "}
-                {selectedDeckCards.length === 1
-                  ? "card"
-                  : "cards"}
-              </p>
-            </div>
-
-            <button
-              type="button"
-              onClick={closeDeck}
-              className="rounded-xl border border-slate-200 px-4 py-2.5 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
-            >
-              ← Back to decks
-            </button>
-          </section>
-
-          {/* COMPARISON */}
-
-          {selectedDeckCards.length < 2 ? (
-            <div className="rounded-[28px] border border-dashed border-slate-300 bg-white p-8 text-center">
-              <p className="font-semibold text-[#043673]">
-                More cards needed
-              </p>
-
-              <p className="mt-2 text-sm text-slate-500">
-                This deck needs at least two cards
-                before you can compare them.
-              </p>
-            </div>
-          ) : (
-            <section className="rounded-[28px] bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)]">
-              <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-                <div>
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#C9A24B]">
-                    Card battle
-                  </p>
-
-                  <h2 className="mt-2 font-serif text-2xl text-[#043673]">
-                    Round {round + 1}
-                  </h2>
-                </div>
-
-                <label className="text-sm font-medium text-slate-600">
-                  Compare by
-
-                  <select
-                    value={compareAttribute}
-                    onChange={(event) =>
-                      setCompareAttribute(
-                        event.target
-                          .value as CompareAttribute
-                      )
-                    }
-                    className="ml-3 rounded-xl border border-slate-200 bg-white px-3 py-2 outline-none focus:border-[#043673]"
-                  >
-                    <option value="points">
-                      Points
-                    </option>
-
-                    <option value="rarity">
-                      Rarity
-                    </option>
-
-                    <option value="strength">
-                      Strength
-                    </option>
-                  </select>
-                </label>
-              </div>
-
-              {/* TWO CARDS */}
-
-              <div className="mt-8 grid items-center gap-6 lg:grid-cols-[1fr_auto_1fr]">
-                {currentCard && (
-                  <ComparisonCard
-                    card={currentCard}
-                    attribute={
-                      compareAttribute
-                    }
-                    winner={
-                      winner === currentCard.id
-                    }
-                  />
-                )}
-
-                <div className="flex items-center justify-center">
-                  <div
-                    className="flex h-12 w-12 items-center justify-center rounded-full text-sm font-bold text-white shadow"
-                    style={{
-                      background: WITS_BLUE,
-                    }}
-                  >
-                    VS
-                  </div>
-                </div>
-
-                {opponentCard && (
-                  <ComparisonCard
-                    card={opponentCard}
-                    attribute={
-                      compareAttribute
-                    }
-                    winner={
-                      winner ===
-                      opponentCard.id
-                    }
-                  />
-                )}
-              </div>
-
-              {/* RESULT */}
-
-              <div className="mt-6 rounded-2xl bg-slate-50 p-4 text-center">
-                {winner === "draw" ? (
-                  <p className="font-semibold text-slate-600">
-                    This round is a draw.
-                  </p>
-                ) : winner ? (
-                  <p
-                    className="font-semibold"
-                    style={{
-                      color: WITS_BLUE,
-                    }}
-                  >
-                    {winner === currentCard?.id
-                      ? currentCard?.title
-                      : opponentCard?.title}{" "}
-                    wins this round!
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="mt-5 flex justify-center">
-                <button
-                  type="button"
-                  onClick={nextRound}
-                  className="rounded-xl px-6 py-3 text-sm font-semibold text-white transition hover:brightness-110"
-                  style={{
-                    background: WITS_BLUE,
-                  }}
-                >
-                  Next Round
-                </button>
-              </div>
-            </section>
-          )}
-
-          {/* CARDS IN DECK */}
-
-          <section>
-            <div className="mb-4 flex items-center justify-between">
-              <h2 className="font-serif text-xl text-[#043673]">
-                Cards in this deck
-              </h2>
-
-              <span className="text-xs font-semibold text-slate-400">
-                {selectedDeckCards.length}
-              </span>
-            </div>
-
-            <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-              {selectedDeckCards.map(
-                (card) => (
-                  <CollectedCardView
-                    key={card.id}
-                    card={card}
-                  />
-                )
-              )}
-            </div>
-          </section>
-        </div>
-      ) : (
-        /*
-         * ==================================================
-         * DECK LIST
-         * ==================================================
-         */
-
+      {!loading && !error && cards.length > 0 && (
         <>
-          {/* GROUPING OPTIONS */}
+          <div className="mb-5 flex items-center justify-between">
+            <h2
+              className="font-serif text-xl"
+              style={{ color: WITS_BLUE }}
+            >
+              Your Collection
+            </h2>
 
-          <section className="mb-6 rounded-[24px] bg-white p-5 shadow-[0_2px_20px_-10px_rgba(4,54,115,0.15)]">
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div>
-                <h2 className="font-serif text-xl text-[#043673]">
-                  My Decks
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-500">
-                  Choose how your cards should be
-                  grouped.
-                </p>
-              </div>
-
-              <div className="flex rounded-xl bg-slate-100 p-1">
-                <button
-                  type="button"
-                  onClick={() =>
-                    setGroupBy("tag")
-                  }
-                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    groupBy === "tag"
-                      ? "bg-white text-[#043673] shadow-sm"
-                      : "text-slate-500"
-                  }`}
-                >
-                  By Tag
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() =>
-                    setGroupBy("rarity")
-                  }
-                  className={`rounded-lg px-4 py-2 text-sm font-semibold transition ${
-                    groupBy === "rarity"
-                      ? "bg-white text-[#043673] shadow-sm"
-                      : "text-slate-500"
-                  }`}
-                >
-                  By Rarity
-                </button>
-              </div>
-            </div>
-          </section>
-
-          {/* DECKS */}
+            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#043673] shadow-sm">
+              {cards.length}{" "}
+              {cards.length === 1 ? "card" : "cards"}
+            </span>
+          </div>
 
           <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {Object.entries(decks).map(
-              ([deckName, deckCards]) => (
-                <button
-                  key={deckName}
-                  type="button"
-                  onClick={() =>
-                    openDeck(deckName)
-                  }
-                  className="group overflow-hidden rounded-[26px] border border-slate-200 bg-white text-left shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)] transition-all hover:-translate-y-1 hover:border-[#043673]/30 hover:shadow-[0_10px_30px_-12px_rgba(4,54,115,0.28)]"
+            {cards.map((playerCard) => {
+              const card = playerCard.cards;
+
+              if (!card) {
+                return null;
+              }
+
+              const accent =
+                card.accent ||
+                (card.rarity === "Gold"
+                  ? "#C9A24B"
+                  : card.rarity === "Black"
+                    ? "#111827"
+                    : "#2563eb");
+
+              return (
+                <div
+                  key={playerCard.id}
+                  className="relative overflow-hidden rounded-[24px] border border-slate-200 p-5 text-white shadow-xl"
+                  style={{
+                    background: `linear-gradient(135deg, ${accent}, rgba(0,0,0,0.85))`,
+                  }}
                 >
-                  <div
-                    className="h-2"
-                    style={{
-                      background:
-                        deckCards[0]
-                          ?.accent ||
-                        WITS_BLUE,
-                    }}
-                  />
+                  {/* RARITY */}
 
-                  <div className="p-6">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-[0.23em] text-[#C9A24B]">
-                          {groupBy === "tag"
-                            ? "Tag deck"
-                            : "Rarity deck"}
-                        </p>
-
-                        <h3 className="mt-2 font-serif text-2xl text-[#043673]">
-                          {deckName}
-                        </h3>
-                      </div>
-
-                      <div
-                        className="flex h-10 w-10 items-center justify-center rounded-xl"
-                        style={{
-                          background:
-                            `${WITS_BLUE}10`,
-                          color:
-                            WITS_BLUE,
-                        }}
-                      >
-                        <DeckIcon />
-                      </div>
-                    </div>
-
-                    <p className="mt-4 text-sm text-slate-500">
-                      {deckCards.length}{" "}
-                      {deckCards.length ===
-                      1
-                        ? "card"
-                        : "cards"}{" "}
-                      in this deck.
-                    </p>
-
-                    <div className="mt-5 flex -space-x-3">
-                      {deckCards
-                        .slice(0, 4)
-                        .map((card) => (
-                          <div
-                            key={
-                              card.id
-                            }
-                            title={
-                              card.title
-                            }
-                            className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white text-[10px] font-bold text-white shadow"
-                            style={{
-                              background:
-                                card.accent,
-                            }}
-                          >
-                            {card.title
-                              .charAt(0)
-                              .toUpperCase()}
-                          </div>
-                        ))}
-
-                      {deckCards.length >
-                        4 && (
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full border-2 border-white bg-slate-100 text-xs font-semibold text-slate-600">
-                          +
-                          {deckCards.length -
-                            4}
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="mt-6 text-sm font-semibold text-[#043673]">
-                      Open deck →
-                    </div>
+                  <div className="absolute right-4 top-4 rounded-full border border-white/30 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90">
+                    {card.badge || card.rarity}
                   </div>
-                </button>
-              )
-            )}
+
+                  <div className="mt-10">
+                    <div className="flex items-center justify-between gap-3">
+                      <p className="text-[10px] uppercase tracking-[0.32em] text-white/70">
+                        Wits Quest
+                      </p>
+
+                      <span className="rounded-full border border-white/30 bg-white/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-white/90">
+                        {card.tag || "General"}
+                      </span>
+                    </div>
+
+                    <h2 className="mt-3 font-serif text-2xl leading-tight">
+                      {card.title}
+                    </h2>
+
+                    {card.description && (
+                      <p className="mt-2 text-sm leading-6 text-white/80">
+                        {card.description}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-6 flex items-end justify-between">
+                    <div>
+                      <p className="text-[9px] uppercase tracking-[0.2em] text-white/50">
+                        Points
+                      </p>
+
+                      <p className="mt-1 font-serif text-2xl font-semibold">
+                        {card.points}
+                      </p>
+                    </div>
+
+                    <span className="text-sm text-white/80">
+                      {card.strength || card.rarity}
+                    </span>
+                  </div>
+
+                  {playerCard.awarded_at && (
+                    <p className="mt-4 border-t border-white/15 pt-3 text-[10px] text-white/50">
+                      Earned{" "}
+                      {new Date(
+                        playerCard.awarded_at
+                      ).toLocaleDateString()}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </>
       )}
@@ -557,140 +284,11 @@ export default function CardsPage() {
   );
 }
 
-/*
- * --------------------------------------------------
- * CARD DISPLAY
- * --------------------------------------------------
- */
-
-function CollectedCardView({
-  card,
-}: {
-  card: CollectedCard;
-}) {
-  return (
-    <div
-      className="relative overflow-hidden rounded-[24px] border border-slate-200 p-5 text-white shadow-xl"
-      style={{
-        background: `linear-gradient(135deg, ${card.accent}, rgba(0,0,0,0.85))`,
-      }}
-    >
-      <div className="absolute right-4 top-4 rounded-full border border-white/30 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90">
-        {card.badge}
-      </div>
-
-      <div className="mt-10">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[10px] uppercase tracking-[0.32em] text-white/70">
-            Wits Quest
-          </p>
-
-          <span className="rounded-full border border-white/30 bg-white/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-white/90">
-            {card.tag || "General"}
-          </span>
-        </div>
-
-        <h2 className="mt-3 font-serif text-2xl leading-tight">
-          {card.title}
-        </h2>
-
-        <p className="mt-2 text-sm text-white/80">
-          {card.description}
-        </p>
-      </div>
-
-      <div className="mt-6 flex items-center justify-between text-sm">
-        <span>{card.points} pts</span>
-        <span>{card.strength}</span>
-      </div>
-    </div>
-  );
-}
-
-/*
- * --------------------------------------------------
- * COMPARISON CARD
- * --------------------------------------------------
- */
-
-function ComparisonCard({
-  card,
-  attribute,
-  winner,
-}: {
-  card: CollectedCard;
-  attribute: CompareAttribute;
-  winner: boolean;
-}) {
-  let displayedValue: string | number;
-
-  if (attribute === "points") {
-    displayedValue = card.points;
-  } else if (attribute === "rarity") {
-    displayedValue = card.rarity;
-  } else {
-    displayedValue = card.strength;
-  }
-
-  return (
-    <div
-      className={`relative overflow-hidden rounded-[26px] border-2 p-6 text-white shadow-xl transition ${
-        winner
-          ? "border-[#C9A24B]"
-          : "border-transparent"
-      }`}
-      style={{
-        background: `linear-gradient(135deg, ${card.accent}, rgba(0,0,0,0.88))`,
-      }}
-    >
-      {winner && (
-        <div className="absolute left-4 top-4 rounded-full bg-[#C9A24B] px-3 py-1 text-[9px] font-bold uppercase tracking-[0.2em] text-white">
-          Round winner
-        </div>
-      )}
-
-      <div className="absolute right-4 top-4 rounded-full border border-white/30 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
-        {card.badge}
-      </div>
-
-      <div className="mt-12">
-        <p className="text-[10px] uppercase tracking-[0.3em] text-white/60">
-          Wits Quest
-        </p>
-
-        <h3 className="mt-3 font-serif text-2xl">
-          {card.title}
-        </h3>
-
-        <p className="mt-2 text-sm text-white/75">
-          {card.description}
-        </p>
-      </div>
-
-      <div className="mt-7 rounded-xl border border-white/20 bg-white/10 p-4">
-        <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-white/60">
-          {attribute}
-        </p>
-
-        <p className="mt-1 font-serif text-2xl">
-          {displayedValue}
-        </p>
-      </div>
-    </div>
-  );
-}
-
-/*
- * --------------------------------------------------
- * DECK ICON
- * --------------------------------------------------
- */
-
-function DeckIcon() {
+function CardIcon() {
   return (
     <svg
-      width="20"
-      height="20"
+      width="26"
+      height="26"
       viewBox="0 0 24 24"
       fill="none"
       stroke="currentColor"
@@ -701,14 +299,15 @@ function DeckIcon() {
     >
       <rect
         x="5"
-        y="4"
-        width="13"
-        height="16"
+        y="3"
+        width="14"
+        height="18"
         rx="2"
       />
 
-      <path d="M9 1h9a2 2 0 0 1 2 2v13" />
-      <path d="M2 8v10a3 3 0 0 0 3 3h9" />
+      <path d="M9 7h6" />
+      <path d="M9 11h6" />
+      <path d="M9 15h4" />
     </svg>
   );
 }
