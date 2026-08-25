@@ -1,30 +1,12 @@
 
-
 ### Acceptence Criteria:
 
-**As a user, I want to delete my account so that my personal data is permanently removed from the platform.**
-
-- Given a signed-in user requests account deletion
-When they confirm the action
-Then their account and associated personal data are permanently removed from the system.
-- Given a user requests account deletion
-When the request is submitted
-Then the system asks for explicit confirmation before proceeding.
-- Given a user's account has been deleted
-When they attempt to sign in again with the same credentials
-Then access should be denied.
-- Given a user has cards, collected data, or challenge attempts tied to their account
-When their account is deleted
-Then that data is either removed or anonymised according to the platform's data retention policy.
-- Given a user cancels the deletion confirmation
-When they choose not to proceed
-Then their account and data remain unchanged.
 
 **As a new user I want to create an account using my email and password so that I can access Wit's Quest.**
 
-- Given a new user provides a valid email and password
-When they submit the sign-up form
-Then their account is created and they are signed in.
+- Given a new user provides a valid email and password,
+when they submit the sign-up form,
+then their account is created and they are signed in.
 - Given a new user provides an email that is already registered
 When they submit the sign-up form
 Then the system rejects the request and displays an appropriate error.
@@ -40,8 +22,8 @@ Then a confirmation is shown and they are directed into the app.
 
 **As a user who forgot my password, I want to reset it via email so that I can regain access to my account.**
 
-- Given a user requests a password reset with a registered email
-When they submit the request
+- Given a user requests a password reset with a registered email,
+When they submit the request,
 Then a reset link is sent to that email address.
 - Given a user requests a password reset with an email that isn't registered
 When they submit the request
@@ -157,9 +139,7 @@ Then a summary of that event (title, distance, status) is shown.
 - Given there are no published events near the player
 When they open the map
 Then the system indicates that no nearby events are available.
-- Given a new event is published while the player has the map open
-When the data refreshes
-Then the new event marker appears without requiring a full page reload.
+
 
 **As a player, I want to see which events are too far away or have expired so that I don't waste time trying to reach them.**
 
@@ -280,9 +260,7 @@ Then the outcome is calculated using the same rules consistently, regardless of 
 - Given a match reaches its end condition
 When the final state is evaluated
 Then the winner is determined according to the defined rules, not by client-side calculation alone.
-- Given a rule-breaking action is attempted via a manipulated client request
-When the server processes it
-Then the server-side validation rejects it independently of what the client sent.
+
 
 **As a player, I want to see my past match results so that I can track how I've done.**
 
