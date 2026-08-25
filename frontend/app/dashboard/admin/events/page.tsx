@@ -1,472 +1,852 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
-import {
-  loadSavedChallenges,
-  saveSavedChallenges,
-  type SavedChallenge,
-} from "@/lib/adminChallenges";
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
-const ADMIN_GITHUB_USERNAME = "nessaforealz";
-const QUESTION_CATEGORIES = [
-  "Alumni",
-  "History",
-  "Landmarks",
-  "Arts",
-  "Science",
-  "Culture",
-  "Campus Life",
-  "Sports",
-  "Student Leadership",
-  "Other",
-];
-const WITS_LOCATIONS = [
-  "Great Hall",
-  "Wits Art Museum",
-  "Solomon Mahlangu House",
-  "Origins Centre",
-  "Chamber of Mines",
-  "Old Main Building",
-  "Wits Science Stadium",
-  "Barnato Hall",
-  "Muller Hall",
-  "The Clock Tower",
-  "Wits Health Sciences Building",
-  "Library Law Building",
-  "Braamfontein Campus",
-  "M1 Main Gate",
-  "University Corner",
-  "Wits Theatre",
-  "The Matrix",
-  "Moses Mabhida Road",
-  "M2 Access Route",
-  "Wits Student Union",
-  "Wits Business School",
-  "The Great Hall",
-  "Bennet & Bloom",
-  "FNB Building",
-  "Wits Village",
-  "Wits West Campus",
-  "School of Governance",
-  "Education Campus",
-  "Bunting Road",
-];
+const ADMIN_GITHUB_USERNAME = "AnovuyoJ";
 
-function getGitHubUsernameCandidates(user: any): string[] {
-  if (!user) return [];
-
-  const values = [
-    user?.user_metadata?.user_name,
-    user?.user_metadata?.login,
-    user?.user_metadata?.preferred_username,
-    user?.user_metadata?.name,
-    user?.email?.split("@")[0],
-    user?.identities?.map((identity: any) => identity?.identity_data?.user_name),
-    user?.identities?.map((identity: any) => identity?.identity_data?.login),
-    user?.identities?.map((identity: any) => identity?.identity_data?.preferred_username),
-  ];
-
-  return values
-    .flat()
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-function isAdminGitHubUser(user: any) {
-  if (!user) return false;
-
-  const candidates = getGitHubUsernameCandidates(user).map((value) => value.toLowerCase());
-  return candidates.includes(ADMIN_GITHUB_USERNAME);
-}
-
-type ChallengeFormState = {
+type Event = {
+  id: string;
   title: string;
-  location: string;
-  description: string;
-  question: string;
-  answer: string;
-  options: string;
-  difficulty: "Easy" | "Medium" | "Hard";
-  points: string;
-  openToEveryone: boolean;
-  category: string;
-  customCategory: string;
+  description: string | null;
+  latitude: number;
+  longitude: number;
+  radius_meters: number;
+  starts_at: string;
+  ends_at: string;
+  created_at: string | null;
 };
 
-const initialFormState: ChallengeFormState = {
-  title: "",
-  location: "",
-  description: "",
-  question: "",
-  answer: "",
-  options: "",
-  difficulty: "Medium",
-  points: "20",
-  openToEveryone: true,
-  category: "Landmarks",
-  customCategory: "",
-};
+function getUsername(user: any) {
+  return (
+    user?.user_metadata?.user_name ||
+    user?.user_metadata?.login ||
+    user?.user_metadata?.preferred_username ||
+    user?.identities?.[0]?.identity_data?.user_name ||
+    ""
+  );
+}
 
 export default function AdminEventsPage() {
   const router = useRouter();
-  const [checkingAccess, setCheckingAccess] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [githubUser, setGithubUser] = useState("");
-  const [formState, setFormState] = useState<ChallengeFormState>(initialFormState);
-  const [savedChallenges, setSavedChallenges] = useState<SavedChallenge[]>([]);
-  const [message, setMessage] = useState<string | null>(null);
 
-  const filteredLocations = useMemo(() => {
-    if (!formState.location.trim()) return WITS_LOCATIONS.slice(0, 8);
+  const [admin, setAdmin] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-    const query = formState.location.trim().toLowerCase();
-    return WITS_LOCATIONS.filter((location) =>
-      location.toLowerCase().includes(query)
-    ).slice(0, 8);
-  }, [formState.location]);
+  const [events, setEvents] = useState<Event[]>([]);
+
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+  const [radius, setRadius] = useState("50");
+  const [startsAt, setStartsAt] = useState("");
+  const [endsAt, setEndsAt] = useState("");
+
+  const [editingId, setEditingId] = useState<string | null>(null);
+
+  const [saving, setSaving] = useState(false);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  /*
+   * ----------------------------------------------------
+   * Check admin access
+   * ----------------------------------------------------
+   */
 
   useEffect(() => {
-    setSavedChallenges(loadSavedChallenges());
-
-    async function verifyAdminAccess() {
+    async function checkAdmin() {
       const {
         data: { session },
       } = await supabase.auth.getSession();
 
       const user = session?.user;
-      const username = getGitHubUsernameCandidates(user)[0] || user?.email || "Unknown user";
-      const adminAccess = isAdminGitHubUser(user);
 
-      setGithubUser(username);
-      setIsAdmin(adminAccess);
-      setCheckingAccess(false);
-
-      if (!adminAccess) {
+      if (!user || getUsername(user) !== ADMIN_GITHUB_USERNAME) {
         router.replace("/dashboard");
+        return;
       }
+
+      setAdmin(true);
     }
 
-    verifyAdminAccess();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      const user = session?.user;
-      const username = getGitHubUsernameCandidates(user)[0] || user?.email || "Unknown user";
-      const adminAccess = isAdminGitHubUser(user);
-
-      setGithubUser(username);
-      setIsAdmin(adminAccess);
-      setCheckingAccess(false);
-
-      if (!adminAccess) {
-        router.replace("/dashboard");
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    checkAdmin();
   }, [router]);
 
-  function updateField<K extends keyof ChallengeFormState>(field: K, value: ChallengeFormState[K]) {
-    setFormState((current) => ({ ...current, [field]: value }));
-  }
+  /*
+   * ----------------------------------------------------
+   * Load events
+   * ----------------------------------------------------
+   */
 
-  function handleSubmit(event: FormEvent) {
-    event.preventDefault();
+  useEffect(() => {
+    if (!admin) return;
 
-    const title = formState.title.trim();
-    const location = formState.location.trim();
-    const description = formState.description.trim();
-    const question = formState.question.trim();
-    const answer = formState.answer.trim();
-    const points = Number(formState.points) || 0;
-    const finalCategory = formState.category === "Other" ? formState.customCategory.trim() || "Other" : formState.category;
+    loadEvents();
+  }, [admin]);
 
-    if (!title || !location || !description || !question || !answer || !finalCategory) {
-      setMessage("Please complete all the required challenge fields, including the category and location.");
+  async function loadEvents() {
+    setLoading(true);
+
+    const { data, error } = await supabase
+      .from("events")
+      .select(
+        "id,title,description,latitude,longitude,radius_meters,starts_at,ends_at,created_at"
+      )
+      .order("starts_at", {
+        ascending: true,
+      });
+
+    if (error) {
+      setError(error.message);
+      setLoading(false);
       return;
     }
 
-    const nextChallenge: SavedChallenge = {
-      id:
-        typeof crypto !== "undefined" && "randomUUID" in crypto
-          ? crypto.randomUUID()
-          : `${Date.now()}`,
-      title,
-      location,
-      category: finalCategory,
-      description,
-      question,
-      answer,
-      options: formState.options
-        .split(",")
-        .map((option) => option.trim())
-        .filter(Boolean),
-      difficulty: formState.difficulty,
-      points,
-      openToEveryone: formState.openToEveryone,
-      createdAt: new Date().toISOString(),
-      published: false,
-      card: null,
+    setEvents((data ?? []) as Event[]);
+    setLoading(false);
+  }
+
+  /*
+   * ----------------------------------------------------
+   * Reset form
+   * ----------------------------------------------------
+   */
+
+  function resetForm() {
+    setTitle("");
+    setDescription("");
+    setLatitude("");
+    setLongitude("");
+    setRadius("50");
+    setStartsAt("");
+    setEndsAt("");
+    setEditingId(null);
+    setMessage("");
+    setError("");
+  }
+
+  /*
+   * ----------------------------------------------------
+   * Create / update event
+   * ----------------------------------------------------
+   */
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+
+    const cleanTitle = title.trim();
+    const cleanDescription = description.trim();
+
+    const latitudeNumber = Number(latitude);
+    const longitudeNumber = Number(longitude);
+    const radiusNumber = Number(radius);
+
+    if (!cleanTitle) {
+      setError("Please enter an event title.");
+      return;
+    }
+
+    if (!latitude || Number.isNaN(latitudeNumber)) {
+      setError("Please enter a valid latitude.");
+      return;
+    }
+
+    if (!longitude || Number.isNaN(longitudeNumber)) {
+      setError("Please enter a valid longitude.");
+      return;
+    }
+
+    if (
+      latitudeNumber < -90 ||
+      latitudeNumber > 90
+    ) {
+      setError("Latitude must be between -90 and 90.");
+      return;
+    }
+
+    if (
+      longitudeNumber < -180 ||
+      longitudeNumber > 180
+    ) {
+      setError("Longitude must be between -180 and 180.");
+      return;
+    }
+
+    if (
+      !radius ||
+      Number.isNaN(radiusNumber) ||
+      radiusNumber <= 0
+    ) {
+      setError("Radius must be greater than 0.");
+      return;
+    }
+
+    if (!startsAt || !endsAt) {
+      setError("Please provide both start and end times.");
+      return;
+    }
+
+    const startDate = new Date(startsAt);
+    const endDate = new Date(endsAt);
+
+    if (endDate <= startDate) {
+      setError("The end time must be after the start time.");
+      return;
+    }
+
+    setSaving(true);
+
+    const eventData = {
+      title: cleanTitle,
+      description: cleanDescription || null,
+      latitude: latitudeNumber,
+      longitude: longitudeNumber,
+      radius_meters: Math.round(radiusNumber),
+      starts_at: startDate.toISOString(),
+      ends_at: endDate.toISOString(),
     };
 
-    const nextList = [nextChallenge, ...loadSavedChallenges()].slice(0, 25);
-    saveSavedChallenges(nextList);
-    setSavedChallenges(nextList);
-    setFormState(initialFormState);
-    setMessage("Challenge created successfully. Go to Cards to define the card and publish this event to the map.");
+    let result;
+
+    if (editingId) {
+      result = await supabase
+        .from("events")
+        .update(eventData)
+        .eq("id", editingId)
+        .select()
+        .single();
+    } else {
+      result = await supabase
+        .from("events")
+        .insert(eventData)
+        .select()
+        .single();
+    }
+
+    setSaving(false);
+
+    if (result.error) {
+      setError(result.error.message);
+      return;
+    }
+
+    if (editingId) {
+      setEvents((current) =>
+        current.map((event) =>
+          event.id === editingId
+            ? (result.data as Event)
+            : event
+        )
+      );
+
+      setMessage("Event updated successfully.");
+    } else {
+      setEvents((current) => [
+        ...current,
+        result.data as Event,
+      ]);
+
+      setMessage("Event created successfully.");
+    }
+
+    resetForm();
   }
 
-  if (checkingAccess) {
+  /*
+   * ----------------------------------------------------
+   * Edit event
+   * ----------------------------------------------------
+   */
+
+  function editEvent(event: Event) {
+    setEditingId(event.id);
+
+    setTitle(event.title);
+    setDescription(event.description ?? "");
+    setLatitude(String(event.latitude));
+    setLongitude(String(event.longitude));
+    setRadius(String(event.radius_meters));
+
+    setStartsAt(toDateTimeLocal(event.starts_at));
+    setEndsAt(toDateTimeLocal(event.ends_at));
+
+    setMessage("");
+    setError("");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  /*
+   * ----------------------------------------------------
+   * Delete event
+   * ----------------------------------------------------
+   */
+
+  async function deleteEvent(id: string) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this event? Any challenges or cards linked to this event may also be affected depending on your database rules."
+    );
+
+    if (!confirmed) return;
+
+    setError("");
+    setMessage("");
+
+    const { error } = await supabase
+      .from("events")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    setEvents((current) =>
+      current.filter((event) => event.id !== id)
+    );
+
+    setMessage("Event deleted successfully.");
+
+    if (editingId === id) {
+      resetForm();
+    }
+  }
+
+  /*
+   * ----------------------------------------------------
+   * Convert ISO date to datetime-local input
+   * ----------------------------------------------------
+   */
+
+  function toDateTimeLocal(value: string) {
+    const date = new Date(value);
+
+    const offset = date.getTimezoneOffset();
+
+    const localDate = new Date(
+      date.getTime() - offset * 60 * 1000
+    );
+
+    return localDate.toISOString().slice(0, 16);
+  }
+
+  /*
+   * ----------------------------------------------------
+   * Event status
+   * ----------------------------------------------------
+   */
+
+  function getEventStatus(event: Event) {
+    const now = new Date();
+
+    const start = new Date(event.starts_at);
+    const end = new Date(event.ends_at);
+
+    if (now < start) {
+      return {
+        label: "Upcoming",
+        className:
+          "bg-amber-50 text-amber-700",
+      };
+    }
+
+    if (now > end) {
+      return {
+        label: "Ended",
+        className:
+          "bg-slate-100 text-slate-500",
+      };
+    }
+
+    return {
+      label: "Active",
+      className:
+        "bg-emerald-50 text-emerald-700",
+    };
+  }
+
+  /*
+   * ----------------------------------------------------
+   * Loading
+   * ----------------------------------------------------
+   */
+
+  if (!admin) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
-        Checking admin access…
+        Checking admin access...
       </div>
     );
   }
 
-  if (!isAdmin) {
-    return (
-      <div className="flex min-h-[50vh] items-center justify-center px-6 text-center">
-        <div className="max-w-md rounded-2xl bg-white p-8 shadow-[0_2px_30px_-8px_rgba(4,54,115,0.15)]">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">Restricted</p>
-          <h1 className="mt-3 font-serif text-2xl text-[#043673]">Admin access required</h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Only the GitHub user <span className="font-semibold">Nessaforealz</span> can access this dashboard.
-          </p>
-        </div>
-      </div>
-    );
-  }
+  /*
+   * ----------------------------------------------------
+   * Page
+   * ----------------------------------------------------
+   */
 
   return (
-    <div className="space-y-8">
-      <header className="space-y-3">
-        <div className="flex items-center justify-between gap-4">
-          <div>
-            <div className="flex items-baseline gap-2.5">
-              <h1 className="font-serif text-3xl tracking-tight" style={{ color: WITS_BLUE }}>
-                Admin Events
-              </h1>
-              <span className="text-[10px] font-medium uppercase tracking-[0.25em] text-[#C9A24B]">
-                Wits Quest
-              </span>
-            </div>
-            <div className="mt-2 h-[3px] w-16 rounded-full bg-gradient-to-r from-[#043673] to-[#C9A24B]" />
-          </div>
+    <div className="space-y-8 p-4 md:p-6">
 
-          <div className="rounded-full border border-[#043673]/15 bg-white px-4 py-2 text-sm font-medium text-[#043673] shadow-sm">
-            Signed in as {githubUser}
-          </div>
+      {/* HEADER */}
+
+      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.28em]"
+            style={{ color: WITS_GOLD }}
+          >
+            Admin console
+          </p>
+
+          <h1
+            className="mt-2 font-serif text-3xl"
+            style={{ color: WITS_BLUE }}
+          >
+            Events
+          </h1>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Create and manage campus quests and their locations.
+          </p>
         </div>
+
+        <Link
+          href="/dashboard/admin"
+          className="rounded-xl border border-[#043673]/15 bg-white px-4 py-2 text-sm font-semibold text-[#043673] shadow-sm transition hover:bg-[#043673]/5"
+        >
+          ← Back to dashboard
+        </Link>
       </header>
 
-      <section className="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
-        <form onSubmit={handleSubmit} className="rounded-[28px] bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
-          <div className="mb-5 flex items-center justify-between gap-3">
-            <h2 className="font-serif text-2xl text-[#043673]">Create event challenge</h2>
-            <span className="rounded-full bg-[#043673]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#043673]">
-              Admin tool
-            </span>
-          </div>
+      {/* MESSAGES */}
 
-          {message && (
-            <div className="mb-5 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
-              {message}
-            </div>
-          )}
+      {message && (
+        <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">
+          {message}
+        </div>
+      )}
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <label className="md:col-span-1 block text-sm font-medium text-slate-700">
-              Challenge title
-              <input
-                value={formState.title}
-                onChange={(event) => updateField("title", event.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-                placeholder="Great Hall Challenge"
-              />
-            </label>
+      {error && (
+        <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
+          {error}
+        </div>
+      )}
 
-            <label className="md:col-span-1 block text-sm font-medium text-slate-700">
-              Difficulty
-              <select
-                value={formState.difficulty}
-                onChange={(event) => updateField("difficulty", event.target.value as ChallengeFormState["difficulty"])}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-              >
-                <option value="Easy">Easy</option>
-                <option value="Medium">Medium</option>
-                <option value="Hard">Hard</option>
-              </select>
-            </label>
+      {/* CREATE / EDIT FORM */}
 
-            <label className="md:col-span-2 block text-sm font-medium text-slate-700">
-              Tag / category
-              <div className="mt-1 rounded-xl border border-slate-200 bg-slate-50 p-2">
-                <div className="max-h-32 overflow-y-auto rounded-lg bg-white p-2">
-                  {QUESTION_CATEGORIES.map((category) => (
-                    <button
-                      key={category}
-                      type="button"
-                      onClick={() => updateField("category", category)}
-                      className={`mb-2 flex w-full items-center justify-between rounded-lg px-3 py-2 text-left text-sm transition ${
-                        formState.category === category
-                          ? "bg-[#043673] text-white"
-                          : "bg-slate-50 text-slate-700 hover:bg-slate-100"
-                      }`}
-                    >
-                      <span>{category}</span>
-                      {formState.category === category && <span>✓</span>}
-                    </button>
-                  ))}
-                </div>
+      <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
 
-                {formState.category === "Other" && (
-                  <input
-                    value={formState.customCategory}
-                    onChange={(event) => updateField("customCategory", event.target.value)}
-                    className="mt-3 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-[#043673]"
-                    placeholder="Type your custom category"
-                  />
-                )}
-              </div>
-            </label>
-
-            <label className="md:col-span-2 block text-sm font-medium text-slate-700">
-              Location
-              <input
-                value={formState.location}
-                onChange={(event) => updateField("location", event.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-                placeholder="Type a Wits location e.g. Great Hall, Library..."
-              />
-              {filteredLocations.length > 0 && (
-                <div className="mt-2 max-h-32 overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 p-2">
-                  {filteredLocations.map((location) => (
-                    <button
-                      key={location}
-                      type="button"
-                      onClick={() => updateField("location", location)}
-                      className="mb-1 block w-full rounded-lg px-3 py-2 text-left text-sm text-slate-700 transition hover:bg-white hover:text-[#043673]"
-                    >
-                      {location}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </label>
-
-            <label className="md:col-span-2 block text-sm font-medium text-slate-700">
-              Description
-              <textarea
-                value={formState.description}
-                onChange={(event) => updateField("description", event.target.value)}
-                className="mt-1 min-h-24 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-                placeholder="Describe the challenge and what students should discover at this location."
-              />
-            </label>
-
-            <label className="md:col-span-2 block text-sm font-medium text-slate-700">
-              Question
-              <textarea
-                value={formState.question}
-                onChange={(event) => updateField("question", event.target.value)}
-                className="mt-1 min-h-24 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-                placeholder="What historical landmark is this?"
-              />
-            </label>
-
-            <label className="md:col-span-2 block text-sm font-medium text-slate-700">
-              Multiple choice options (comma separated)
-              <input
-                value={formState.options}
-                onChange={(event) => updateField("options", event.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-                placeholder="Old Main, The Great Hall, Solomon Mahlangu House, Wits Art Museum"
-              />
-            </label>
-
-            <label className="md:col-span-1 block text-sm font-medium text-slate-700">
-              Correct answer
-              <input
-                value={formState.answer}
-                onChange={(event) => updateField("answer", event.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-                placeholder="The Great Hall"
-              />
-            </label>
-
-            <label className="md:col-span-1 block text-sm font-medium text-slate-700">
-              Points
-              <input
-                type="number"
-                min="5"
-                max="100"
-                value={formState.points}
-                onChange={(event) => updateField("points", event.target.value)}
-                className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-              />
-            </label>
-
-            <label className="md:col-span-2 flex items-center justify-between rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm font-medium text-slate-700">
-              Open to everyone
-              <input
-                type="checkbox"
-                checked={formState.openToEveryone}
-                onChange={(event) => updateField("openToEveryone", event.target.checked)}
-                className="h-4 w-4 accent-[#043673]"
-              />
-            </label>
-          </div>
-
-          <button
-            type="submit"
-            className="mt-6 inline-flex items-center rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
-            style={{ background: WITS_BLUE }}
+        <div className="mb-6">
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.2em]"
+            style={{ color: WITS_GOLD }}
           >
-            Save challenge
-          </button>
-        </form>
+            {editingId ? "Edit quest" : "Create quest"}
+          </p>
 
-        <aside className="rounded-[28px] bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
-          <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-serif text-xl text-[#043673]">Recent challenges</h2>
-            <span className="text-xs font-medium uppercase tracking-[0.2em]" style={{ color: WITS_GOLD }}>
-              {savedChallenges.length}
+          <h2
+            className="mt-2 font-serif text-2xl"
+            style={{ color: WITS_BLUE }}
+          >
+            {editingId
+              ? "Update event"
+              : "Create a new event"}
+          </h2>
+        </div>
+
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-5"
+        >
+
+          {/* TITLE */}
+
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">
+              Event title
             </span>
+
+            <input
+              value={title}
+              onChange={(e) =>
+                setTitle(e.target.value)
+              }
+              placeholder="Wits Great Hall Quest"
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+            />
+          </label>
+
+          {/* DESCRIPTION */}
+
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">
+              Description
+            </span>
+
+            <textarea
+              value={description}
+              onChange={(e) =>
+                setDescription(e.target.value)
+              }
+              placeholder="Find the location and complete the challenge..."
+              className="mt-2 min-h-28 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+            />
+          </label>
+
+          {/* LOCATION */}
+
+          <div>
+            <h3
+              className="mb-3 font-serif text-lg"
+              style={{ color: WITS_BLUE }}
+            >
+              Location
+            </h3>
+
+            <div className="grid gap-4 md:grid-cols-3">
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">
+                  Latitude
+                </span>
+
+                <input
+                  type="number"
+                  step="any"
+                  value={latitude}
+                  onChange={(e) =>
+                    setLatitude(e.target.value)
+                  }
+                  placeholder="-26.1929"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">
+                  Longitude
+                </span>
+
+                <input
+                  type="number"
+                  step="any"
+                  value={longitude}
+                  onChange={(e) =>
+                    setLongitude(e.target.value)
+                  }
+                  placeholder="28.0305"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">
+                  Radius (metres)
+                </span>
+
+                <input
+                  type="number"
+                  min="1"
+                  value={radius}
+                  onChange={(e) =>
+                    setRadius(e.target.value)
+                  }
+                  placeholder="50"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+                />
+              </label>
+
+            </div>
+
+            <p className="mt-2 text-xs text-slate-400">
+              Players must be within this radius of the coordinates to verify the event.
+            </p>
           </div>
 
-          {savedChallenges.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
-              No challenges created yet.
+          {/* DATES */}
+
+          <div>
+            <h3
+              className="mb-3 font-serif text-lg"
+              style={{ color: WITS_BLUE }}
+            >
+              Availability
+            </h3>
+
+            <div className="grid gap-4 md:grid-cols-2">
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">
+                  Starts at
+                </span>
+
+                <input
+                  type="datetime-local"
+                  value={startsAt}
+                  onChange={(e) =>
+                    setStartsAt(e.target.value)
+                  }
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">
+                  Ends at
+                </span>
+
+                <input
+                  type="datetime-local"
+                  value={endsAt}
+                  onChange={(e) =>
+                    setEndsAt(e.target.value)
+                  }
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+                />
+              </label>
+
             </div>
-          ) : (
-            <div className="space-y-3">
-              {savedChallenges.map((challenge) => (
-                <div key={challenge.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
-                  <div className="flex items-center justify-between gap-3">
-                    <h3 className="font-semibold text-[#043673]">{challenge.title}</h3>
-                    <span className="rounded-full bg-[#C9A24B]/15 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#043673]">
-                      {challenge.difficulty}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-slate-500">{challenge.location}</p>
-                  <p className="mt-2 text-sm text-slate-600">{challenge.question}</p>
-                  <div className="mt-3 flex items-center justify-between text-[11px] text-slate-500">
-                    <span>{challenge.points} pts</span>
-                    <span>{challenge.category}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </aside>
+          </div>
+
+          {/* BUTTONS */}
+
+          <div className="flex flex-wrap gap-3 pt-2">
+
+            <button
+              type="submit"
+              disabled={saving}
+              className="rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
+              style={{ background: WITS_BLUE }}
+            >
+              {saving
+                ? "Saving..."
+                : editingId
+                  ? "Update event"
+                  : "Create event"}
+            </button>
+
+            {editingId && (
+              <button
+                type="button"
+                onClick={resetForm}
+                className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              >
+                Cancel edit
+              </button>
+            )}
+
+          </div>
+        </form>
       </section>
+
+      {/* EVENTS LIST */}
+
+      <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+
+        <div className="mb-6 flex items-center justify-between gap-4">
+          <div>
+            <p
+              className="text-xs font-semibold uppercase tracking-[0.2em]"
+              style={{ color: WITS_GOLD }}
+            >
+              Event manager
+            </p>
+
+            <h2
+              className="mt-1 font-serif text-2xl"
+              style={{ color: WITS_BLUE }}
+            >
+              Existing events
+            </h2>
+          </div>
+
+          <span className="rounded-full bg-[#043673]/5 px-3 py-1 text-xs font-semibold text-[#043673]">
+            {events.length} events
+          </span>
+        </div>
+
+        {loading ? (
+          <div className="py-10 text-center text-sm text-slate-500">
+            Loading events...
+          </div>
+        ) : events.length === 0 ? (
+          <div className="rounded-2xl bg-slate-50 p-8 text-center">
+            <p
+              className="font-serif text-lg"
+              style={{ color: WITS_BLUE }}
+            >
+              No events yet
+            </p>
+
+            <p className="mt-1 text-sm text-slate-500">
+              Create your first campus quest above.
+            </p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+
+            {events.map((event) => {
+              const status = getEventStatus(event);
+
+              return (
+                <div
+                  key={event.id}
+                  className="rounded-2xl border border-slate-200 bg-slate-50 p-5"
+                >
+
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+
+                    <div className="min-w-0">
+
+                      <div className="flex flex-wrap items-center gap-2">
+
+                        <h3
+                          className="font-serif text-xl"
+                          style={{ color: WITS_BLUE }}
+                        >
+                          {event.title}
+                        </h3>
+
+                        <span
+                          className={`rounded-full px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider ${status.className}`}
+                        >
+                          {status.label}
+                        </span>
+
+                      </div>
+
+                      {event.description && (
+                        <p className="mt-2 text-sm leading-6 text-slate-600">
+                          {event.description}
+                        </p>
+                      )}
+
+                    </div>
+
+                    <div className="flex shrink-0 gap-2">
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editEvent(event)
+                        }
+                        className="rounded-lg border border-[#043673]/15 bg-white px-3 py-2 text-xs font-semibold text-[#043673] transition hover:bg-[#043673]/5"
+                      >
+                        Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() =>
+                          deleteEvent(event.id)
+                        }
+                        className="rounded-lg border border-red-100 bg-white px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"
+                      >
+                        Delete
+                      </button>
+
+                    </div>
+
+                  </div>
+
+                  {/* EVENT DETAILS */}
+
+                  <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                        Latitude
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-slate-700">
+                        {event.latitude}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                        Longitude
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-slate-700">
+                        {event.longitude}
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                        Radius
+                      </p>
+
+                      <p className="mt-1 text-sm font-medium text-slate-700">
+                        {event.radius_meters}m
+                      </p>
+                    </div>
+
+                    <div className="rounded-xl bg-white p-3">
+                      <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                        Schedule
+                      </p>
+
+                      <p className="mt-1 text-xs font-medium text-slate-700">
+                        {new Date(
+                          event.starts_at
+                        ).toLocaleString()}
+                      </p>
+
+                      <p className="mt-1 text-xs text-slate-400">
+                        to{" "}
+                        {new Date(
+                          event.ends_at
+                        ).toLocaleString()}
+                      </p>
+                    </div>
+
+                  </div>
+
+                  {/* ACTIONS */}
+
+                  <div className="mt-4 flex flex-wrap gap-2 border-t border-slate-200 pt-4">
+
+                    <Link
+                      href={`/dashboard/admin/challenges?event=${event.id}`}
+                      className="rounded-lg bg-[#043673] px-3 py-2 text-xs font-semibold text-white transition hover:opacity-90"
+                    >
+                      Manage challenges
+                    </Link>
+
+                    <Link
+                      href="/dashboard/admin/cards"
+                      className="rounded-lg border border-[#C9A24B]/40 bg-white px-3 py-2 text-xs font-semibold text-[#043673] transition hover:bg-[#C9A24B]/10"
+                    >
+                      Manage cards
+                    </Link>
+
+                  </div>
+
+                </div>
+              );
+            })}
+
+          </div>
+        )}
+
+      </section>
+
     </div>
   );
 }

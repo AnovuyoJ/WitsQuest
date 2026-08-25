@@ -1,158 +1,525 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
-import {
-  getCardThemeByRarity,
-  getCardTierByPoints,
-  loadSavedChallenges,
-  saveSavedChallenges,
-  type SavedChallenge,
-  type SavedChallengeCard,
-} from "@/lib/adminChallenges";
+import { FormEvent, useEffect, useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
+import { supabase } from "@/lib/supabaseClient";
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
+const ADMIN_GITHUB_USERNAME = "AnovuyoJ";
+
+type CardRarity = "Blue" | "Black" | "Gold";
+
+type Event = {
+  id: string;
+  title: string;
+};
+
+type Card = {
+  id: string;
+  title: string;
+  rarity: CardRarity;
+  description: string | null;
+  accent: string | null;
+  badge: string | null;
+  strength: string | null;
+  points: number;
+  tag: string | null;
+  created_at: string | null;
+  event_id: string | null;
+};
+
+function getGitHubUsernameCandidates(user: any): string[] {
+  if (!user) return [];
+
+  const values = [
+    user?.user_metadata?.user_name,
+    user?.user_metadata?.login,
+    user?.user_metadata?.preferred_username,
+    user?.user_metadata?.name,
+    user?.email?.split("@")[0],
+
+    user?.identities?.map(
+      (identity: any) => identity?.identity_data?.user_name
+    ),
+
+    user?.identities?.map(
+      (identity: any) => identity?.identity_data?.login
+    ),
+
+    user?.identities?.map(
+      (identity: any) =>
+        identity?.identity_data?.preferred_username
+    ),
+  ];
+
+  return values
+    .flat()
+    .filter(
+      (value): value is string =>
+        typeof value === "string"
+    )
+    .map((value) => value.trim())
+    .filter(Boolean);
+}
+
+function isAdminGitHubUser(user: any) {
+  if (!user) return false;
+
+  const candidates =
+    getGitHubUsernameCandidates(user).map((value) =>
+      value.toLowerCase()
+    );
+
+  return candidates.includes(
+    ADMIN_GITHUB_USERNAME.toLowerCase()
+  );
+}
+
+function getCardTheme(rarity: CardRarity) {
+  if (rarity === "Gold") {
+    return {
+      accent: "#C9A24B",
+      badge: "Gold",
+      strength: "Hard",
+    };
+  }
+
+  if (rarity === "Black") {
+    return {
+      accent: "#111827",
+      badge: "Black",
+      strength: "Medium",
+    };
+  }
+
+  return {
+    accent: "#2563EB",
+    badge: "Blue",
+    strength: "Easy",
+  };
+}
 
 export default function AdminCardsPage() {
-  const [savedChallenges, setSavedChallenges] = useState<SavedChallenge[]>([]);
-  const [selectedChallengeId, setSelectedChallengeId] = useState<string>("");
-  const [cardTitle, setCardTitle] = useState("");
-  const [cardDescription, setCardDescription] = useState("");
-  const [message, setMessage] = useState<string | null>(null);
+  const router = useRouter();
+
+  const [checkingAccess, setCheckingAccess] =
+    useState(true);
+
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  const [events, setEvents] = useState<Event[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
+
+  const [selectedEvent, setSelectedEvent] =
+    useState("");
+
+  const [title, setTitle] = useState("");
+  const [rarity, setRarity] =
+    useState<CardRarity>("Blue");
+
+  const [description, setDescription] =
+    useState("");
+
+  const [points, setPoints] = useState("20");
+  const [tag, setTag] = useState("General");
+
+  const [editingId, setEditingId] =
+    useState<string | null>(null);
+
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const theme = useMemo(
+    () => getCardTheme(rarity),
+    [rarity]
+  );
+
+  /*
+   * -----------------------------------------
+   * ADMIN ACCESS
+   * -----------------------------------------
+   */
 
   useEffect(() => {
-    const challenges = loadSavedChallenges();
-    setSavedChallenges(challenges);
-    setSelectedChallengeId((current) => {
-      if (current && challenges.some((challenge) => challenge.id === current)) {
-        return current;
+    let mounted = true;
+
+    async function checkAdmin() {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
+
+      const user = session?.user;
+
+      if (!user) {
+        if (!mounted) return;
+
+        setCheckingAccess(false);
+        setIsAdmin(false);
+
+        router.replace("/dashboard");
+        return;
       }
 
-      return challenges[0]?.id ?? "";
-    });
-  }, []);
+      const adminAccess =
+        isAdminGitHubUser(user);
 
-  const pendingChallenges = useMemo(
-    () => savedChallenges.filter((challenge) => !challenge.published),
-    [savedChallenges]
-  );
+      if (!mounted) return;
 
-  const publishedChallenges = useMemo(
-    () => savedChallenges.filter((challenge) => challenge.published),
-    [savedChallenges]
-  );
+      setIsAdmin(adminAccess);
+      setCheckingAccess(false);
 
-  const selectedChallenge = useMemo(
-    () => savedChallenges.find((challenge) => challenge.id === selectedChallengeId) ?? null,
-    [savedChallenges, selectedChallengeId]
-  );
+      if (!adminAccess) {
+        router.replace("/dashboard");
+      }
+    }
+
+    checkAdmin();
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange(
+      (_event, session) => {
+        const user = session?.user;
+
+        if (!user) {
+          setIsAdmin(false);
+          setCheckingAccess(false);
+          router.replace("/dashboard");
+          return;
+        }
+
+        const adminAccess =
+          isAdminGitHubUser(user);
+
+        setIsAdmin(adminAccess);
+        setCheckingAccess(false);
+
+        if (!adminAccess) {
+          router.replace("/dashboard");
+        }
+      }
+    );
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, [router]);
+
+  /*
+   * -----------------------------------------
+   * LOAD EVENTS
+   * -----------------------------------------
+   */
 
   useEffect(() => {
-    if (!selectedChallenge) {
+    if (!isAdmin) return;
+
+    async function loadEvents() {
+      const { data, error } = await supabase
+        .from("events")
+        .select("id,title")
+        .order("created_at", {
+          ascending: false,
+        });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      setEvents((data ?? []) as Event[]);
+
+      if (data && data.length > 0) {
+        setSelectedEvent((current) =>
+          current || data[0].id
+        );
+      }
+    }
+
+    loadEvents();
+  }, [isAdmin]);
+
+  /*
+   * -----------------------------------------
+   * LOAD CARDS
+   * -----------------------------------------
+   */
+
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    async function loadCards() {
+      const { data, error } = await supabase
+        .from("cards")
+        .select(
+          "id,title,rarity,description,accent,badge,strength,points,tag,created_at,event_id"
+        )
+        .order("created_at", {
+          ascending: false,
+        });
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      setCards((data ?? []) as Card[]);
+    }
+
+    loadCards();
+  }, [isAdmin]);
+
+  /*
+   * -----------------------------------------
+   * RESET FORM
+   * -----------------------------------------
+   */
+
+  function resetForm() {
+    setTitle("");
+    setRarity("Blue");
+    setDescription("");
+    setPoints("20");
+    setTag("General");
+    setEditingId(null);
+  }
+
+  /*
+   * -----------------------------------------
+   * CREATE / UPDATE CARD
+   * -----------------------------------------
+   */
+
+  async function handleSubmit(e: FormEvent) {
+    e.preventDefault();
+
+    setMessage("");
+    setError("");
+
+    const cleanTitle = title.trim();
+    const cleanDescription =
+      description.trim();
+
+    const cleanTag = tag.trim() || "General";
+    const pointValue = Number(points);
+
+    if (!selectedEvent) {
+      setError("Please select an event.");
       return;
     }
 
-    setCardTitle(selectedChallenge.card?.title ?? selectedChallenge.title);
-    setCardDescription(selectedChallenge.card?.description ?? selectedChallenge.description);
-  }, [selectedChallenge]);
+    if (!cleanTitle) {
+      setError("Please enter a card title.");
+      return;
+    }
 
-  const cardPreview = useMemo(() => {
-    if (!selectedChallenge) return null;
+    if (
+      Number.isNaN(pointValue) ||
+      pointValue < 0
+    ) {
+      setError(
+        "Points must be a valid number."
+      );
+      return;
+    }
 
-    const points = selectedChallenge.points || 20;
-    const rarity = getCardTierByPoints(points);
-    const theme = getCardThemeByRarity(rarity);
-
-    return {
+    const cardData = {
+      event_id: selectedEvent,
+      title: cleanTitle,
       rarity,
-      points,
-      title: cardTitle.trim() || selectedChallenge.title,
-      description: cardDescription.trim() || selectedChallenge.description,
+      description:
+        cleanDescription || null,
       accent: theme.accent,
       badge: theme.badge,
       strength: theme.strength,
-      tag: selectedChallenge.category || "General",
-    };
-  }, [cardDescription, cardTitle, selectedChallenge]);
-
-  function handleCreateCard() {
-    if (!selectedChallenge) {
-      setMessage("Please select an event first.");
-      return;
-    }
-
-    const title = cardTitle.trim() || selectedChallenge.title;
-    const description = cardDescription.trim() || selectedChallenge.description;
-    const points = Number(selectedChallenge.points) || 20;
-    const rarity = getCardTierByPoints(points);
-    const theme = getCardThemeByRarity(rarity);
-
-    const card: SavedChallengeCard = {
-      id: typeof crypto !== "undefined" && "randomUUID" in crypto
-        ? crypto.randomUUID()
-        : `${Date.now()}`,
-      eventId: selectedChallenge.id,
-      title,
-      rarity,
-      description,
-      accent: theme.accent,
-      badge: theme.badge,
-      strength: theme.strength,
-      points,
-      tag: selectedChallenge.category || "General",
+      points: pointValue,
+      tag: cleanTag,
     };
 
-    const nextChallenges = loadSavedChallenges().map((challenge) =>
-      challenge.id === selectedChallenge.id
-        ? { ...challenge, card, published: selectedChallenge.published }
-        : challenge
-    );
+    setSaving(true);
 
-    saveSavedChallenges(nextChallenges);
-    setSavedChallenges(nextChallenges);
-    setMessage(`Card defined for ${selectedChallenge.title}. Now publish it to the map when you're ready.`);
-  }
+    if (editingId) {
+      const { data, error } = await supabase
+        .from("cards")
+        .update(cardData)
+        .eq("id", editingId)
+        .select()
+        .single();
 
-  function handlePublishToMap() {
-    if (!selectedChallenge) {
-      setMessage("Select a challenge before publishing.");
+      setSaving(false);
+
+      if (error) {
+        setError(error.message);
+        return;
+      }
+
+      setCards((current) =>
+        current.map((card) =>
+          card.id === editingId
+            ? (data as Card)
+            : card
+        )
+      );
+
+      setMessage("Card updated successfully.");
+      resetForm();
       return;
     }
 
-    if (!selectedChallenge.card) {
-      setMessage("Create a card for this event before publishing it to the map.");
+    const { data, error } = await supabase
+      .from("cards")
+      .insert(cardData)
+      .select()
+      .single();
+
+    setSaving(false);
+
+    if (error) {
+      setError(error.message);
       return;
     }
 
-    const nextChallenges = loadSavedChallenges().map((challenge) =>
-      challenge.id === selectedChallenge.id
-        ? { ...challenge, published: true }
-        : challenge
-    );
+    setCards((current) => [
+      data as Card,
+      ...current,
+    ]);
 
-    saveSavedChallenges(nextChallenges);
-    setSavedChallenges(nextChallenges);
-    setMessage(`${selectedChallenge.title} is now published to the map.`);
+    setMessage("Card created successfully.");
+    resetForm();
   }
 
-  const publishedCount = savedChallenges.filter((challenge) => challenge.published && challenge.card).length;
+  /*
+   * -----------------------------------------
+   * EDIT CARD
+   * -----------------------------------------
+   */
+
+  function editCard(card: Card) {
+    setEditingId(card.id);
+
+    setSelectedEvent(card.event_id ?? "");
+    setTitle(card.title);
+    setRarity(card.rarity);
+    setDescription(card.description ?? "");
+    setPoints(String(card.points));
+    setTag(card.tag ?? "General");
+
+    setMessage("");
+    setError("");
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  }
+
+  /*
+   * -----------------------------------------
+   * DELETE CARD
+   * -----------------------------------------
+   */
+
+  async function deleteCard(id: string) {
+    const confirmed = window.confirm(
+      "Are you sure you want to delete this card?"
+    );
+
+    if (!confirmed) return;
+
+    setMessage("");
+    setError("");
+
+    const { error } = await supabase
+      .from("cards")
+      .delete()
+      .eq("id", id);
+
+    if (error) {
+      setError(error.message);
+      return;
+    }
+
+    setCards((current) =>
+      current.filter(
+        (card) => card.id !== id
+      )
+    );
+
+    if (editingId === id) {
+      resetForm();
+    }
+
+    setMessage("Card deleted successfully.");
+  }
+
+  /*
+   * -----------------------------------------
+   * FIND EVENT TITLE
+   * -----------------------------------------
+   */
+
+  function getEventTitle(eventId: string | null) {
+    if (!eventId) return "No event";
+
+    return (
+      events.find(
+        (event) => event.id === eventId
+      )?.title ?? "Unknown event"
+    );
+  }
+
+  /*
+   * -----------------------------------------
+   * ACCESS STATE
+   * -----------------------------------------
+   */
+
+  if (checkingAccess) {
+    return (
+      <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
+        Checking admin access...
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return null;
+  }
+
+  /*
+   * -----------------------------------------
+   * PAGE
+   * -----------------------------------------
+   */
 
   return (
-    <div className="space-y-6 p-4 md:p-6">
-      <header className="flex flex-col gap-2 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em]" style={{ color: WITS_GOLD }}>
-            Admin console
-          </p>
-          <h1 className="mt-2 font-serif text-3xl" style={{ color: WITS_BLUE }}>
-            Card creation studio
-          </h1>
-        </div>
+    <div className="space-y-8 p-4 md:p-6">
+      {/* HEADER */}
 
-        <div className="rounded-full border border-[#043673]/15 bg-white px-4 py-2 text-sm font-medium text-[#043673] shadow-sm">
-          Published to map: {publishedCount}
-        </div>
+      <header>
+        <p
+          className="text-xs font-semibold uppercase tracking-[0.28em]"
+          style={{ color: WITS_GOLD }}
+        >
+          Admin console
+        </p>
+
+        <h1
+          className="mt-2 font-serif text-3xl"
+          style={{ color: WITS_BLUE }}
+        >
+          Cards
+        </h1>
+
+        <p className="mt-2 text-sm text-slate-500">
+          Create reward cards and attach them to events.
+        </p>
       </header>
+
+      {/* MESSAGES */}
 
       {message && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
@@ -160,192 +527,364 @@ export default function AdminCardsPage() {
         </div>
       )}
 
-      <section className="grid gap-6 xl:grid-cols-[0.9fr_1.1fr]">
-        <div className="rounded-[28px] bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
-          <div className="mb-5 flex items-center justify-between">
-            <h2 className="font-serif text-xl text-[#043673]">Pending events</h2>
-            <span className="text-xs font-medium uppercase tracking-[0.2em]" style={{ color: WITS_GOLD }}>
-              {pendingChallenges.length}
-            </span>
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <div className="grid gap-6 xl:grid-cols-[1fr_1fr]">
+        {/* CREATE CARD */}
+
+        <form
+          onSubmit={handleSubmit}
+          className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]"
+        >
+          <div className="mb-6">
+            <p
+              className="text-xs font-semibold uppercase tracking-[0.2em]"
+              style={{ color: WITS_GOLD }}
+            >
+              {editingId
+                ? "Edit reward"
+                : "New reward"}
+            </p>
+
+            <h2
+              className="mt-2 font-serif text-2xl"
+              style={{ color: WITS_BLUE }}
+            >
+              {editingId
+                ? "Update card"
+                : "Create card"}
+            </h2>
           </div>
 
-          {pendingChallenges.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 text-sm text-slate-500">
-              No pending events. Publish a card to move it to the published list.
-            </div>
-          ) : (
-            <div className="space-y-3">
-              {pendingChallenges.map((challenge) => {
-                const isSelected = challenge.id === selectedChallengeId;
+          <div className="space-y-5">
+            {/* EVENT */}
 
-                return (
-                  <button
-                    key={challenge.id}
-                    type="button"
-                    onClick={() => setSelectedChallengeId(challenge.id)}
-                    className={`w-full rounded-2xl border p-4 text-left transition ${
-                      isSelected
-                        ? "border-[#043673] bg-[#043673]/5"
-                        : "border-slate-200 bg-slate-50 hover:border-slate-300"
-                    }`}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <h3 className="font-semibold text-[#043673]">{challenge.title}</h3>
-                        <p className="mt-1 text-xs text-slate-500">{challenge.location}</p>
-                      </div>
-
-                      <div className="text-right text-[10px] uppercase tracking-[0.18em] text-slate-500">
-                        Draft
-                      </div>
-                    </div>
-
-                    <div className="mt-3 flex items-center justify-between gap-2 text-[11px] text-slate-500">
-                      <span>{challenge.points} pts</span>
-                      <span className="rounded-full border border-[#043673]/15 bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#043673]">
-                        {challenge.category}
-                      </span>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-
-          <div className="mt-6 border-t border-slate-200 pt-5">
-            <div className="mb-3 flex items-center justify-between">
-              <h2 className="font-serif text-xl text-[#043673]">Published event list</h2>
-              <span className="text-xs font-medium uppercase tracking-[0.2em]" style={{ color: WITS_GOLD }}>
-                {publishedChallenges.length}
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">
+                Event
               </span>
-            </div>
 
-            {publishedChallenges.length === 0 ? (
-              <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-3 text-sm text-slate-500">
-                No published events yet.
-              </div>
-            ) : (
-              <div className="space-y-2">
-                {publishedChallenges.map((challenge) => {
-                  const isSelected = challenge.id === selectedChallengeId;
+              <select
+                value={selectedEvent}
+                onChange={(e) =>
+                  setSelectedEvent(
+                    e.target.value
+                  )
+                }
+                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
+              >
+                <option value="">
+                  Select event
+                </option>
+
+                {events.map((event) => (
+                  <option
+                    key={event.id}
+                    value={event.id}
+                  >
+                    {event.title}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            {/* TITLE */}
+
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">
+                Card title
+              </span>
+
+              <input
+                value={title}
+                onChange={(e) =>
+                  setTitle(e.target.value)
+                }
+                placeholder="Great Hall Explorer"
+                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
+              />
+            </label>
+
+            {/* RARITY */}
+
+            <div>
+              <span className="text-sm font-semibold text-slate-700">
+                Rarity
+              </span>
+
+              <div className="mt-2 grid grid-cols-3 gap-2">
+                {(
+                  [
+                    "Blue",
+                    "Black",
+                    "Gold",
+                  ] as CardRarity[]
+                ).map((item) => {
+                  const selected =
+                    rarity === item;
 
                   return (
                     <button
-                      key={challenge.id}
+                      key={item}
                       type="button"
-                      onClick={() => setSelectedChallengeId(challenge.id)}
-                      className={`flex w-full items-center justify-between gap-3 rounded-xl border px-3 py-2 text-left text-sm transition ${
-                        isSelected
-                          ? "border-[#043673] bg-[#043673]/5 text-[#043673]"
-                          : "border-slate-200 bg-slate-50 text-slate-700 hover:border-slate-300"
+                      onClick={() =>
+                        setRarity(item)
+                      }
+                      className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
+                        selected
+                          ? "border-[#043673] bg-[#043673] text-white"
+                          : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-white"
                       }`}
                     >
-                      <div className="min-w-0 flex-1">
-                        <span className="block truncate font-medium">{challenge.title}</span>
-                        <span className="mt-1 inline-flex rounded-full border border-[#043673]/10 bg-white px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-[#043673]">
-                          {challenge.category}
-                        </span>
-                      </div>
-                      <span className="shrink-0 text-[10px] uppercase tracking-[0.16em] text-slate-500">
-                        {challenge.points} pts
-                      </span>
+                      {item}
                     </button>
                   );
                 })}
               </div>
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-[28px] bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
-          {selectedChallenge ? (
-            <>
-              <div className="mb-6 flex items-center justify-between gap-3">
-                <h2 className="font-serif text-xl text-[#043673]">Card definition</h2>
-                <span className="rounded-full bg-[#043673]/10 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#043673]">
-                  {selectedChallenge.points} pts
-                </span>
-              </div>
-
-              <div className="grid gap-4 md:grid-cols-2">
-                <label className="block text-sm font-medium text-slate-700 md:col-span-2">
-                  Card title
-                  <input
-                    value={cardTitle}
-                    onChange={(event) => setCardTitle(event.target.value)}
-                    className="mt-1 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-                    placeholder={selectedChallenge.title}
-                  />
-                </label>
-
-                <label className="block text-sm font-medium text-slate-700 md:col-span-2">
-                  Card description
-                  <textarea
-                    value={cardDescription}
-                    onChange={(event) => setCardDescription(event.target.value)}
-                    className="mt-1 min-h-24 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 text-sm outline-none transition focus:border-[#043673] focus:bg-white"
-                    placeholder={selectedChallenge.description}
-                  />
-                </label>
-              </div>
-
-              <div className="mt-6">
-                <p className="mb-3 text-xs font-semibold uppercase tracking-[0.2em] text-slate-500">
-                  Card preview
-                </p>
-
-                {cardPreview && (
-                  <div
-                    className="relative overflow-hidden rounded-[24px] border border-slate-200 p-5 text-white shadow-xl"
-                    style={{ background: `linear-gradient(135deg, ${cardPreview.accent}, rgba(0,0,0,0.85))` }}
-                  >
-                    <div className="absolute right-4 top-4 rounded-full border border-white/30 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90">
-                      {cardPreview.badge}
-                    </div>
-                    <div className="mt-10">
-                      <div className="flex items-center justify-between gap-3">
-                        <p className="text-[10px] uppercase tracking-[0.32em] text-white/70">Wits Quest</p>
-                        <span className="rounded-full border border-white/30 bg-white/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-white/90">
-                          {cardPreview.tag}
-                        </span>
-                      </div>
-                      <h3 className="mt-2 font-serif text-2xl leading-tight">{cardPreview.title}</h3>
-                      <p className="mt-2 max-w-xs text-sm text-white/80">{cardPreview.description}</p>
-                    </div>
-                    <div className="mt-6 flex items-center justify-between text-sm">
-                      <span>{cardPreview.points} pts</span>
-                      <span>{cardPreview.strength}</span>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <button
-                  type="button"
-                  onClick={handleCreateCard}
-                  className="inline-flex items-center rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
-                  style={{ background: WITS_BLUE }}
-                >
-                  Save card
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handlePublishToMap}
-                  className="inline-flex items-center rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110"
-                  style={{ background: WITS_GOLD }}
-                >
-                  Publish to map
-                </button>
-              </div>
-            </>
-          ) : (
-            <div className="flex min-h-[320px] items-center justify-center rounded-2xl border border-dashed border-slate-300 bg-slate-50 text-sm text-slate-500">
-              Select an event to define its card.
             </div>
-          )}
+
+            {/* DESCRIPTION */}
+
+            <label className="block">
+              <span className="text-sm font-semibold text-slate-700">
+                Description
+              </span>
+
+              <textarea
+                value={description}
+                onChange={(e) =>
+                  setDescription(
+                    e.target.value
+                  )
+                }
+                placeholder="Awarded for completing the Great Hall quest."
+                className="mt-2 min-h-28 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
+              />
+            </label>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              {/* POINTS */}
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">
+                  Points
+                </span>
+
+                <input
+                  type="number"
+                  min="0"
+                  value={points}
+                  onChange={(e) =>
+                    setPoints(e.target.value)
+                  }
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
+                />
+              </label>
+
+              {/* TAG */}
+
+              <label className="block">
+                <span className="text-sm font-semibold text-slate-700">
+                  Tag
+                </span>
+
+                <input
+                  value={tag}
+                  onChange={(e) =>
+                    setTag(e.target.value)
+                  }
+                  placeholder="History"
+                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
+                />
+              </label>
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              <button
+                type="submit"
+                disabled={saving}
+                className="rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
+                style={{
+                  background: WITS_BLUE,
+                }}
+              >
+                {saving
+                  ? "Saving..."
+                  : editingId
+                    ? "Update card"
+                    : "Create card"}
+              </button>
+
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
+          </div>
+        </form>
+
+        {/* PREVIEW */}
+
+        <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+          <p
+            className="text-xs font-semibold uppercase tracking-[0.2em]"
+            style={{ color: WITS_GOLD }}
+          >
+            Preview
+          </p>
+
+          <h2
+            className="mt-2 font-serif text-2xl"
+            style={{ color: WITS_BLUE }}
+          >
+            Card preview
+          </h2>
+
+          <div
+            className="relative mt-6 overflow-hidden rounded-[26px] p-6 text-white shadow-xl"
+            style={{
+              background: `linear-gradient(135deg, ${theme.accent}, rgba(0,0,0,0.88))`,
+            }}
+          >
+            <div className="absolute right-4 top-4 rounded-full border border-white/30 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.2em]">
+              {theme.badge}
+            </div>
+
+            <div className="mt-10">
+              <p className="text-[10px] uppercase tracking-[0.3em] text-white/60">
+                Wits Quest
+              </p>
+
+              <h3 className="mt-3 font-serif text-2xl">
+                {title ||
+                  "Your card title"}
+              </h3>
+
+              <p className="mt-2 text-sm text-white/75">
+                {description ||
+                  "Your card description will appear here."}
+              </p>
+            </div>
+
+            <div className="mt-8 flex items-center justify-between">
+              <span className="text-sm">
+                {points || "0"} pts
+              </span>
+
+              <span className="text-sm">
+                {theme.strength}
+              </span>
+            </div>
+          </div>
+        </section>
+      </div>
+
+      {/* EXISTING CARDS */}
+
+      <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+        <div className="mb-5 flex items-center justify-between">
+          <div>
+            <p
+              className="text-xs font-semibold uppercase tracking-[0.2em]"
+              style={{ color: WITS_GOLD }}
+            >
+              Rewards
+            </p>
+
+            <h2
+              className="mt-1 font-serif text-2xl"
+              style={{ color: WITS_BLUE }}
+            >
+              Existing cards
+            </h2>
+          </div>
+
+          <span className="rounded-full bg-[#043673]/5 px-3 py-1 text-xs font-semibold text-[#043673]">
+            {cards.length} cards
+          </span>
         </div>
+
+        {cards.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+            <p className="text-sm text-slate-500">
+              No cards have been created yet.
+            </p>
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+            {cards.map((card) => (
+              <div
+                key={card.id}
+                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <h3 className="truncate font-semibold text-[#043673]">
+                      {card.title}
+                    </h3>
+
+                    <p className="mt-1 text-xs text-slate-500">
+                      {getEventTitle(
+                        card.event_id
+                      )}
+                    </p>
+                  </div>
+
+                  <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase text-[#043673]">
+                    {card.rarity}
+                  </span>
+                </div>
+
+                {card.description && (
+                  <p className="mt-3 line-clamp-3 text-sm text-slate-600">
+                    {card.description}
+                  </p>
+                )}
+
+                <div className="mt-4 flex items-center justify-between text-xs text-slate-500">
+                  <span>
+                    {card.points} pts
+                  </span>
+
+                  <span>
+                    {card.tag || "General"}
+                  </span>
+                </div>
+
+                <div className="mt-4 flex gap-2 border-t border-slate-200 pt-4">
+                  <button
+                    type="button"
+                    onClick={() =>
+                      editCard(card)
+                    }
+                    className="rounded-lg border border-[#043673]/15 bg-white px-3 py-2 text-xs font-semibold text-[#043673]"
+                  >
+                    Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() =>
+                      deleteCard(card.id)
+                    }
+                    className="rounded-lg border border-red-100 bg-white px-3 py-2 text-xs font-semibold text-red-500"
+                  >
+                    Delete
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </section>
     </div>
   );
