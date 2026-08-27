@@ -16,8 +16,6 @@ nav:
   - Decisions: decisions.md
   - Meeting Minutes:
     - Meeting-minutes-1: meeting-minutes-1.md
-<<<<<<< Updated upstream
-=======
     - Meeting-minutes-2: meeting-minutes-2.md
     - Meeting-minutes-3: meeting-minutes-3.md
   - Acceptance Criteria: 
@@ -26,4 +24,3 @@ nav:
       - Acceptance Criteria 2: sprint-1(US).md
 
     
->>>>>>> Stashed changes

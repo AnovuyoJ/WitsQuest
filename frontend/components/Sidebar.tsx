@@ -3,14 +3,12 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import Link from "next/link";
-import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
 import { supabase } from "@/lib/supabaseClient";
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
+
 const ADMIN_GITHUB_USERNAME = "AnovuyoJ";
 
 type NavItem = {
@@ -55,9 +53,6 @@ const navItems: NavItem[] = [
     icon: <GameIcon />,
     href: "/dashboard/games",
   },
-  { label: "Dashboard", icon: <HomeIcon />, href: "/dashboard" },
-  { label: "Events", icon: <MapPinIcon />, href: "/dashboard/events" },
-  { label: "Notifications", icon: <BellIcon />, href: "/notifications" },
 ];
 
 export default function Sidebar() {
@@ -86,8 +81,6 @@ export default function Sidebar() {
         return;
       }
 
-      console.log("Sidebar user:", user);
-
       const githubUsername =
         user.user_metadata?.user_name ||
         user.user_metadata?.login ||
@@ -95,14 +88,10 @@ export default function Sidebar() {
         user.identities?.[0]?.identity_data?.user_name ||
         user.identities?.[0]?.identity_data?.login;
 
-      console.log("Sidebar GitHub username:", githubUsername);
-
       const admin =
         typeof githubUsername === "string" &&
         githubUsername.toLowerCase() ===
           ADMIN_GITHUB_USERNAME.toLowerCase();
-
-      console.log("Sidebar admin:", admin);
 
       setIsAdmin(admin);
     }
@@ -110,8 +99,8 @@ export default function Sidebar() {
     checkAdmin();
 
     /*
-     * Also update the admin status if the authentication
-     * state changes.
+     * Update admin status whenever
+     * authentication changes.
      */
     const {
       data: { subscription },
@@ -144,42 +133,25 @@ export default function Sidebar() {
   }, []);
 
   /*
-   * Only show the Admin item to AnovuyoJ.
+   * Hide Admin navigation from normal users.
    */
   const visibleNavItems = navItems.filter(
     (item) => item.label !== "Admin" || isAdmin
   );
-  const pathname = usePathname();
+
+  /*
+   * Optional sidebar search.
+   */
+  const filteredNavItems = visibleNavItems.filter((item) =>
+    item.label.toLowerCase().includes(query.toLowerCase())
+  );
 
   return (
-    <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col justify-between py-6 transition-all duration-200 ${
-        collapsed ? "w-[76px]" : "w-[240px]"
-      }`}
-      style={{ background: WITS_BLUE }}
-    >
-      {/* ===================================================== */}
-      {/* TOP SECTION */}
-      {/* ===================================================== */}
-
-      <div className="flex flex-col gap-4 px-4">
-        {/* Collapse button */}
-        <button
-          onClick={() => setCollapsed((current) => !current)}
-          aria-label={
-            collapsed ? "Expand sidebar" : "Collapse sidebar"
-          }
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-        >
-          <MenuIcon />
-        </button>
-
-        {/* ================================================= */}
-        {/* SEARCH */}
-        {/* ================================================= */}
     <>
-      {/* Mobile-only floating menu button — lives outside the drawer so it's
-          always tappable, even while the drawer itself is closed/hidden. */}
+      {/* ===================================================== */}
+      {/* MOBILE MENU BUTTON */}
+      {/* ===================================================== */}
+
       <button
         onClick={() => setMobileOpen(true)}
         aria-label="Open menu"
@@ -189,7 +161,10 @@ export default function Sidebar() {
         <MenuIcon />
       </button>
 
-      {/* Backdrop — tapping it closes the drawer on mobile */}
+      {/* ===================================================== */}
+      {/* MOBILE BACKDROP */}
+      {/* ===================================================== */}
+
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
@@ -197,53 +172,53 @@ export default function Sidebar() {
         />
       )}
 
+      {/* ===================================================== */}
+      {/* SIDEBAR */}
+      {/* ===================================================== */}
+
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col justify-between py-6 transition-transform duration-200 md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0 ${
+        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col justify-between py-6 transition-all duration-200 md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } ${collapsed ? "md:w-[76px]" : "md:w-[240px]"}`}
         style={{ background: WITS_BLUE }}
       >
-        {/* Top: collapse toggle (desktop only) + search */}
-        <div className="flex flex-col gap-4 px-4">
+        {/* ================================================= */}
+        {/* TOP */}
+        {/* ================================================= */}
+
+        <div className="flex min-h-0 flex-1 flex-col gap-4 px-4">
+          {/* Desktop collapse button */}
+
           <button
-            onClick={() => setCollapsed((c) => !c)}
-            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            onClick={() => setCollapsed((current) => !current)}
+            aria-label={
+              collapsed ? "Expand sidebar" : "Collapse sidebar"
+            }
             className="hidden h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white md:flex"
           >
             <MenuIcon />
           </button>
 
-        {collapsed ? (
-          <button
-            onClick={() => setCollapsed(false)}
-            aria-label="Expand to search"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
-          >
-            <SearchIcon />
-          </button>
-        ) : (
-          <div className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
-              <SearchIcon />
-            </span>
+          {/* Mobile close button */}
 
-            <input
-              type="text"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder="Search..."
-              className="w-full rounded-lg border border-white/10 bg-white/10 py-2 pl-9 pr-3 text-sm text-white placeholder-white/50 outline-none transition-colors focus:border-white/30 focus:bg-white/[0.14]"
-            />
+          <div className="flex justify-end md:hidden">
+            <button
+              onClick={() => setMobileOpen(false)}
+              aria-label="Close menu"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+            >
+              <CloseIcon />
+            </button>
           </div>
-        )}
 
-        {/* ================================================= */}
-        {/* NAVIGATION */}
-        {/* ================================================= */}
+          {/* ================================================= */}
+          {/* SEARCH */}
+          {/* ================================================= */}
+
           {collapsed ? (
             <button
               onClick={() => setCollapsed(false)}
-              aria-label="Expand to search"
+              aria-label="Expand sidebar to search"
               className="hidden h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white md:flex"
             >
               <SearchIcon />
@@ -253,97 +228,57 @@ export default function Sidebar() {
               <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
                 <SearchIcon />
               </span>
+
               <input
                 type="text"
                 value={query}
-                onChange={(e) => setQuery(e.target.value)}
+                onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search..."
                 className="w-full rounded-lg border border-white/10 bg-white/10 py-2 pl-9 pr-3 text-sm text-white placeholder-white/50 outline-none transition-colors focus:border-white/30 focus:bg-white/[0.14]"
               />
             </div>
           )}
 
-        <nav className="mt-2 flex flex-col gap-1.5">
-          {visibleNavItems.map((item) => {
-            /*
-             * IMPORTANT:
-             *
-             * We use exact matching here.
-             *
-             * This means:
-             *
-             * /dashboard        -> Dashboard active
-             * /dashboard/cards   -> Cards active
-             * /dashboard/events  -> Events active
-             * /dashboard/map     -> Map active
-             * /notifications     -> Notifications active
-             * /dashboard/admin   -> Admin active
-             *
-             * Dashboard will NOT remain highlighted
-             * when you visit another page.
-             */
-            const isActive = pathname === item.href;
+          {/* ================================================= */}
+          {/* NAVIGATION */}
+          {/* ================================================= */}
 
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                  isActive
-                    ? "text-white"
-                    : "text-white/60 hover:bg-white/5 hover:text-white/90"
-                }`}
-                style={
-                  isActive
-                    ? {
-                        background: "rgba(255,255,255,0.12)",
-                      }
-                    : undefined
-                }
-              >
-                {/* Icon */}
-                <span className="flex h-5 w-5 shrink-0 items-center justify-center">
-                  {item.icon}
-                </span>
-
-                {/* Name */}
-                {!collapsed && (
-                  <span className="truncate">
-                    {item.label}
-                  </span>
-                )}
-
-                {/* Active gold dot */}
-                {isActive && (
-                  <span
-                    className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
-                    style={{
-                      background: WITS_GOLD,
-                    }}
-                  />
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-          <nav className="scroll-thin mt-2 flex flex-col gap-1.5 overflow-y-auto">
-            {navItems.map((item) => {
+          <nav className="scroll-thin mt-2 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+            {filteredNavItems.map((item) => {
               const isActive = pathname === item.href;
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
-                    isActive ? "text-white" : "text-white/60 hover:bg-white/5 hover:text-white/90"
+                    isActive
+                      ? "text-white"
+                      : "text-white/60 hover:bg-white/5 hover:text-white/90"
                   }`}
-                  style={isActive ? { background: "rgba(255,255,255,0.12)" } : undefined}
+                  style={
+                    isActive
+                      ? {
+                          background: "rgba(255,255,255,0.12)",
+                        }
+                      : undefined
+                  }
                 >
+                  {/* Icon */}
+
                   <span className="flex h-5 w-5 shrink-0 items-center justify-center">
                     {item.icon}
                   </span>
-                  {!collapsed && <span className="truncate">{item.label}</span>}
+
+                  {/* Name */}
+
+                  {!collapsed && (
+                    <span className="truncate">{item.label}</span>
+                  )}
+
+                  {/* Active gold dot */}
+
                   {isActive && (
                     <span
                       className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
@@ -356,23 +291,40 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        {/* Bottom: logout + theme toggle */}
-        <div className="flex flex-col gap-1.5 px-4">
+        {/* ================================================= */}
+        {/* BOTTOM */}
+        {/* ================================================= */}
+
+        <div className="flex flex-col gap-1.5 px-4 pt-4">
           <LogoutButton collapsed={collapsed} />
+
+          {/* Dark mode switch */}
 
           {collapsed ? (
             <button
-              onClick={() => setDarkMode((d) => !d)}
-              aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
-              className="flex items-center justify-center rounded-xl px-3 py-2.5 text-white/60 transition-colors hover:bg-white/5 hover:text-white/90"
+              onClick={() => setDarkMode((current) => !current)}
+              aria-label={
+                darkMode
+                  ? "Switch to light mode"
+                  : "Switch to dark mode"
+              }
+              className="hidden items-center justify-center rounded-xl px-3 py-2.5 text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 md:flex"
             >
               <span
                 className="relative flex h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition-colors"
-                style={{ background: darkMode ? WITS_GOLD : "rgba(255,255,255,0.2)" }}
+                style={{
+                  background: darkMode
+                    ? WITS_GOLD
+                    : "rgba(255,255,255,0.2)",
+                }}
               >
                 <span
                   className="h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
-                  style={{ transform: darkMode ? "translateX(16px)" : "translateX(0)" }}
+                  style={{
+                    transform: darkMode
+                      ? "translateX(16px)"
+                      : "translateX(0)",
+                  }}
                 />
               </span>
             </button>
@@ -381,18 +333,32 @@ export default function Sidebar() {
               <span className="flex h-5 w-5 shrink-0 items-center justify-center text-white/60">
                 {darkMode ? <MoonIcon /> : <SunIcon />}
               </span>
+
               <span className="text-sm text-white/60">
                 {darkMode ? "Dark mode" : "Light mode"}
               </span>
+
               <button
-                onClick={() => setDarkMode((d) => !d)}
-                aria-label={darkMode ? "Switch to light mode" : "Switch to dark mode"}
+                onClick={() => setDarkMode((current) => !current)}
+                aria-label={
+                  darkMode
+                    ? "Switch to light mode"
+                    : "Switch to dark mode"
+                }
                 className="relative ml-auto flex h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition-colors"
-                style={{ background: darkMode ? WITS_GOLD : "rgba(255,255,255,0.2)" }}
+                style={{
+                  background: darkMode
+                    ? WITS_GOLD
+                    : "rgba(255,255,255,0.2)",
+                }}
               >
                 <span
                   className="h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
-                  style={{ transform: darkMode ? "translateX(16px)" : "translateX(0)" }}
+                  style={{
+                    transform: darkMode
+                      ? "translateX(16px)"
+                      : "translateX(0)",
+                  }}
                 />
               </button>
             </div>
@@ -422,6 +388,24 @@ function MenuIcon() {
       <path d="M3 6h18" />
       <path d="M3 12h18" />
       <path d="M3 18h18" />
+    </svg>
+  );
+}
+
+function CloseIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      aria-hidden="true"
+    >
+      <path d="M6 6l12 12" />
+      <path d="M18 6 6 18" />
     </svg>
   );
 }
@@ -463,11 +447,60 @@ function HomeIcon() {
   );
 }
 
+function CardIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="5" width="18" height="14" rx="2" />
+      <path d="M3 10h18" />
+    </svg>
+  );
+}
+
 function MapPinIcon() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
       <path d="M12 22s7-7.5 7-12.5A7 7 0 0 0 5 9.5C5 14.5 12 22 12 22Z" />
       <circle cx="12" cy="9.5" r="2.5" />
+    </svg>
+  );
+}
+
+function MapIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21 3 6" />
+      <path d="M9 3v15" />
+      <path d="M15 6v15" />
     </svg>
   );
 }
@@ -506,6 +539,28 @@ function AdminIcon() {
     >
       <path d="M12 3l7 4v5c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V7l7-4Z" />
       <path d="M9.5 12l1.5 1.5 3.5-3.5" />
+    </svg>
+  );
+}
+
+function GameIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M8 8h8a5 5 0 0 1 4.5 7.2l-1.2 2.4a2 2 0 0 1-3.1.6L14 16h-4l-2.2 2.2a2 2 0 0 1-3.1-.6l-1.2-2.4A5 5 0 0 1 8 8Z" />
+      <path d="M7 12h4" />
+      <path d="M9 10v4" />
+      <circle cx="16.5" cy="11.5" r=".5" fill="currentColor" />
+      <circle cx="18.5" cy="13.5" r=".5" fill="currentColor" />
     </svg>
   );
 }
