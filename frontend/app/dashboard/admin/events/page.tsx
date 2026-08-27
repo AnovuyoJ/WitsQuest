@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import type { User } from "@supabase/supabase-js";
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
@@ -21,7 +22,7 @@ type Event = {
   created_at: string | null;
 };
 
-function getUsername(user: any) {
+function getUsername(user: User | null) {
   return (
     user?.user_metadata?.user_name ||
     user?.user_metadata?.login ||
@@ -84,12 +85,6 @@ export default function AdminEventsPage() {
    * ----------------------------------------------------
    */
 
-  useEffect(() => {
-    if (!admin) return;
-
-    loadEvents();
-  }, [admin]);
-
   async function loadEvents() {
     setLoading(true);
 
@@ -111,6 +106,14 @@ export default function AdminEventsPage() {
     setEvents((data ?? []) as Event[]);
     setLoading(false);
   }
+
+  useEffect(() => {
+    if (!admin) return;
+
+    loadEvents();
+  }, [admin]);
+
+  
 
   /*
    * ----------------------------------------------------

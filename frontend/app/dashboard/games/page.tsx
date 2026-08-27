@@ -1,10 +1,14 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { use, useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { useRouter } from "next/navigation";
+
+
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
+
 
 type Card = {
   id: string;
@@ -49,6 +53,8 @@ export default function GamesPage() {
 
   const [error, setError] =
     useState<string | null>(null);
+
+  const router = useRouter();
 
   /*
    * --------------------------------------------------
@@ -393,8 +399,9 @@ export default function GamesPage() {
           }
         }
 
-        window.location.href =
-          `/dashboard/games/${joinedGame.id}`;
+        router.push(
+          `/dashboard/games/${joinedGame.id}`
+        );
 
         return;
       }
@@ -453,8 +460,9 @@ export default function GamesPage() {
       /*
        * Go to waiting/battle room.
        */
-      window.location.href =
-        `/dashboard/games/${newGame.id}`;
+      router.push(
+        `/dashboard/games/${newGame.id}`
+      );
     } catch (err) {
       console.error(
         "MATCHMAKING ERROR:",

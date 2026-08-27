@@ -3,6 +3,7 @@
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { User } from "@supabase/supabase-js";
 
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
@@ -29,7 +30,7 @@ type Challenge = {
   created_at: string | null;
 };
 
-function getGitHubUsernameCandidates(user: any): string[] {
+function getGitHubUsernameCandidates(user: User | null | undefined): string[] {
   if (!user) return [];
 
   const values = [
@@ -39,19 +40,12 @@ function getGitHubUsernameCandidates(user: any): string[] {
     user?.user_metadata?.name,
     user?.email?.split("@")[0],
 
-    user?.identities?.map(
-      (identity: any) =>
-        identity?.identity_data?.user_name
-    ),
+    user?.identities?.map((identity) => identity?.identity_data?.user_name),
+
+    user?.identities?.map((identity) => identity?.identity_data?.login),
 
     user?.identities?.map(
-      (identity: any) =>
-        identity?.identity_data?.login
-    ),
-
-    user?.identities?.map(
-      (identity: any) =>
-        identity?.identity_data?.preferred_username
+      (identity) => identity?.identity_data?.preferred_username
     ),
   ];
 
@@ -65,7 +59,7 @@ function getGitHubUsernameCandidates(user: any): string[] {
     .filter(Boolean);
 }
 
-function isAdminGitHubUser(user: any) {
+function isAdminGitHubUser(user: User | null | undefined): boolean {
   if (!user) return false;
 
   const candidates =
