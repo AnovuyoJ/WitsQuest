@@ -22,9 +22,12 @@ export default function DashboardLayout({
     >
       <div className="flex min-h-screen">
         {isAdminArea ? (
-          <AdminSidebar darkMode={darkMode} onToggleDarkMode={() => setDarkMode((value) => !value)} />
+          <AdminSidebar
+            darkMode={darkMode}
+            onToggleDarkMode={() => setDarkMode((current) => !current)}
+          />
         ) : (
-          <Sidebar darkMode={darkMode} onToggleDarkMode={() => setDarkMode((value) => !value)} />
+          <Sidebar />
         )}
 
         <div
