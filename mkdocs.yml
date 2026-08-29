@@ -15,7 +15,9 @@ nav:
   - Home: index.md
   - Planning:
     - Project Plan: Planning/project-plan.md
-    - Sprint Plan: Planning/sprint-1-plan.md
+    - Sprint Plan: 
+        - Sprint 1: Planning/sprint-1-plan.md
+        - Sprint 2: Planning/sprint-2-plan.md
     - Dev Plan: Planning/dev-plan.md
     - Decisions: Planning/decisions.md
   - Design:
