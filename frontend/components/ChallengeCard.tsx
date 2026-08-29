@@ -13,13 +13,15 @@ type ChallengeCardProps = {
 export default function ChallengeCard({
   eventId,
 }: ChallengeCardProps) {
-  const { state, submit } = useChallenge(eventId);
+  const { state, submit, nextQuestion } = useChallenge(eventId);
 
   const [selectedOption, setSelectedOption] =
     useState<string | null>(null);
 
   const [textAnswer, setTextAnswer] =
     useState("");
+  
+  
 
   /*
    * Loading
@@ -47,45 +49,58 @@ export default function ChallengeCard({
    * Result
    */
   if (state.status === "result") {
-    const { result } = state;
+  const { result } = state;
 
-    return (
-      <div className="rounded-2xl bg-white p-6 text-center shadow-[0_2px_30px_-8px_rgba(4,54,115,0.2)]">
-        {result.alreadyCompleted ? (
-          <p className="text-sm text-gray-500">
-            You've already completed this challenge.
-          </p>
-        ) : result.correct ? (
-          <p className="font-serif text-lg text-green-700">
-            Correct!
-          </p>
-        ) : (
-          <p className="font-serif text-lg text-red-600">
-            Not quite.
-          </p>
-        )}
-
-        <p className="mt-2 text-sm text-gray-600">
-          The answer was:{" "}
-          <span className="font-semibold">
-            {result.correctAnswer}
-          </span>
+  return (
+    <div className="rounded-2xl bg-white p-6 text-center shadow-[0_2px_30px_-8px_rgba(4,54,115,0.2)]">
+      {result.alreadyCompleted ? (
+        <p className="text-sm text-gray-500">
+          You've already completed this challenge.
         </p>
+      ) : result.correct ? (
+        <p className="font-serif text-lg text-green-700">
+          Correct!
+        </p>
+      ) : (
+        <p className="font-serif text-lg text-red-600">
+          Not quite.
+        </p>
+      )}
 
-        {result.cardAwarded && (
-          <div
-            className="mt-4 rounded-xl px-4 py-3 text-sm font-semibold"
-            style={{
-              background: `${WITS_GOLD}20`,
-              color: WITS_BLUE,
-            }}
-          >
-            🎉 You earned a new card!
-          </div>
-        )}
-      </div>
-    );
-  }
+      <p className="mt-2 text-sm text-gray-600">
+        The answer was:{" "}
+        <span className="font-semibold">
+          {result.correctAnswer}
+        </span>
+      </p>
+
+      {result.cardAwarded && (
+        <div
+          className="mt-4 rounded-xl px-4 py-3 text-sm font-semibold"
+          style={{
+            background: `${WITS_GOLD}20`,
+            color: WITS_BLUE,
+          }}
+        >
+          🎉 You earned a new card!
+        </div>
+      )}
+
+      <button
+        type="button"
+        onClick={() => {
+          setSelectedOption(null);
+          setTextAnswer("");
+          nextQuestion();
+        }}
+        style={{ background: WITS_BLUE }}
+        className="mt-5 w-full rounded-xl py-3 text-sm font-semibold text-white transition-all hover:brightness-110"
+      >
+        Next Question
+      </button>
+    </div>
+  );
+}
 
   /*
    * At this point state is either

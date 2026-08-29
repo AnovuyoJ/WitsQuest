@@ -9,6 +9,7 @@ const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
 const ADMIN_GITHUB_USERNAME = "AnovuyoJ";
 
+
 type QuestionType =
   | "multiple_choice"
   | "true_false"
@@ -116,6 +117,9 @@ function AdminChallengesContent() {
 
   const [saving, setSaving] =
     useState(false);
+
+  const [cards, setCards] = useState<{ id: string; title: string }[]>([]);
+  const [selectedCard, setSelectedCard] = useState("");
 
   /*
    * ----------------------------------------------------
@@ -250,45 +254,62 @@ function AdminChallengesContent() {
    */
 
   useEffect(() => {
-    if (!selectedEvent) {
-      setChallenges([]);
+  if (!selectedEvent) {
+    setChallenges([]);
+    return;
+  }
+
+  async function loadChallenges() {
+    setError("");
+
+    const { data, error } = await supabase
+      .from("challenges")
+      .select(`
+        id,
+        event_id,
+        question_text,
+        question_type,
+        options,
+        correct_answer,
+        card_id,
+        created_at
+      `)
+      .eq("event_id", selectedEvent)
+      .order("created_at", { ascending: true });
+
+    if (error) {
+      setError(error.message);
       return;
     }
 
-    async function loadChallenges() {
-      setError("");
+    setChallenges((data ?? []) as Challenge[]);
+  }
 
-      const { data, error } = await supabase
-        .from("challenges")
-        .select(
-          `
-          id,
-          event_id,
-          question_text,
-          question_type,
-          options,
-          correct_answer,
-          card_id,
-          created_at
-          `
-        )
-        .eq("event_id", selectedEvent)
-        .order("created_at", {
-          ascending: true,
-        });
+  loadChallenges();
+}, [selectedEvent]);
 
-      if (error) {
-        setError(error.message);
-        return;
-      }
+useEffect(() => {
+  if (!selectedEvent) {
+    setCards([]);
+    return;
+  }
 
-      setChallenges(
-        (data ?? []) as Challenge[]
-      );
+  async function loadCards() {
+    const { data, error } = await supabase
+      .from("cards")
+      .select("id, title")
+      .eq("event_id", selectedEvent);
+
+    if (error) {
+      setError(error.message);
+      return;
     }
 
-    loadChallenges();
-  }, [selectedEvent]);
+    setCards(data ?? []);
+  }
+
+  loadCards();
+}, [selectedEvent]);
 
   /*
    * ----------------------------------------------------
@@ -301,6 +322,7 @@ function AdminChallengesContent() {
     setQuestionType("multiple_choice");
     setOptions("");
     setAnswer("");
+    setSelectedCard("");
     setEditingId(null);
   }
 
@@ -416,6 +438,7 @@ function AdminChallengesContent() {
       question_type: questionType,
       options: challengeOptions,
       correct_answer: cleanAnswer,
+      card_id: selectedCard || null,
     };
 
     setSaving(true);
@@ -510,6 +533,10 @@ function AdminChallengesContent() {
 
     setAnswer(
       challenge.correct_answer
+    );
+
+    setSelectedCard(
+      challenge.card_id ?? ""
     );
 
     setMessage("");
@@ -737,6 +764,25 @@ function AdminChallengesContent() {
           )}
 
           <div className="mt-6 space-y-5">
+
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">
+              Reward card
+            </span>
+
+            <select
+              value={selectedCard}
+              onChange={(e) => setSelectedCard(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none focus:border-[#043673]"
+            >
+              <option value="">No card</option>
+              {cards.map((card) => (
+                <option key={card.id} value={card.id}>
+                  {card.title}
+                </option>
+              ))}
+            </select>
+          </label>
 
             {/* QUESTION TYPE */}
 
