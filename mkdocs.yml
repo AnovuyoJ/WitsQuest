@@ -1,26 +1,39 @@
-site_name: Campus Game-Wit's Quest
+site_name: "Campus Game-Wit's Quest"
 theme:
-  name: material
-  palette:
-    scheme: default
-  features:
-    - navigation.tabs
-    - search.suggest
+  name: readthedocs
+
+extra_css:
+  - stylesheets/extra.css
 
 nav:
   - Home: index.md
-  - Dev Plan: dev-plan.md
-  - System Design: system-design.md
-  - UI Design:
-    - Authentication UI: authentication-ui.md
-  - Decisions: decisions.md
+  - Planning:
+    - Project Plan: Planning/project-plan.md
+    - Sprint Plan: Planning/sprint-plan.md
+    - Dev Plan: Planning/dev-plan.md
+    - Decisions: Planning/decisions.md
+  - Design:
+    - System Design: Design/system-design.md
+    - UI Design:
+      - Authentication UI: Design/UI Design/authentication-ui.md
+  - Sprints:
+    - Sprint 1:
+      - Sprint 1 Burndown Chart: Sprints/Sprint 1/sprint-1-burndown-chart.md
+      - Acceptance Criteria 1: Sprints/Sprint 1/sprint-1(UAT).md
+      - Sprint 1 Backlog: Sprints/Sprint 1/sprint-1-backlog.md
+      - Sprint 1 Retrospective: Sprints/Sprint 1/sprint-1-retrospective.md
+    - Sprint 2:
+      - Sprint 2 Burndown Chart: Sprints/sprint-2-burndown-chart.md
+      - Acceptance Criteria 1:  Sprints/sprint-2(UAT).md
+      - Acceptance Criteria 2: Sprints/sprint-2(US).md
+      - Sprint 2 Retrospective: Sprints/sprint-2-retrospective.md
+    - Sprint 3:
+      - Sprint 3 Burndown Chart: sprint-3-burndown-chart.md
+      - Acceptance Criteria 1: sprint-3(UAT).md
+      - Acceptance Criteria 2: sprint-3(US).md
+      - Sprint 3 Retrospective: sprint-3-retrospective.md
   - Meeting Minutes:
-    - Meeting-minutes-1: meeting-minutes-1.md
-    - Meeting-minutes-2: meeting-minutes-2.md
-    - Meeting-minutes-3: meeting-minutes-3.md
-  - Acceptance Criteria: 
-    - Sprint-1:
-      - Acceptance Criteria 1: sprint-1(UAT).md
-      - Acceptance Criteria 2: sprint-1(US).md
-
-    
+    - Sprint 1:
+      - Meeting 1: Meeting Minutes/Sprint 1/meeting-minutes-1.md
+      - Meeting 2: Meeting Minutes/Sprint 1/meeting-minutes-2.md
+      - Meeting 3: Meeting Minutes/Sprint 1/meeting-minutes-3.md
