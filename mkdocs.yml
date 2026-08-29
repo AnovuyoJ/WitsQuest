@@ -2,8 +2,14 @@ site_name: "Campus Game-Wit's Quest"
 theme:
   name: readthedocs
 
+plugins:
+  - search
+  - mermaid2
+
 extra_css:
   - stylesheets/extra.css
+
+
 
 nav:
   - Home: index.md

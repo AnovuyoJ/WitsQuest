@@ -1,4 +1,4 @@
-# Wits Quest – Software Design
+# Wits Quest – System Design
 
 ## 1. Introduction
 
@@ -55,24 +55,14 @@ It is responsible for storing:
 
 The overall architecture can be represented as:
 
-```text
-User
-  |
-  v
-Next.js / React Frontend
-  |
-  v
-Application / API Logic
-  |
-  v
-Supabase
-  |
-  +-- Authentication
-  |
-  +-- PostgreSQL Database
+```mermaid
+graph TD
+  A[User] --> B[Next.js / React Frontend]
+  B --> C[Application / API Logic]
+  C --> D[Supabase]
+  D --> E[Authentication]
+  D --> F[PostgreSQL Database]
 ```
-
----
 
 ## 3. Technologies
 
@@ -142,7 +132,7 @@ The campus map is implemented using **Leaflet** and **React Leaflet**.
 
 The map displays the locations of game events using their stored latitude and longitude coordinates.
 
-Events can be represented using map markers and their associated location radius.
+Events are represented using map markers and their associated location radius.
 
 ---
 
@@ -156,43 +146,25 @@ The browser uses the **Geolocation API** to obtain the player's current:
 - Longitude
 - Location accuracy
 
-The player's location is sent to the location verification API.
-
-The backend retrieves the event's coordinates and compares them with the player's coordinates.
+The player's location is sent to the location verification API. The backend retrieves the event's coordinates and compares them with the player's coordinates.
 
 ### Location Verification Flow
 
-```text
-Player selects event
-        |
-        v
-Browser requests location
-        |
-        v
-Player coordinates obtained
-        |
-        v
-Coordinates sent to API
-        |
-        v
-Event coordinates retrieved
-        |
-        v
-Distance calculated
-        |
-        v
-Is player within event radius?
-       / \
-     Yes  No
-      |    |
-      v    v
- Challenge Access
- available denied
+```mermaid
+flowchart TD
+    A[Player selects event] --> B[Browser requests location]
+    B --> C[Player coordinates obtained]
+    C --> D[Coordinates sent to API]
+    D --> E[Event coordinates retrieved]
+    E --> F[Distance calculated]
+    F --> G{Is player within event radius?}
+    G -->|Yes| H[Challenge access available]
+    G -->|No| I[Challenge access denied]
 ```
 
 The system uses the **Haversine formula** to calculate the distance between the player and the event.
 
-The calculated distance is compared with the event's `radius_meters`.
+The calculated distance is compared with the event's `radius_meters`:
 
 ```text
 distance <= radius_meters
@@ -200,20 +172,21 @@ distance <= radius_meters
 
 If this condition is true, the player's location is successfully verified.
 
-The system also checks whether the event is currently active using its start and end times.
+The system also checks whether the event is currently active based on its start and end times.
 
 ---
 
 ## 6. Authentication Design
 
-Authentication is handled using **Supabase Auth**.
+Authentication is handled using **Supabase Auth**, which manages the authenticated user's session.
 
-The application supports authentication methods such as:
+The application supports three sign-in methods, implemented in `lib/authService.ts`:
 
-- Email and password
-- GitHub OAuth
-
-Supabase manages the authenticated user's session.
+| Method | Implementation |
+|---|---|
+| Email / password | `signUp()` and `signIn()`, using Supabase's built-in `signUp` / `signInWithPassword` |
+| Google OAuth | `signInWithGoogle()`, using Supabase's OAuth provider integration |
+| GitHub OAuth | `signInWithGithub()`, following the same OAuth pattern |
 
 Protected application functionality checks whether a valid authenticated user exists before allowing access.
 
@@ -231,9 +204,7 @@ The main administrative routes are:
 /dashboard/admin/cards
 ```
 
-Admin pages perform an additional authorisation check.
-
-If a user does not have administrator access, they are redirected to the normal dashboard.
+Admin pages perform an additional authorisation check. If a user does not have administrator access, they are redirected to the normal dashboard.
 
 Administrators can manage:
 
@@ -302,11 +273,7 @@ The application supports three challenge question types:
 
 ### Multiple Choice
 
-Multiple-choice challenges contain a list of possible answers.
-
-The administrator must provide at least two options and specify the correct answer.
-
-The correct answer must match one of the provided options.
+Multiple-choice challenges contain a list of possible answers. The administrator must provide at least two options and specify the correct answer, which must match one of the provided options.
 
 ### True / False
 
@@ -314,7 +281,7 @@ True/False challenges allow the administrator to select either `True` or `False`
 
 ### Text Answer
 
-Text challenges allow players to manually enter an answer which can be compared with the expected answer stored for the challenge.
+Text challenges allow players to manually enter an answer, which is compared with the expected answer stored for the challenge.
 
 ---
 
@@ -324,32 +291,16 @@ After a player's location has been successfully verified, the player can attempt
 
 The general challenge flow is:
 
-```text
-Player
-  |
-  v
-Verify location
-  |
-  v
-Display challenge
-  |
-  v
-Submit answer
-  |
-  v
-Validate answer
-  |
-  +----------------+
-  |                |
-Correct          Incorrect
-  |                |
-  v                v
-Award card      Show result
+```mermaid
+flowchart TD
+    A[Player] --> B[Verify location]
+    B --> C[Display challenge]
+    C --> D[Submit answer]
+    D --> E[Validate answer]
+    E -->|Correct| F[Award card]
+    E -->|Incorrect| G[Show result]
 ```
-
-The player's submitted answer is compared with the challenge's stored correct answer.
-
-If the answer is correct, the player can receive the associated card.
+The player's submitted answer is compared with the challenge's stored correct answer. If the answer is correct, the player receives the associated card.
 
 ---
 
@@ -380,6 +331,43 @@ Cards provide a reward and progression mechanism for players participating in Wi
 The application uses a **Supabase PostgreSQL database**.
 
 ### Events
+
+```mermaid
+erDiagram
+    EVENTS ||--o{ CHALLENGES : "has"
+    EVENTS ||--o{ LOCATION_VERIFICATIONS : "verified against"
+
+    EVENTS {
+        uuid id
+        string title
+        string description
+        float latitude
+        float longitude
+        float radius_meters
+        timestamp starts_at
+        timestamp ends_at
+        timestamp created_at
+    }
+
+    CHALLENGES {
+        uuid id
+        uuid event_id
+        string question_text
+        string question_type
+        json options
+        string correct_answer
+        uuid card_id
+        timestamp created_at
+    }
+
+    LOCATION_VERIFICATIONS {
+        uuid id
+        uuid player_id
+        uuid event_id
+        float distance_meters
+        timestamp verified_at
+    }
+```
 
 ```text
 events
@@ -455,15 +443,7 @@ CampusMap
 
 ### Sidebar
 
-The sidebar provides navigation between the main application pages.
-
-It contains links such as:
-
-- Dashboard
-- Events
-- Notifications
-
-The sidebar can also be collapsed to provide more screen space.
+The sidebar provides navigation between the main application pages, including links such as Dashboard, Events, and Notifications. The sidebar can also be collapsed to provide more screen space.
 
 ### Profile Menu
 
@@ -471,9 +451,7 @@ The profile menu displays information about the authenticated user and provides 
 
 ### Campus Map
 
-The `CampusMap` component displays game events geographically using React Leaflet.
-
-It retrieves event information and displays event markers on the campus map.
+The `CampusMap` component displays game events geographically using React Leaflet. It retrieves event information and displays event markers on the campus map.
 
 ---
 
@@ -506,15 +484,11 @@ Admin functionality performs additional checks to prevent normal players from ac
 
 ### Location Validation
 
-The player's reported location is compared with the stored event location before the challenge is made available.
-
-The application can reject location readings when the reported GPS accuracy is too poor.
+The player's reported location is compared with the stored event location before the challenge is made available. The application can reject location readings when the reported GPS accuracy is too poor.
 
 ### Server-Side Validation
 
-Important game rules should be validated by backend/API logic rather than relying only on frontend validation.
-
-This reduces the possibility of users bypassing game restrictions by modifying frontend behaviour.
+Important game rules are validated by backend/API logic rather than relying only on frontend validation. This reduces the possibility of users bypassing game restrictions by modifying frontend behaviour.
 
 ---
 
@@ -534,9 +508,7 @@ Possible errors include:
 - Challenge information is invalid
 - Database operation fails
 
-The application also displays confirmation messages when administrative operations are successful.
-
-Examples include:
+The application also displays confirmation messages when administrative operations are successful, for example:
 
 ```text
 Challenge added successfully.
@@ -548,46 +520,20 @@ Challenge deleted successfully.
 
 ## 17. Overall System Flow
 
-```text
-                    WITS QUEST
-                         |
-                         v
-                       User
-                         |
-                         v
-                Authentication
-                         |
-                         v
-                Player Dashboard
-                         |
-              +----------+----------+
-              |                     |
-              v                     v
-            Events               Campus Map
-              |                     |
-              +----------+----------+
-                         |
-                         v
-                  Select Event
-                         |
-                         v
-                Verify Location
-                         |
-                         v
-                Attempt Challenge
-                         |
-                         v
-                  Submit Answer
-                         |
-                   +-----+-----+
-                   |           |
-                   v           v
-                Correct     Incorrect
-                   |
-                   v
-                Earn Card
+```mermaid
+flowchart TD
+    A[User] --> B[Authentication]
+    B --> C[Player Dashboard]
+    C --> D[Events]
+    C --> E[Campus Map]
+    D --> F[Select Event]
+    E --> F
+    F --> G[Verify Location]
+    G --> H[Attempt Challenge]
+    H --> I[Submit Answer]
+    I -->|Correct| J[Earn Card]
+    I -->|Incorrect| K[Show Result]
 ```
-
 ---
 
 ## 18. Design Summary
@@ -606,3 +552,4 @@ The core game flow consists of:
 6. The player receiving a card after successfully completing the challenge.
 
 This structure allows Wits Quest to combine location-based gameplay, campus exploration, challenges, and collectible rewards in a single web application.
+
