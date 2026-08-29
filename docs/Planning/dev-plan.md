@@ -1,6 +1,6 @@
 # Development Plan
 
-## Development Methology:
+## Development Methodology:
 
 The project follows the Scrum Agile methodology, as outlined in our project decisions. Development is organised into sprints, with user stories and tasks planned and tracked using Taiga.
 
@@ -30,7 +30,7 @@ The project uses a combination of technologies and development tools to support 
 
 Together, these technologies and tools provide the development, collaboration, version control, documentation, and deployment infrastructure required for the project.
 
-## Branding & Version Control Strategy:
+## Branching & Version Control Strategy:
 
 The team follows a feature-branch workflow using Git and Gitea. The main branch represents the stable version of the project and team members do not develop features directly on it.
 
@@ -87,7 +87,15 @@ Team members are expected to run the relevant lint, type-check, and formatting c
 
 ## Testing Approach
 
-## Defnition of Done 
+The project currently uses **manual testing** as its primary testing approach. Each feature is tested by the developer during implementation to ensure that it functions as expected and meets the requirements of the user story. Before being merged into the main branch, the feature is also tested by at least one other team member as part of the **Pull Request review process.**
+
+At the end of each sprint, **User Acceptance Testing (UAT)** is conducted against the predefined acceptance criteria for each user story. This verifies that the implemented functionality meets the expected user requirements before the user story is considered complete. The acceptance criteria and UAT results are recorded in the relevant **Sprint Acceptance Criteria documents.**
+
+Testing also includes checking interactions between the **frontend, backend, authentication, and database** where applicable to ensure that the different parts of the system work correctly together.
+
+**Automated unit and integration testing** has not yet been introduced. However, it is being considered for future sprints as the application grows and the codebase becomes more stable. Introducing automated testing would help identify regressions, improve reliability, and reduce the amount of repetitive manual testing required in later stages of development.
+
+## Definition of Done 
 
 A user story is considered **Done** only when all agreed development, testing, review, and integration requirements have been completed. This ensures that completed work is functional and ready to be included in the project.
 
