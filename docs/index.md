@@ -1,17 +1,29 @@
-# Welcome to MkDocs
+# Wits Quest
 
-For full documentation visit [mkdocs.org](https://www.mkdocs.org).
+Wits Quest is a location-based campus exploration and trivia game built for students at the University of the Witwatersrand. Players move around campus, discover events, verify their presence at event locations, complete trivia challenges, and collect cards that can be used in battles against other players.
 
-## Commands
+## About This Documentation
 
-* `mkdocs new [dir-name]` - Create a new project.
-* `mkdocs serve` - Start the live-reloading docs server.
-* `mkdocs build` - Build the documentation site.
-* `mkdocs -h` - Print help message and exit.
+This site contains the technical and process documentation for the Wits Quest Software Design Project, including:
 
-## Project layout
+- **Planning** — project scope, development approach, and key technical decisions
+- **Design** — system architecture, database design, and UI design
+- **Sprints** — sprint backlogs, acceptance criteria, and outcomes
+- **Meeting Minutes** — records of team and client meetings
 
-    mkdocs.yml    # The configuration file.
-    docs/
-        index.md  # The documentation homepage.
-        ...       # Other markdown pages, images and other files.
+## Project Overview
+
+| | |
+|---|---|
+| **Team** | Bugs Bunnies |
+| **Methodology** | Scrum |
+| **Frontend** | Next.js, React, TypeScript, Tailwind CSS |
+| **Backend** | Node.js, Express |
+| **Database** | Supabase (PostgreSQL) |
+| **Tracking** | Taiga |
+
+## Quick Links
+
+- [Dev Plan](Planning/dev-plan.md)
+- [System Design](Design/system-design.md)
+- [Decisions](Planning/decisions.md)

@@ -1,3 +1,454 @@
+/* =========================
+   MAIN CONTENT AREA
+   ========================= */
+
 .wy-nav-content {
   max-width: 1200px !important;
+  margin: 0 auto;
+  padding: 2.5rem 3rem;
+  background: #ffffff;
+  border-radius: 12px;
+}
+
+/* =========================
+   PAGE BACKGROUND
+   ========================= */
+
+.wy-nav-content-wrap {
+  background: #f5f7fa;
+}
+
+/* =========================
+   HEADINGS
+   ========================= */
+
+.rst-content h1,
+.rst-content h2,
+.rst-content h3,
+.rst-content h4 {
+  font-weight: 700;
+  color: #043673;
+}
+
+.rst-content h1 {
+  font-size: 2.2rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.6rem;
+  border-bottom: 3px solid #c9a24b;
+}
+
+.rst-content h2 {
+  font-size: 1.6rem;
+  margin-top: 2rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.rst-content h3 {
+  font-size: 1.25rem;
+  margin-top: 1.5rem;
+}
+
+/* =========================
+   BODY TEXT
+   ========================= */
+
+.rst-content p,
+.rst-content li {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #374151;
+}
+
+.rst-content strong {
+  color: #043673;
+}
+
+/* =========================
+   LINKS
+   ========================= */
+
+.rst-content a {
+  color: #043673;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.rst-content a:hover {
+  color: #c9a24b;
+  text-decoration: underline;
+}
+
+/* =========================
+   SIDEBAR
+   ========================= */
+
+.wy-side-nav-search {
+  background: #043673;
+}
+
+.wy-nav-side {
+  background: #102a43;
+}
+
+.wy-menu-vertical a {
+  color: #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.wy-menu-vertical a:hover {
+  background: #173f68;
+  color: #ffffff;
+}
+
+.wy-menu-vertical li.current > a {
+  background: #ffffff;
+  color: #043673;
+  font-weight: 600;
+}
+
+.wy-menu-vertical li.toctree-l2.current > a {
+  background: #edf2f7;
+  color: #043673;
+}
+
+/* =========================
+   SEARCH BAR
+   ========================= */
+
+.wy-side-nav-search input[type="text"] {
+  border-radius: 8px;
+  border: none;
+  padding: 10px 12px;
+}
+
+/* =========================
+   CODE BLOCKS
+   ========================= */
+
+.rst-content pre {
+  border-radius: 10px;
+  padding: 1rem;
+  border: 1px solid #e5e7eb;
+}
+
+.rst-content code {
+  border-radius: 5px;
+  padding: 2px 6px;
+}
+
+/* =========================
+   TABLES
+   ========================= */
+
+.rst-content table.docutils {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1.5rem 0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rst-content table.docutils th {
+  background: #043673;
+  color: white;
+  padding: 12px;
+}
+
+.rst-content table.docutils td {
+  padding: 12px;
+}
+
+.rst-content table.docutils tr:nth-child(even) {
+  background: #f8fafc;
+}
+
+/* =========================
+   NOTES / WARNINGS
+   ========================= */
+
+.rst-content .admonition {
+  border-radius: 10px;
+  border: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+}
+
+.rst-content .admonition-title {
+  border-radius: 10px 10px 0 0;
+}
+
+/* =========================
+   BLOCKQUOTES
+   ========================= */
+
+.rst-content blockquote {
+  border-left: 4px solid #c9a24b;
+  background: #f8fafc;
+  padding: 1rem 1.5rem;
+  margin: 1.5rem 0;
+  border-radius: 0 8px 8px 0;
+}
+
+/* =========================
+   PREVIOUS / NEXT BUTTONS
+   ========================= */
+
+.rst-footer-buttons a {
+  border-radius: 8px;
+  background: #043673;
+  color: white !important;
+  padding: 10px 16px;
+  transition: all 0.2s ease;
+}
+
+.rst-footer-buttons a:hover {
+  background: #c9a24b;
+  color: #ffffff !important;
+  text-decoration: none;
+}
+
+/* =========================
+   MOBILE
+   ========================= */
+
+@media screen and (max-width: 768px) {
+  .wy-nav-content {
+    padding: 1.5rem 1rem;
+    border-radius: 0;
+  }
+
+  .rst-content h1 {
+    font-size: 1.8rem;
+  }
+
+  .rst-content h2 {
+    font-size: 1.4rem;
+  }
+}
+
+/* =====================================
+   MODERN TOP BRAND / SEARCH AREA
+   ===================================== */
+
+.wy-side-nav-search {
+  background: linear-gradient(
+    135deg,
+    #043673 0%,
+    #0b4f9c 100%
+  );
+  padding: 1.4rem 1rem 1.2rem;
+  border-bottom: 3px solid #c9a24b;
+}
+
+/* Project title / logo text */
+.wy-side-nav-search > a {
+  color: #ffffff !important;
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: 0.4px;
+  text-decoration: none;
+}
+
+/* Optional subtitle feel */
+.wy-side-nav-search > a::after {
+  content: "Project Documentation";
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 0.72rem;
+  font-weight: 500;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+/* Search bar */
+.wy-side-nav-search input[type="text"] {
+  margin-top: 1rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.96);
+  color: #1f2937;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+/* Search focus */
+.wy-side-nav-search input[type="text"]:focus {
+  outline: none;
+  border-color: #c9a24b;
+  box-shadow: 0 0 0 3px rgba(201, 162, 75, 0.2);
+}
+
+
+/* =====================================
+   MODERN SIDEBAR
+   ===================================== */
+
+.wy-nav-side {
+  background: #0f2742;
+  border-right: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Sidebar section labels */
+.wy-menu-vertical p.caption {
+  color: #9fb3c8;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  margin: 1.25rem 0 0.5rem;
+  padding-left: 1rem;
+}
+
+/* Sidebar links */
+.wy-menu-vertical a {
+  color: #dbe5ef;
+  padding: 0.7rem 1rem;
+  border-left: 3px solid transparent;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    border-color 0.2s ease,
+    padding-left 0.2s ease;
+}
+
+/* Hover */
+.wy-menu-vertical a:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #ffffff;
+  border-left-color: #c9a24b;
+  padding-left: 1.15rem;
+}
+
+/* Current main page */
+.wy-menu-vertical li.current > a {
+  background: #ffffff;
+  color: #043673;
+  font-weight: 700;
+  border-left: 4px solid #c9a24b;
+}
+
+/* Current nested page */
+.wy-menu-vertical li.toctree-l2.current > a,
+.wy-menu-vertical li.toctree-l3.current > a {
+  background: #eef3f8;
+  color: #043673;
+  font-weight: 600;
+}
+
+/* Nested list container */
+.wy-menu-vertical li.current {
+  background: #f8fafc;
+}
+
+
+/* =====================================
+   CLEANER SIDEBAR SCROLLING
+   ===================================== */
+
+.wy-side-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #506b86 #0f2742;
+}
+
+.wy-side-scroll::-webkit-scrollbar {
+  width: 8px;
+}
+
+.wy-side-scroll::-webkit-scrollbar-track {
+  background: #0f2742;
+}
+
+.wy-side-scroll::-webkit-scrollbar-thumb {
+  background: #506b86;
+  border-radius: 8px;
+}
+
+.wy-side-scroll::-webkit-scrollbar-thumb:hover {
+  background: #6f89a3;
+}
+
+
+/* =====================================
+   TOP MOBILE BAR
+   ===================================== */
+
+.wy-nav-top {
+  background: #043673;
+  border-bottom: 3px solid #c9a24b;
+  color: white;
+  font-weight: 700;
+}
+
+
+/* =====================================
+   CONTENT HEADER POLISH
+   ===================================== */
+
+.rst-content h1 {
+  color: #043673;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+}
+
+.rst-content h1::before {
+  content: "";
+  display: block;
+  width: 52px;
+  height: 5px;
+  background: #c9a24b;
+  border-radius: 20px;
+  margin-bottom: 0.85rem;
+}
+
+
+/* =====================================
+   BREADCRUMBS
+   ===================================== */
+
+.wy-breadcrumbs {
+  margin-bottom: 1.5rem;
+  font-size: 0.88rem;
+  color: #64748b;
+}
+
+.wy-breadcrumbs a {
+  color: #043673;
+  font-weight: 600;
+}
+
+.wy-breadcrumbs a:hover {
+  color: #c9a24b;
+}
+
+
+/* =====================================
+   FOOTER
+   ===================================== */
+
+footer {
+  margin-top: 3rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  color: #94a3b8;
+  font-size: 0.85rem;
+}
+
+
+/* =====================================
+   MOBILE SIDEBAR
+   ===================================== */
+
+@media screen and (max-width: 768px) {
+  .wy-side-nav-search {
+    padding: 1rem;
+  }
+
+  .wy-side-nav-search > a {
+    font-size: 1.15rem;
+  }
+
+  .wy-menu-vertical a {
+    padding: 0.8rem 1rem;
+  }
 }
