@@ -328,102 +328,207 @@ Cards provide a reward and progression mechanism for players participating in Wi
 
 ## 12. Database Design
 
-The application uses a **Supabase PostgreSQL database**.
+The application uses a **Supabase PostgreSQL database** consisting of eight tables covering events, challenges, cards, location verification, and the battle system.
 
 ### Events
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `title` | `text` | |
+| `description` | `text` | Nullable |
+| `latitude` | `float8` | |
+| `longitude` | `float8` | |
+| `radius_meters` | `int4` | |
+| `starts_at` | `timestamptz` | |
+| `ends_at` | `timestamptz` | |
+| `created_at` | `timestamptz` | Nullable |
+
+### Challenges
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `event_id` | `uuid` | |
+| `question_text` | `text` | |
+| `question_type` | `text` | |
+| `options` | `jsonb` | Nullable |
+| `correct_answer` | `text` | |
+| `card_id` | `uuid` | Nullable |
+| `created_at` | `timestamptz` | Nullable |
+
+### Location Verifications
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `player_id` | `uuid` | Nullable |
+| `event_id` | `uuid` | Nullable |
+| `distance_meters` | `float8` | Nullable |
+| `verified_at` | `timestamptz` | Nullable |
+
+### Cards
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `title` | `text` | |
+| `rarity` | `text` | |
+| `description` | `text` | Nullable |
+| `accent` | `text` | Nullable |
+| `badge` | `text` | Nullable |
+| `strength` | `text` | Nullable |
+| `points` | `int4` | |
+| `tag` | `text` | Nullable |
+| `created_at` | `timestamptz` | Nullable |
+| `event_id` | `uuid` | Nullable |
+
+### Player Cards
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `player_id` | `uuid` | |
+| `event_id` | `uuid` | |
+| `card_id` | `uuid` | |
+| `awarded_at` | `timestamptz` | Nullable |
+
+### Challenge Attempts
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `player_id` | `uuid` | |
+| `event_id` | `uuid` | |
+| `correct` | `bool` | |
+| `answered_at` | `timestamptz` | Nullable |
+
+### Card Games
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `player_one_id` | `uuid` | |
+| `player_two_id` | `uuid` | Nullable |
+| `category` | `text` | |
+| `status` | `text` | |
+| `winner_id` | `uuid` | Nullable |
+| `created_at` | `timestamptz` | Nullable |
+| `started_at` | `timestamptz` | Nullable |
+| `finished_at` | `timestamptz` | Nullable |
+
+### Game Rounds
+
+| Name | Type | Constraints |
+|------|------|-------------|
+| `id` | `uuid` | Primary |
+| `game_id` | `uuid` | |
+| `round_number` | `int4` | |
+| `player_one_card_id` | `uuid` | Nullable |
+| `player_two_card_id` | `uuid` | Nullable |
+| `player_one_points` | `int4` | Nullable |
+| `player_two_points` | `int4` | Nullable |
+| `winner_id` | `uuid` | Nullable |
+| `status` | `text` | |
+| `created_at` | `timestamptz` | Nullable |
+| `finished_at` | `timestamptz` | Nullable |
+
+### Database Relationships
 
 ```mermaid
 erDiagram
     EVENTS ||--o{ CHALLENGES : "has"
     EVENTS ||--o{ LOCATION_VERIFICATIONS : "verified against"
+    EVENTS ||--o{ PLAYER_CARDS : "awards from"
+    EVENTS ||--o{ CHALLENGE_ATTEMPTS : "attempted at"
+    EVENTS ||--o{ CARDS : "themed to"
+    CHALLENGES }o--|| CARDS : "rewards"
+    PLAYER_CARDS }o--|| CARDS : "instance of"
+    CARD_GAMES ||--o{ GAME_ROUNDS : "contains"
+    CARDS ||--o{ GAME_ROUNDS : "played in"
 
     EVENTS {
         uuid id
-        string title
-        string description
-        float latitude
-        float longitude
-        float radius_meters
-        timestamp starts_at
-        timestamp ends_at
-        timestamp created_at
+        text title
+        text description
+        float8 latitude
+        float8 longitude
+        int4 radius_meters
+        timestamptz starts_at
+        timestamptz ends_at
     }
-
     CHALLENGES {
         uuid id
         uuid event_id
-        string question_text
-        string question_type
-        json options
-        string correct_answer
+        text question_text
+        text question_type
+        jsonb options
+        text correct_answer
         uuid card_id
-        timestamp created_at
     }
-
     LOCATION_VERIFICATIONS {
         uuid id
         uuid player_id
         uuid event_id
-        float distance_meters
-        timestamp verified_at
+        float8 distance_meters
+    }
+    CARDS {
+        uuid id
+        text title
+        text rarity
+        int4 points
+        uuid event_id
+    }
+    PLAYER_CARDS {
+        uuid id
+        uuid player_id
+        uuid event_id
+        uuid card_id
+    }
+    CHALLENGE_ATTEMPTS {
+        uuid id
+        uuid player_id
+        uuid event_id
+        bool correct
+    }
+    CARD_GAMES {
+        uuid id
+        uuid player_one_id
+        uuid player_two_id
+        text category
+        text status
+        uuid winner_id
+    }
+    GAME_ROUNDS {
+        uuid id
+        uuid game_id
+        int4 round_number
+        uuid winner_id
+        text status
     }
 ```
 
-```text
-events
--------------------------
-id
-title
-description
-latitude
-longitude
-radius_meters
-starts_at
-ends_at
-created_at
-```
+An event can contain multiple challenges and multiple cards. Location verifications, challenge attempts, and player cards each connect a player to an event, recording the outcome of that interaction. Card games consist of multiple game rounds, each of which references the cards played by both participants.
 
-### Challenges
+### Row-Level Security (RLS)
 
-```text
-challenges
--------------------------
-id
-event_id
-question_text
-question_type
-options
-correct_answer
-card_id
-created_at
-```
+All tables enforce Row-Level Security policies to ensure players can only access or modify data they are authorised to.
 
-### Location Verifications
+**Events and Challenges** — viewable by any authenticated user. Insert, update, and delete operations are restricted to administrator accounts, identified by GitHub username in the user's JWT metadata.
 
-```text
-location_verifications
--------------------------
-id
-player_id
-event_id
-distance_meters
-verified_at
-```
+**Cards** — viewable by any authenticated user; create, update, and delete operations are currently permitted for any authenticated user.
 
-### Database Relationships
+**Player Cards** — players may only view and insert their own awarded cards (`player_id = auth.uid()`).
 
-An event can contain multiple challenges:
+**Location Verifications** — players may only insert their own location verification records.
 
-```text
-Event
-  |
-  | 1
-  |
-  +--------< Challenges
-              many
-```
+**Challenge Attempts** — players may only insert and view their own challenge attempts.
 
-A location verification connects a player with an event and records the calculated distance.
+**Card Games** — players may create their own games, view games they are part of (or open games waiting for a second player), and join a waiting game as the second player. Both participants may update a game they are part of.
+
+**Game Rounds** — players may view, insert, and update rounds belonging only to card games they are participating in.
+
+This ensures that gameplay data, scores, and card ownership cannot be read or modified by unauthorised players, while event and challenge content remains editable only by administrators.
 
 ---
 
@@ -552,4 +657,3 @@ The core game flow consists of:
 6. The player receiving a card after successfully completing the challenge.
 
 This structure allows Wits Quest to combine location-based gameplay, campus exploration, challenges, and collectible rewards in a single web application.
-
