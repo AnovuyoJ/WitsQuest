@@ -3,7 +3,7 @@ import cors from "cors";
 import dotenv from "dotenv";
 import verifyLocationRouter from "./routes/events/verifyLocation";
 import submitAnswerRouter from "./routes/events/submitAnswer";
-
+import accountRouter from './routes/account';
 dotenv.config();
 dotenv.config({ path: ".env.local" });
 
@@ -15,6 +15,7 @@ app.use(express.json());
 
 app.use("/api/events", verifyLocationRouter);
 app.use("/api/events", submitAnswerRouter);
+app.use('/api', accountRouter);
 
 app.get("/", (_req, res) => {
   res.json({ message: "Campus Quest backend is running." });
