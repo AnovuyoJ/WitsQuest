@@ -41,7 +41,7 @@ const navItems: NavItem[] = [
   {
     label: "Notifications",
     icon: <BellIcon />,
-    href: "/notifications",
+    href: "/dashboard/notifications",
   },
   {
     label: "Admin",

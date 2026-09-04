@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 
@@ -36,6 +36,14 @@ type Deck = {
   cards: PlayerCardRow[];
 };
 
+type PendingGame = {
+  id: string;
+  player_one_id: string;
+  player_two_id: string | null;
+  category: string;
+  status: "waiting" | "active";
+};
+
 export default function GamesPage() {
   const [playerId, setPlayerId] = useState<string | null>(null);
 
@@ -50,6 +58,10 @@ export default function GamesPage() {
 
   const [loading, setLoading] = useState(true);
   const [matching, setMatching] = useState(false);
+  const [pendingGames, setPendingGames] = useState<PendingGame[]>([]);
+  const [loadingPendingGames, setLoadingPendingGames] = useState(true);
+  const [cancellingGameId, setCancellingGameId] = useState<string | null>(null);
+  const [forfeitingGameId, setForfeitingGameId] = useState<string | null>(null);
 
   const [error, setError] =
     useState<string | null>(null);
@@ -150,6 +162,89 @@ export default function GamesPage() {
 
     loadCards();
   }, [playerId]);
+
+  useEffect(() => {
+    if (!playerId) return;
+
+    async function loadPendingGames() {
+      setLoadingPendingGames(true);
+
+      const { data, error } = await supabase
+        .from("card_games")
+        .select("id, player_one_id, player_two_id, category, status")
+        .or(`player_one_id.eq.${playerId},player_two_id.eq.${playerId}`)
+        .in("status", ["waiting", "active"])
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("PENDING GAMES LOAD ERROR:", error);
+        setError(`Could not load your pending games: ${error.message}`);
+      } else {
+        setPendingGames((data ?? []) as PendingGame[]);
+      }
+
+      setLoadingPendingGames(false);
+    }
+
+    loadPendingGames();
+  }, [playerId]);
+
+  async function cancelPendingGame(gameId: string) {
+    if (!playerId) return;
+
+    const confirmed = window.confirm(
+      "Delete this pending game? Other players will no longer be able to join it."
+    );
+
+    if (!confirmed) return;
+
+    setCancellingGameId(gameId);
+    setError(null);
+
+    const { data, error } = await supabase
+      .from("card_games")
+      .update({ status: "cancelled" })
+      .eq("id", gameId)
+      .eq("player_one_id", playerId)
+      .eq("status", "waiting")
+      .select("id")
+      .maybeSingle();
+
+    if (error) {
+      console.error("PENDING GAME DELETE ERROR:", error);
+      setError(`Could not delete the pending game: ${error.message}`);
+    } else if (!data) {
+      setError("This game is no longer waiting and cannot be deleted.");
+    } else {
+      setPendingGames((games) => games.filter((game) => game.id !== gameId));
+    }
+
+    setCancellingGameId(null);
+  }
+
+  async function forfeitGame(gameId: string) {
+    const confirmed = window.confirm(
+      "Quit this match? Your opponent will immediately win by forfeit."
+    );
+
+    if (!confirmed) return;
+
+    setForfeitingGameId(gameId);
+    setError(null);
+
+    const { error } = await supabase.rpc("forfeit_card_game", {
+      p_game_id: gameId,
+    });
+
+    if (error) {
+      console.error("GAME FORFEIT ERROR:", error);
+      setError(`Could not forfeit the game: ${error.message}`);
+    } else {
+      setPendingGames((games) => games.filter((game) => game.id !== gameId));
+    }
+
+    setForfeitingGameId(null);
+  }
 
   /*
    * --------------------------------------------------
@@ -934,6 +1029,96 @@ export default function GamesPage() {
           )}
         </section>
       )}
+
+      {/* PENDING / ACTIVE GAMES */}
+
+      <section className="mt-10">
+        <div className="mb-4">
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
+            Your battles
+          </p>
+          <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+            Pending Games
+          </h2>
+          <p className="mt-1 text-sm text-slate-500">
+            Return to a waiting lobby or resume a battle after an opponent joins.
+          </p>
+        </div>
+
+        {loadingPendingGames ? (
+          <div className="rounded-2xl bg-white p-6 text-sm text-slate-500 shadow-sm">
+            Loading pending games...
+          </div>
+        ) : pendingGames.length === 0 ? (
+          <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-6 text-sm text-slate-500">
+            You have no pending or active games.
+          </div>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2">
+            {pendingGames.map((game) => {
+              const waiting = game.status === "waiting";
+              const canDelete = waiting && game.player_one_id === playerId;
+
+              return (
+                <article
+                  key={game.id}
+                  className="rounded-2xl bg-white p-5 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]"
+                >
+                  <div className="flex items-start justify-between gap-4">
+                    <div>
+                      <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
+                        {game.category} battle
+                      </p>
+                      <h3 className="mt-2 font-serif text-xl text-[#043673]">
+                        {waiting ? "Waiting for an opponent" : "Opponent found"}
+                      </h3>
+                    </div>
+                    <span className={`rounded-full px-3 py-1 text-xs font-semibold ${
+                      waiting
+                        ? "bg-amber-50 text-amber-700"
+                        : "bg-emerald-50 text-emerald-700"
+                    }`}>
+                      {waiting ? "Waiting" : "Ready"}
+                    </span>
+                  </div>
+
+                  <div className="mt-5 flex flex-wrap gap-3">
+                    <button
+                      type="button"
+                      onClick={() => router.push(`/dashboard/games/${game.id}`)}
+                      className="rounded-xl bg-[#043673] px-5 py-2.5 text-sm font-semibold text-white transition hover:brightness-110"
+                    >
+                      {waiting ? "Return to Lobby" : "Resume Battle"}
+                    </button>
+
+                    {canDelete && (
+                      <button
+                        type="button"
+                        onClick={() => cancelPendingGame(game.id)}
+                        disabled={cancellingGameId === game.id}
+                        className="rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                      >
+                        {cancellingGameId === game.id ? "Deleting..." : "Delete"}
+                      </button>
+                    )}
+
+                    {!waiting && (
+                      <button
+                        type="button"
+                        onClick={() => forfeitGame(game.id)}
+                        disabled={forfeitingGameId === game.id}
+                        className="rounded-xl border border-red-200 px-5 py-2.5 text-sm font-semibold text-red-600 transition hover:bg-red-50 disabled:opacity-60"
+                      >
+                        {forfeitingGameId === game.id ? "Quitting..." : "Quit Match"}
+                      </button>
+                    )}
+                  </div>
+                </article>
+              );
+            })}
+          </div>
+        )}
+      </section>
     </div>
   );
 }

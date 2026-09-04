@@ -96,7 +96,11 @@ export async function submitAnswer(
       card_id: challenge.card_id,
     });
 
-    cardAwarded = !insertError;
+    if (insertError) {
+      throw new Error(`Could not award card: ${insertError.message}`);
+    }
+
+    cardAwarded = true;
   }
 
   return {

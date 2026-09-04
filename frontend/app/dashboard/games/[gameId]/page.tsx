@@ -5,7 +5,6 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 
 const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
 
 type GameStatus =
   | "waiting"
@@ -65,6 +64,11 @@ type PlayerCard = {
   cards: Card | null;
 };
 
+type GamePlayerNames = {
+  player_one_name: string;
+  player_two_name: string | null;
+};
+
 export default function GameRoomPage() {
   const params = useParams();
   const router = useRouter();
@@ -76,6 +80,9 @@ export default function GameRoomPage() {
 
   const [game, setGame] =
     useState<Game | null>(null);
+
+  const [playerNames, setPlayerNames] =
+    useState<GamePlayerNames | null>(null);
 
   const [round, setRound] =
     useState<Round | null>(null);
@@ -240,6 +247,29 @@ export default function GameRoomPage() {
     setRound(
       data ? (data as Round) : null
     );
+  }, [gameId]);
+
+  /*
+   * --------------------------------------------------
+   * LOAD PLAYER DISPLAY NAMES
+   * --------------------------------------------------
+   */
+
+  const loadPlayerNames = useCallback(async () => {
+    if (!gameId) return;
+
+    const { data, error } = await supabase
+      .rpc("get_card_game_player_names", {
+        p_game_id: gameId,
+      })
+      .maybeSingle();
+
+    if (error) {
+      console.error("PLAYER NAME LOAD ERROR:", error);
+      return;
+    }
+
+    setPlayerNames(data as GamePlayerNames | null);
   }, [gameId]);
 
   /*
@@ -410,10 +440,12 @@ export default function GameRoomPage() {
     if (!game || !playerId) return;
 
     loadMyCards();
+    loadPlayerNames();
   }, [
     game,
     playerId,
     loadMyCards,
+    loadPlayerNames,
   ]);
 
   /*
@@ -478,6 +510,48 @@ export default function GameRoomPage() {
 
     return null;
   }, [game, playerId]);
+
+  const playerOneName =
+    playerNames?.player_one_name || "Player 1";
+
+  const playerTwoName =
+    playerNames?.player_two_name || "Player 2";
+
+  const currentPlayerName =
+    playerNumber === 1
+      ? playerOneName
+      : playerNumber === 2
+        ? playerTwoName
+        : null;
+
+  const opponentName =
+    playerNumber === 1
+      ? playerTwoName
+      : playerOneName;
+
+  /*
+   * Keep a server-side record of when this player was last present in the
+   * battle room. The scheduled cleanup uses this to decide a fair forfeit.
+   */
+  useEffect(() => {
+    if (!playerNumber || game?.status !== "active") return;
+
+    async function recordPresence() {
+      const { error } = await supabase.rpc("touch_card_game_presence", {
+        p_game_id: gameId,
+      });
+
+      if (error) {
+        console.error("GAME PRESENCE ERROR:", error);
+      }
+    }
+
+    recordPresence();
+
+    const interval = window.setInterval(recordPresence, 60_000);
+
+    return () => window.clearInterval(interval);
+  }, [game?.status, gameId, playerNumber]);
 
   /*
    * Has this player already submitted?
@@ -775,8 +849,8 @@ export default function GameRoomPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            {playerNumber
-              ? `You are Player ${playerNumber}`
+            {currentPlayerName
+              ? `You are ${currentPlayerName} · Playing against ${opponentName}`
               : "Battle room"}
           </p>
         </div>
@@ -828,9 +902,34 @@ export default function GameRoomPage() {
           </section>
         )}
 
+      {/* FORFEITED / FINISHED GAME */}
+
+      {game.status === "finished" && (
+        <section className="rounded-[28px] bg-white p-10 text-center shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)]">
+          <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#C9A24B]">
+            Match finished
+          </p>
+          <h2 className="mt-3 font-serif text-3xl text-[#043673]">
+            {game.winner_id === playerId
+              ? "You won by forfeit"
+              : `${opponentName} won by forfeit`}
+          </h2>
+          <p className="mt-3 text-sm text-slate-500">
+            No card was transferred because the match ended before round resolution.
+          </p>
+          <button
+            type="button"
+            onClick={leaveRoom}
+            className="mt-6 rounded-xl bg-[#043673] px-6 py-3 text-sm font-semibold text-white"
+          >
+            Back to Games
+          </button>
+        </section>
+      )}
+
       {/* ACTIVE GAME */}
 
-      {game.player_two_id && round && (
+      {game.status === "active" && game.player_two_id && round && (
         <div className="space-y-6">
           {/* ROUND HEADER */}
 
@@ -1043,7 +1142,7 @@ export default function GameRoomPage() {
 
               <div className="grid items-center gap-6 lg:grid-cols-[1fr_auto_1fr]">
                 <BattleCard
-                  title="Player 1"
+                  title={playerOneName}
                   card={
                     playerOneCard
                   }
@@ -1056,6 +1155,7 @@ export default function GameRoomPage() {
                     round.winner_id ===
                       game.player_one_id
                   }
+                  hidden={round.status !== "finished" && playerNumber !== 1}
                 />
 
                 <div className="flex justify-center">
@@ -1065,7 +1165,7 @@ export default function GameRoomPage() {
                 </div>
 
                 <BattleCard
-                  title="Player 2"
+                  title={playerTwoName}
                   card={
                     playerTwoCard
                   }
@@ -1078,6 +1178,7 @@ export default function GameRoomPage() {
                     round.winner_id ===
                       game.player_two_id
                   }
+                  hidden={round.status !== "finished" && playerNumber !== 2}
                 />
               </div>
 
@@ -1133,7 +1234,7 @@ export default function GameRoomPage() {
                           {round.winner_id ===
                           playerId
                             ? "You won!"
-                            : "Opponent won"}
+                            : `${opponentName} won`}
                         </h3>
 
                         <p className="mt-2 text-sm text-slate-500">
@@ -1183,12 +1284,32 @@ function BattleCard({
   card,
   points,
   winner,
+  hidden,
 }: {
   title: string;
   card: Card | null;
   points: number | null;
   winner: boolean;
+  hidden: boolean;
 }) {
+  if (hidden) {
+    return (
+      <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-[26px] border-2 border-[#C9A24B]/60 bg-[#043673] p-6 text-white shadow-xl">
+        <div className="absolute inset-3 rounded-[20px] border border-white/20" />
+        <div className="relative text-center">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#C9A24B]/60 bg-white/10 font-serif text-xl text-[#C9A24B]">
+            WQ
+          </div>
+          <p className="mt-5 text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
+            {title}
+          </p>
+          <p className="mt-2 font-serif text-2xl">Hidden Card</p>
+          <p className="mt-2 text-sm text-white/60">Revealed when the round is resolved</p>
+        </div>
+      </div>
+    );
+  }
+
   if (!card) {
     return (
       <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center">

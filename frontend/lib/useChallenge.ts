@@ -91,6 +91,8 @@ export function useChallenge(eventId: string) {
       .select("id")
       .eq("player_id", playerId)
       .eq("card_id", cardId)
+      .eq("event_id", eventId)
+      .limit(1)
       .maybeSingle();
 
     if (error) {
