@@ -208,7 +208,7 @@ export default function SignUpForm() {
 
         <p className="mt-5 text-center text-sm text-gray-500">
           Already have an account?{" "}
-          <a href="/login" className="font-medium" style={{ color: WITS_BLUE }}>
+          <a href="/Login" className="font-medium" style={{ color: WITS_BLUE }}>
             Sign in
           </a>
         </p>
