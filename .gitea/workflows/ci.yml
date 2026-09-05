@@ -72,7 +72,7 @@ jobs:
         run: npm ci
 
       - name: Run tests with coverage
-        run: npm jest --coverage
+        run: npx jest --coverage
       
       - name: Upload coverage to Codecov
         run: |
