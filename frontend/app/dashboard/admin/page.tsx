@@ -216,7 +216,7 @@ export default function AdminDashboardPage() {
             Restricted
           </p>
 
-          <h1 className="mt-3 font-serif text-2xl text-[#043673]">
+          <h1 className="mt-3 text-2xl font-black tracking-tight text-[#043673]">
             Admin access required
           </h1>
 
@@ -237,7 +237,7 @@ export default function AdminDashboardPage() {
   // -----------------------------
 
   return (
-    <div className="space-y-8 p-4 md:p-6">
+    <div className="space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
       <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
         <div>
           <p
@@ -248,7 +248,7 @@ export default function AdminDashboardPage() {
           </p>
 
           <h1
-            className="mt-2 font-serif text-3xl"
+            className="mt-2 text-4xl font-black tracking-[-0.045em]"
             style={{ color: WITS_BLUE }}
           >
             Dashboard
@@ -263,7 +263,7 @@ export default function AdminDashboardPage() {
       <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
         <Link
           href="/dashboard/admin/events"
-          className="group rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)] transition hover:-translate-y-1 hover:shadow-[0_12px_30px_-12px_rgba(4,54,115,0.3)]"
+          className="group rounded-2xl border border-[#043673]/12 bg-[#043673] p-6 text-white transition hover:-translate-y-0.5 active:scale-[.99]"
         >
           <div
             className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl text-2xl shadow-sm"
@@ -282,18 +282,17 @@ export default function AdminDashboardPage() {
             Create
           </p>
 
-          <h2 className="mt-3 font-serif text-2xl text-[#043673]">
+          <h2 className="mt-3 text-2xl font-black tracking-tight text-white">
             Create Quest
           </h2>
 
-          <p className="mt-3 text-sm leading-6 text-slate-600">
+          <p className="mt-3 text-sm leading-6 text-white/70">
             Build a new challenge, assign a location, define the question,
             and publish it to the map once its card is complete.
           </p>
 
           <div
-            className="mt-5 inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold text-white"
-            style={{ background: WITS_BLUE }}
+            className="mt-5 inline-flex items-center rounded-xl bg-white/10 px-4 py-2 text-sm font-bold text-white"
           >
             Open events
           </div>
@@ -301,7 +300,7 @@ export default function AdminDashboardPage() {
 
         <Link
           href="/dashboard/admin/cards"
-          className="group rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)] transition hover:-translate-y-1 hover:shadow-[0_12px_30px_-12px_rgba(4,54,115,0.3)]"
+          className="group rounded-2xl border border-[#C9A24B]/35 bg-[#F1E6C7] p-6 transition hover:-translate-y-0.5 active:scale-[.99]"
         >
           <div
             className="mb-5 flex h-12 w-12 items-center justify-center rounded-2xl text-2xl shadow-sm"
@@ -320,7 +319,7 @@ export default function AdminDashboardPage() {
             Card studio
           </p>
 
-          <h2 className="mt-3 font-serif text-2xl text-[#043673]">
+          <h2 className="mt-3 text-2xl font-black tracking-tight text-[#043673]">
             Cards
           </h2>
 
@@ -330,7 +329,7 @@ export default function AdminDashboardPage() {
           </p>
 
           <div
-            className="mt-5 inline-flex items-center rounded-xl px-4 py-2 text-sm font-semibold text-white"
+            className="mt-5 inline-flex items-center rounded-xl px-4 py-2 text-sm font-bold text-[#082C58]"
             style={{ background: WITS_GOLD }}
           >
             Manage cards
@@ -339,9 +338,9 @@ export default function AdminDashboardPage() {
       </div>
 
       <section className="grid gap-6 lg:grid-cols-2">
-        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+        <div className="rounded-2xl border border-[#043673]/12 bg-white p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-serif text-xl text-[#043673]">
+            <h2 className="text-xl font-black tracking-tight text-[#043673]">
               Pending events
             </h2>
 
@@ -375,9 +374,9 @@ export default function AdminDashboardPage() {
           )}
         </div>
 
-        <div className="rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+        <div className="rounded-2xl border border-[#043673]/12 bg-white p-5">
           <div className="mb-4 flex items-center justify-between">
-            <h2 className="font-serif text-xl text-[#043673]">
+            <h2 className="text-xl font-black tracking-tight text-[#043673]">
               Published event list
             </h2>
 

@@ -492,7 +492,7 @@ export default function AdminCardsPage() {
    */
 
   return (
-    <div className="space-y-8 p-4 md:p-6">
+    <div className="space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
       {/* HEADER */}
 
       <header>
@@ -504,7 +504,7 @@ export default function AdminCardsPage() {
         </p>
 
         <h1
-          className="mt-2 font-serif text-3xl"
+          className="mt-2 text-4xl font-black tracking-[-0.045em]"
           style={{ color: WITS_BLUE }}
         >
           Cards
@@ -534,7 +534,7 @@ export default function AdminCardsPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]"
+          className="rounded-2xl border border-[#043673]/12 bg-white p-6"
         >
           <div className="mb-6">
             <p
@@ -547,7 +547,7 @@ export default function AdminCardsPage() {
             </p>
 
             <h2
-              className="mt-2 font-serif text-2xl"
+              className="mt-2 text-2xl font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               {editingId
@@ -730,7 +730,7 @@ export default function AdminCardsPage() {
 
         {/* PREVIEW */}
 
-        <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+        <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
           <p
             className="text-xs font-semibold uppercase tracking-[0.2em]"
             style={{ color: WITS_GOLD }}
@@ -739,14 +739,14 @@ export default function AdminCardsPage() {
           </p>
 
           <h2
-            className="mt-2 font-serif text-2xl"
+            className="mt-2 text-2xl font-black tracking-tight"
             style={{ color: WITS_BLUE }}
           >
             Card preview
           </h2>
 
           <div
-            className="relative mt-6 overflow-hidden rounded-[26px] p-6 text-white shadow-xl"
+            className="relative mt-6 overflow-hidden rounded-2xl p-6 text-white shadow-[0_22px_48px_-32px_rgba(4,54,115,.85)]"
             style={{
               background: `linear-gradient(135deg, ${theme.accent}, rgba(0,0,0,0.88))`,
             }}
@@ -760,7 +760,7 @@ export default function AdminCardsPage() {
                 Wits Quest
               </p>
 
-              <h3 className="mt-3 font-serif text-2xl">
+              <h3 className="mt-3 text-2xl font-black tracking-tight">
                 {title ||
                   "Your card title"}
               </h3>
@@ -786,7 +786,7 @@ export default function AdminCardsPage() {
 
       {/* EXISTING CARDS */}
 
-      <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+      <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <p
@@ -797,7 +797,7 @@ export default function AdminCardsPage() {
             </p>
 
             <h2
-              className="mt-1 font-serif text-2xl"
+              className="mt-1 text-2xl font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               Existing cards

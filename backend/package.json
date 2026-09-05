@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "jest",
     "dev": "tsx watch index.ts",
     "start": "tsx index.ts"
   },
@@ -21,7 +21,10 @@
   "devDependencies": {
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jest": "^30.0.0",
     "@types/node": "^26.2.0",
+    "jest": "^30.5.1",
+    "ts-jest": "^29.4.12",
     "tsx": "^4.23.12"
   }
 }

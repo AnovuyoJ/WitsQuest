@@ -1,16 +1,6 @@
 # Sprint 2 Plan
 
-**Sprint duration:** [start date] – 15 September 2026
-
-## Status
-
-Sprint 2 planning has not yet been finalised as a team. This document currently reflects:
-
-- The Sprint 2 rubric requirements, translated into a working checklist
-- Preparatory work completed ahead of the planning meeting
-- User stories added to the backlog for intermediate features
-
-**Sprint goal, story assignments, and story point estimates are pending the team's Sprint 2 planning meeting.**
+**Sprint duration:** 25 August 2026 – 15 September 2026
 
 ## Preparatory Work Completed
 
@@ -76,3 +66,56 @@ The following requirements were set for Sprint 2 marking. Each item below still 
 - Assign user stories to team members
 - Estimate story points
 - Decide who owns each rubric checklist item aboves
+
+
+## Unit Testing Plan
+
+For Sprint 2, we plan to introduce **unit testing gradually**, starting with the easiest and most isolated functionality before moving to tests that require mocking external services.
+
+### 1. Location Verification (Haversine)
+
+This will be tested first because the Haversine calculation is a pure mathematical function with no database, authentication, or external dependencies.
+
+**Planned tests:**
+
+- Test two coordinates with a known distance between them.
+- Test a location exactly at the allowed radius boundary.
+- Test a location clearly outside the allowed radius.
+
+### 2. Authentication Service (`authService.ts`)
+
+The authentication logic will be tested next. The Supabase client will need to be mocked so that the tests do not interact with the real database or authentication service.
+
+**Planned tests:**
+
+- Test that sign-up with valid input succeeds.
+- Test that sign-up with an invalid or duplicate email fails correctly.
+- Test that sign-in with incorrect credentials returns the correct error.
+
+### 3. Challenge Submission Logic
+
+The challenge submission logic will be tested to ensure that answers are scored correctly and that players cannot submit the same challenge more than once. Supabase interactions will also need to be mocked.
+
+**Planned tests:**
+
+- Test that a first-time submission is accepted.
+- Test that a duplicate submission is rejected.
+- Test that each supported question type is scored correctly.
+
+### 4. Authentication Forms (`SignUpForm.tsx` / `SignInForm.tsx`)
+
+Frontend form components will be tested after the main application logic. These are considered lower priority because they mainly handle UI behaviour.
+
+**Planned tests:**
+
+- Test that the form displays an error for empty or invalid fields.
+- Test that the form calls `authService` with the entered values.
+
+### Testing Order
+
+The planned testing order is:
+
+`Haversine → authService → Challenge Submission → Authentication Forms`
+
+This allows the team to start with simple unit tests and gradually move towards more involved tests that require mocking and frontend component testing.
+

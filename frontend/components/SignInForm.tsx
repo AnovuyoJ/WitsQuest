@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
+import { useRouter } from "next/navigation";
 // 1. Importing OAuth and password reset functions alongside signIn
 import {
   signIn,
@@ -18,6 +19,7 @@ const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
 
 export default function SignInForm() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
 
@@ -104,14 +106,14 @@ export default function SignInForm() {
     }
 
     // Sign-in succeeded — redirect to campus dashboard
-    window.location.href = "/dashboard";
+    router.push("/dashboard");
   }
 
   return (
     <form
       onSubmit={handleSubmit}
       noValidate
-      className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-[0_2px_40px_-8px_rgba(4,54,115,0.25)]"
+      className="w-full max-w-lg overflow-hidden rounded-2xl border border-[#043673]/10 bg-white shadow-[0_24px_60px_-44px_rgba(4,54,115,.8)]"
     >
       {/* Gold-to-blue accent bar */}
       <div
@@ -122,7 +124,7 @@ export default function SignInForm() {
       <div className="px-9 pb-9 pt-8">
         <div className="mb-7 flex flex-col items-center text-center">
           <Monogram />
-          <h1 className="mt-4 font-serif text-[26px] leading-tight text-[#0A1F3D]">
+          <h1 className="mt-4 text-[28px] font-black leading-tight tracking-[-.04em] text-[#043673]">
             Welcome back
           </h1>
           <p className="mt-1.5 text-[13px] text-gray-500">Sign in to continue your quest</p>
@@ -196,7 +198,7 @@ export default function SignInForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="w-full rounded-xl border border-gray-200 bg-gray-50/60 px-4 py-2.5 text-sm text-[#0A1F3D] outline-none transition-colors focus:border-[#043673] focus:bg-white"
+            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0A1F3D] outline-none transition-colors focus:border-[#043673] focus:ring-4 focus:ring-[#043673]/10"
           />
           {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
         </div>
@@ -205,7 +207,7 @@ export default function SignInForm() {
           type="submit"
           disabled={isSubmitting}
           style={{ background: WITS_BLUE }}
-          className="mt-1 w-full rounded-xl py-3.5 text-sm font-semibold text-white transition-all hover:brightness-110 disabled:opacity-60"
+          className="mt-1 w-full rounded-xl py-3.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[.99] disabled:cursor-wait disabled:opacity-60"
         >
           {isSubmitting ? "Signing in…" : "Sign in"}
         </button>
@@ -231,7 +233,7 @@ function Monogram() {
         boxShadow: `0 0 0 3px ${WITS_GOLD}33`,
       }}
     >
-      <span className="font-serif text-lg tracking-wide" style={{ color: WITS_GOLD }}>
+      <span className="text-lg font-black tracking-wide" style={{ color: WITS_GOLD }}>
         WQ
       </span>
     </div>
@@ -266,7 +268,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-gray-200 bg-gray-50/60 px-4 py-2.5 text-sm text-[#0A1F3D] outline-none transition-colors focus:border-[#043673] focus:bg-white"
+        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0A1F3D] outline-none transition-colors focus:border-[#043673] focus:ring-4 focus:ring-[#043673]/10"
       />
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
@@ -287,7 +289,7 @@ function OAuthButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-gray-200 py-2.5 text-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+      className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-slate-300 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#043673]/35 hover:bg-[#043673]/5 active:scale-[.99]"
     >
       {icon}
       {label}

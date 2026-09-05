@@ -16,6 +16,6 @@
     "skipLibCheck": true
   },
 
-  "include": ["routes/**/*", "services/**/*", "middleware/**/*", "types/**/*", "index.ts"],
+  "include": ["routes/**/*", "services/**/*", "middleware/**/*", "types/**/*", "index.ts", "services/locationService.test.ts"],
   "exclude": ["node_modules", "dist"]
 }

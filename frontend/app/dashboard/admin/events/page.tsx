@@ -402,7 +402,7 @@ export default function AdminEventsPage() {
    */
 
   return (
-    <div className="space-y-8 p-4 md:p-6">
+    <div className="space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
 
       {/* HEADER */}
 
@@ -416,7 +416,7 @@ export default function AdminEventsPage() {
           </p>
 
           <h1
-            className="mt-2 font-serif text-3xl"
+            className="mt-2 text-4xl font-black tracking-[-0.045em]"
             style={{ color: WITS_BLUE }}
           >
             Events
@@ -451,7 +451,7 @@ export default function AdminEventsPage() {
 
       {/* CREATE / EDIT FORM */}
 
-      <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+      <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
 
         <div className="mb-6">
           <p
@@ -462,7 +462,7 @@ export default function AdminEventsPage() {
           </p>
 
           <h2
-            className="mt-2 font-serif text-2xl"
+            className="mt-2 text-2xl font-black tracking-tight"
             style={{ color: WITS_BLUE }}
           >
             {editingId
@@ -514,7 +514,7 @@ export default function AdminEventsPage() {
 
           <div>
             <h3
-              className="mb-3 font-serif text-lg"
+              className="mb-3 text-lg font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               Location
@@ -584,7 +584,7 @@ export default function AdminEventsPage() {
 
           <div>
             <h3
-              className="mb-3 font-serif text-lg"
+              className="mb-3 text-lg font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               Availability
@@ -658,7 +658,7 @@ export default function AdminEventsPage() {
 
       {/* EVENTS LIST */}
 
-      <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+      <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
 
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
@@ -670,7 +670,7 @@ export default function AdminEventsPage() {
             </p>
 
             <h2
-              className="mt-1 font-serif text-2xl"
+              className="mt-1 text-2xl font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               Existing events
@@ -689,7 +689,7 @@ export default function AdminEventsPage() {
         ) : events.length === 0 ? (
           <div className="rounded-2xl bg-slate-50 p-8 text-center">
             <p
-              className="font-serif text-lg"
+              className="text-lg font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               No events yet
@@ -718,7 +718,7 @@ export default function AdminEventsPage() {
                       <div className="flex flex-wrap items-center gap-2">
 
                         <h3
-                          className="font-serif text-xl"
+                          className="text-xl font-black tracking-tight"
                           style={{ color: WITS_BLUE }}
                         >
                           {event.title}
