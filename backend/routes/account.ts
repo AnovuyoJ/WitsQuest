@@ -16,7 +16,11 @@ router.delete('/account', requireAuth, async (req, res) => {
     }
 
     return res.status(200).json({ message: 'Account deleted successfully.' });
-  } catch (err) {
+
+  } 
+  
+  
+  catch (err) {
     console.error('Unexpected error during account deletion:', err);
     return res.status(500).json({ error: 'Something went wrong. Please try again.' });
   }
