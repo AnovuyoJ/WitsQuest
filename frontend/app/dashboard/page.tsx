@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest, type EventRecord } from "@/lib/api";
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
@@ -22,8 +23,7 @@ export default function DashboardPage() {
       if (!mounted) return;
       if (!user) { router.replace("/"); return; }
       setCheckingSession(false);
-      const now = new Date().toISOString();
-      const { data } = await supabase.from("events").select("id,title,description,ends_at").lte("starts_at", now).gte("ends_at", now).order("ends_at", { ascending: true }).limit(3);
+      const { data } = await apiRequest<EventRecord[]>("/events/active");
       if (!mounted) return;
       setEvents((data ?? []) as ActiveEvent[]);
       setLoadingEvents(false);

@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest, type PlayerCardRecord, type CardRecord } from "@/lib/api";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
@@ -31,6 +32,7 @@ type Game = {
 };
 
 type Round = {
+  selection_issue?: string;
   id: string;
   game_id: string;
   round_number: number;
@@ -156,23 +158,7 @@ export default function GameRoomPage() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("card_games")
-      .select(
-        `
-        id,
-        player_one_id,
-        player_two_id,
-        category,
-        status,
-        winner_id,
-        created_at,
-        started_at,
-        finished_at
-        `
-      )
-      .eq("id", gameId)
-      .single();
+    const { data, error } = await apiRequest<Game>(`/games/${gameId}`);
 
     if (error) {
       console.error("GAME LOAD ERROR:", error);
@@ -211,29 +197,7 @@ export default function GameRoomPage() {
   const loadRound = useCallback(async () => {
     if (!gameId) return;
 
-    const { data, error } = await supabase
-      .from("game_rounds")
-      .select(
-        `
-        id,
-        game_id,
-        round_number,
-        player_one_card_id,
-        player_two_card_id,
-        player_one_points,
-        player_two_points,
-        winner_id,
-        status,
-        created_at,
-        finished_at
-        `
-      )
-      .eq("game_id", gameId)
-      .order("round_number", {
-        ascending: false,
-      })
-      .limit(1)
-      .maybeSingle();
+    const { data, error } = await apiRequest<Round>(`/games/${gameId}/round`);
 
     if (error) {
       console.error(
@@ -245,6 +209,7 @@ export default function GameRoomPage() {
       return;
     }
 
+    if (data?.selection_issue) setError(data.selection_issue);
     setRound(
       data ? (data as Round) : null
     );
@@ -259,11 +224,7 @@ export default function GameRoomPage() {
   const loadPlayerNames = useCallback(async () => {
     if (!gameId) return;
 
-    const { data, error } = await supabase
-      .rpc("get_card_game_player_names", {
-        p_game_id: gameId,
-      })
-      .maybeSingle();
+    const { data, error } = await apiRequest<GamePlayerNames>(`/games/${gameId}/players`);
 
     if (error) {
       console.error("PLAYER NAME LOAD ERROR:", error);
@@ -284,30 +245,7 @@ export default function GameRoomPage() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("player_cards")
-      .select(`
-        id,
-        player_id,
-        event_id,
-        card_id,
-        awarded_at,
-        cards (
-          id,
-          title,
-          rarity,
-          description,
-          accent,
-          badge,
-          strength,
-          points,
-          tag
-        )
-      `)
-      .eq("player_id", playerId)
-      .order("awarded_at", {
-        ascending: false,
-      });
+    const { data, error } = await apiRequest<PlayerCardRecord[]>("/me/cards");
 
     if (error) {
       console.error(
@@ -363,22 +301,7 @@ export default function GameRoomPage() {
         return;
       }
 
-      const { data, error } = await supabase
-        .from("cards")
-        .select(
-          `
-          id,
-          title,
-          rarity,
-          description,
-          accent,
-          badge,
-          strength,
-          points,
-          tag
-          `
-        )
-        .in("id", ids);
+      const { data, error } = await apiRequest<CardRecord[]>(`/cards?ids=${ids.map(encodeURIComponent).join(",")}`);
 
       if (error) {
         console.error(
@@ -538,9 +461,7 @@ export default function GameRoomPage() {
     if (!playerNumber || game?.status !== "active") return;
 
     async function recordPresence() {
-      const { error } = await supabase.rpc("touch_card_game_presence", {
-        p_game_id: gameId,
-      });
+      const { error } = await apiRequest(`/games/${gameId}/presence`, "POST");
 
       if (error) {
         console.error("GAME PRESENCE ERROR:", error);
@@ -608,21 +529,7 @@ export default function GameRoomPage() {
     setSubmitting(true);
     setError(null);
 
-    const update =
-      playerNumber === 1
-        ? {
-            player_one_card_id:
-              ownedCard.card_id,
-          }
-        : {
-            player_two_card_id:
-              ownedCard.card_id,
-          };
-
-    const { error } = await supabase
-      .from("game_rounds")
-      .update(update)
-      .eq("id", round.id);
+    const { error } = await apiRequest(`/games/${gameId}/rounds/${round.id}/card`, "POST", { cardId: ownedCard.card_id });
 
     if (error) {
       console.error(
@@ -632,6 +539,7 @@ export default function GameRoomPage() {
 
       setError(error.message);
       setSubmitting(false);
+      if (error.status === 409) { await loadRound(); await loadMyCards(); }
       return;
     }
 
@@ -662,12 +570,7 @@ export default function GameRoomPage() {
     setError(null);
 
     const { error } =
-      await supabase.rpc(
-        "resolve_card_game_round",
-        {
-          p_round_id: round.id,
-        }
-      );
+      await apiRequest(`/games/${gameId}/rounds/${round.id}/resolve`, "POST");
 
     if (error) {
       console.error(
@@ -677,6 +580,7 @@ export default function GameRoomPage() {
 
       setError(error.message);
       setResolving(false);
+      if (error.status === 409) { await loadRound(); await loadMyCards(); }
       return;
     }
 
@@ -693,80 +597,11 @@ export default function GameRoomPage() {
    */
 
   async function startNextRound() {
-    if (!round || !game) {
-      return;
-    }
-
-    setStartingRound(true);
-    setError(null);
-
-    const nextRound =
-      round.round_number + 1;
-
-    /*
-     * Both players may click Next Round.
-     *
-     * Because (game_id, round_number)
-     * is unique, maybeSingle lets us
-     * check whether it already exists.
-     */
-    const {
-      data: existing,
-      error: lookupError,
-    } = await supabase
-      .from("game_rounds")
-      .select("id")
-      .eq("game_id", game.id)
-      .eq(
-        "round_number",
-        nextRound
-      )
-      .maybeSingle();
-
-    if (lookupError) {
-      setError(
-        lookupError.message
-      );
-
-      setStartingRound(false);
-      return;
-    }
-
-    if (!existing) {
-      const { error: insertError } =
-        await supabase
-          .from("game_rounds")
-          .insert({
-            game_id: game.id,
-            round_number:
-              nextRound,
-            status: "waiting",
-          });
-
-      if (insertError) {
-        /*
-         * If both players clicked at
-         * almost the same time, one
-         * insert may lose the race.
-         */
-        if (
-          insertError.code !== "23505"
-        ) {
-          setError(
-            insertError.message
-          );
-
-          setStartingRound(false);
-          return;
-        }
-      }
-    }
-
-    setSelectedCardId(null);
-
-    await loadRound();
-    await loadMyCards();
-
+    if (!round || !game) return;
+    setStartingRound(true); setError(null);
+    const { error } = await apiRequest(`/games/${game.id}/rounds/${round.id}/next`, "POST");
+    if (error) setError(error.message);
+    else { setSelectedCardId(null); await loadRound(); await loadMyCards(); }
     setStartingRound(false);
   }
 

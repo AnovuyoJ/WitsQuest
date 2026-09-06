@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest, type PlayerCardRecord } from "@/lib/api";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
@@ -62,30 +63,7 @@ export default function CardsPage() {
       /*
        * Get cards actually owned by this player
        */
-      const { data, error } = await supabase
-        .from("player_cards")
-        .select(`
-          id,
-          player_id,
-          event_id,
-          card_id,
-          awarded_at,
-          cards (
-            id,
-            title,
-            rarity,
-            description,
-            accent,
-            badge,
-            strength,
-            points,
-            tag
-          )
-        `)
-        .eq("player_id", user.id)
-        .order("awarded_at", {
-          ascending: false,
-        });
+      const { data, error } = await apiRequest<PlayerCardRecord[]>("/me/cards");
 
       if (error) {
         console.error("CARD LOAD ERROR:", error);

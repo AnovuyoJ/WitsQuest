@@ -5,25 +5,29 @@ A campus exploration game inspired by Pokemon Go! Players walk to real campus lo
 ## Tech Stack
 
 - **Frontend:** Next.js
-- **Auth & Database:** Supabase
-- **Backend:** Node.js
+- **Authentication:** Supabase Auth
+- **Database:** PostgreSQL hosted on Supabase
+- **Backend:** Handwritten Express REST API with parameterized SQL (`pg`)
 - **Mapping:** Leaflet
 
 
 ## Getting Started
 
-Full setup instructions are in our documentation. 
+See [API setup and database migration](docs/handwritten-api.md) for the required configuration and existing-database cutover steps.
 
 Quick start:
 
 ```bash
 git clone https://sdp.ms.wits.ac.za/bugs-bunnies/WitsQuest
 cd WitsQuest
-npm install
+cd backend
+npm ci
 npm run dev
 ```
 
-You'll need a `.env.local` file with Supabase credentials — see `.env.example` for the required variables.
+In another terminal, run `npm ci` and `npm run dev` from `frontend`.
+
+Use `backend/.env.example` and `frontend/.env.example`. Application data goes through Express to PostgreSQL; Supabase's generated Data API is not used. The backend needs a PostgreSQL `DATABASE_URL` and trusted administrator UUIDs in `ADMIN_USER_IDS`.
 
 
 ## Project Management

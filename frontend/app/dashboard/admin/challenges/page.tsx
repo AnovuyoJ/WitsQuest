@@ -1,14 +1,12 @@
 "use client";
 
-import { FormEvent, Suspense, useEffect, useState } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import { User } from "@supabase/supabase-js";
+import { useAdminAccess } from "@/lib/useAdminAccess";
 
+import { apiRequest, type EventRecord, type CardRecord } from "@/lib/api";
+import { FormEvent, Suspense, useEffect, useState } from "react";
+import { useSearchParams } from "next/navigation";
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
-const ADMIN_GITHUB_USERNAME = "AnovuyoJ";
-
 
 type QuestionType =
   | "multiple_choice"
@@ -31,59 +29,12 @@ type Challenge = {
   created_at: string | null;
 };
 
-function getGitHubUsernameCandidates(user: User | null | undefined): string[] {
-  if (!user) return [];
-
-  const values = [
-    user?.user_metadata?.user_name,
-    user?.user_metadata?.login,
-    user?.user_metadata?.preferred_username,
-    user?.user_metadata?.name,
-    user?.email?.split("@")[0],
-
-    user?.identities?.map((identity) => identity?.identity_data?.user_name),
-
-    user?.identities?.map((identity) => identity?.identity_data?.login),
-
-    user?.identities?.map(
-      (identity) => identity?.identity_data?.preferred_username
-    ),
-  ];
-
-  return values
-    .flat()
-    .filter(
-      (value): value is string =>
-        typeof value === "string"
-    )
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-function isAdminGitHubUser(user: User | null | undefined): boolean {
-  if (!user) return false;
-
-  const candidates =
-    getGitHubUsernameCandidates(user).map((value) =>
-      value.toLowerCase()
-    );
-
-  return candidates.includes(
-    ADMIN_GITHUB_USERNAME.toLowerCase()
-  );
-}
-
 function AdminChallengesContent() {
-  const router = useRouter();
   const searchParams = useSearchParams();
 
   const eventFromUrl = searchParams.get("event");
 
-  const [checkingAccess, setCheckingAccess] =
-    useState(true);
-
-  const [isAdmin, setIsAdmin] =
-    useState(false);
+  const { checkingAccess, isAdmin } = useAdminAccess();
 
   const [events, setEvents] =
     useState<Event[]>([]);
@@ -127,73 +78,6 @@ function AdminChallengesContent() {
    * ----------------------------------------------------
    */
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function checkAdmin() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const user = session?.user;
-
-      if (!user) {
-        if (!mounted) return;
-
-        setCheckingAccess(false);
-        setIsAdmin(false);
-
-        router.replace("/dashboard");
-        return;
-      }
-
-      const adminAccess =
-        isAdminGitHubUser(user);
-
-      if (!mounted) return;
-
-      setIsAdmin(adminAccess);
-      setCheckingAccess(false);
-
-      if (!adminAccess) {
-        router.replace("/dashboard");
-      }
-    }
-
-    checkAdmin();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        const user = session?.user;
-
-        if (!user) {
-          setIsAdmin(false);
-          setCheckingAccess(false);
-
-          router.replace("/dashboard");
-          return;
-        }
-
-        const adminAccess =
-          isAdminGitHubUser(user);
-
-        setIsAdmin(adminAccess);
-        setCheckingAccess(false);
-
-        if (!adminAccess) {
-          router.replace("/dashboard");
-        }
-      }
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [router]);
-
   /*
    * ----------------------------------------------------
    * LOAD EVENTS
@@ -204,12 +88,7 @@ function AdminChallengesContent() {
     if (!isAdmin) return;
 
     async function loadEvents() {
-      const { data, error } = await supabase
-        .from("events")
-        .select("id,title")
-        .order("created_at", {
-          ascending: false,
-        });
+      const { data, error } = await apiRequest<EventRecord[]>("/events");
 
       if (error) {
         setError(error.message);
@@ -262,20 +141,7 @@ function AdminChallengesContent() {
   async function loadChallenges() {
     setError("");
 
-    const { data, error } = await supabase
-      .from("challenges")
-      .select(`
-        id,
-        event_id,
-        question_text,
-        question_type,
-        options,
-        correct_answer,
-        card_id,
-        created_at
-      `)
-      .eq("event_id", selectedEvent)
-      .order("created_at", { ascending: true });
+    const { data, error } = await apiRequest<Challenge[]>(`/admin/challenges?eventId=${encodeURIComponent(selectedEvent)}`);
 
     if (error) {
       setError(error.message);
@@ -295,10 +161,7 @@ useEffect(() => {
   }
 
   async function loadCards() {
-    const { data, error } = await supabase
-      .from("cards")
-      .select("id, title")
-      .eq("event_id", selectedEvent);
+    const { data, error } = await apiRequest<CardRecord[]>(`/admin/cards?eventId=${encodeURIComponent(selectedEvent)}`);
 
     if (error) {
       setError(error.message);
@@ -448,12 +311,7 @@ useEffect(() => {
      */
     if (editingId) {
       const { data, error } =
-        await supabase
-          .from("challenges")
-          .update(challengeData)
-          .eq("id", editingId)
-          .select()
-          .single();
+        await apiRequest<Challenge>(`/admin/challenges/${editingId}`, "PUT", challengeData);
 
       setSaving(false);
 
@@ -482,11 +340,7 @@ useEffect(() => {
      * Create new
      */
     const { data, error } =
-      await supabase
-        .from("challenges")
-        .insert(challengeData)
-        .select()
-        .single();
+      await apiRequest<Challenge>("/admin/challenges", "POST", challengeData);
 
     setSaving(false);
 
@@ -567,10 +421,7 @@ useEffect(() => {
     setError("");
     setMessage("");
 
-    const { error } = await supabase
-      .from("challenges")
-      .delete()
-      .eq("id", id);
+    const { error } = await apiRequest(`/admin/challenges/${id}`, "DELETE");
 
     if (error) {
       setError(error.message);

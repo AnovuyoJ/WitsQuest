@@ -1,9 +1,9 @@
 "use client";
 
+import { apiRequest } from "@/lib/api";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
-import { supabase } from "@/lib/supabaseClient";
 
 type Notification = { id: string; title: string; message: string; href: string | null; read_at: string | null; created_at: string };
 
@@ -14,7 +14,7 @@ export default function NotificationsPage() {
   const [error, setError] = useState<string | null>(null);
   const loadNotifications = useCallback(async () => {
     setLoading(true);
-    const { data, error: loadError } = await supabase.from("notifications").select("id, title, message, href, read_at, created_at").order("created_at", { ascending: false });
+    const { data, error: loadError } = await apiRequest<Notification[]>("/me/notifications");
     if (loadError) { console.error("NOTIFICATIONS LOAD ERROR:", loadError); setError(loadError.message); }
     else setNotifications((data ?? []) as Notification[]);
     setLoading(false);
@@ -24,7 +24,7 @@ export default function NotificationsPage() {
   async function openNotification(notification: Notification) {
     if (!notification.read_at) {
       const readAt = new Date().toISOString();
-      const { error: updateError } = await supabase.from("notifications").update({ read_at: readAt }).eq("id", notification.id);
+      const { error: updateError } = await apiRequest("/me/notifications/read", "POST", { ids: [notification.id] });
       if (!updateError) setNotifications((items) => items.map((item) => item.id === notification.id ? { ...item, read_at: readAt } : item));
     }
     if (notification.href) router.push(notification.href);
@@ -34,7 +34,7 @@ export default function NotificationsPage() {
     const unreadIds = notifications.filter((item) => !item.read_at).map((item) => item.id);
     if (!unreadIds.length) return;
     const readAt = new Date().toISOString();
-    const { error: updateError } = await supabase.from("notifications").update({ read_at: readAt }).in("id", unreadIds);
+    const { error: updateError } = await apiRequest("/me/notifications/read", "POST", { ids: unreadIds });
     if (updateError) { setError(updateError.message); return; }
     setNotifications((items) => items.map((item) => ({ ...item, read_at: item.read_at ?? readAt })));
   }

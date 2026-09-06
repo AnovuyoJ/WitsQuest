@@ -1,66 +1,25 @@
 "use client";
 
+import { useAdminAccess } from "@/lib/useAdminAccess";
+
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import type { User } from "@supabase/supabase-js";
-
 import {
   ADMIN_CHALLENGE_UPDATED_EVENT,
   loadSavedChallenges,
   type SavedChallenge,
 } from "@/lib/adminChallenges";
 
-import { supabase } from "@/lib/supabaseClient";
-
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
-const ADMIN_GITHUB_USERNAME = "AnovuyoJ";
-
-function getGitHubUsernameCandidates(user: User | null | undefined): string[] {
-  if (!user) return [];
-
-  const values = [
-    user?.user_metadata?.user_name,
-    user?.user_metadata?.login,
-    user?.user_metadata?.preferred_username,
-    user?.user_metadata?.name,
-    user?.email?.split("@")[0],
-
-    user?.identities?.map((identity) => identity?.identity_data?.user_name),
-
-    user?.identities?.map(
-      (identity: { identity_data?: { login?: string } }) => identity?.identity_data?.login
-    ),
-
-    user?.identities?.map(
-      (identity: { identity_data?: { preferred_username?: string } }) => identity?.identity_data?.preferred_username
-    ),
-  ];
-
-  return values
-    .flat()
-    .filter((value): value is string => typeof value === "string")
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-function isAdminGitHubUser(user: User | null | undefined): boolean {
-  if (!user) return false;
-
-  const candidates = getGitHubUsernameCandidates(user).map((value) =>
-    value.toLowerCase()
-  );
-
-  return candidates.includes(ADMIN_GITHUB_USERNAME.toLowerCase());
-}
 
 export default function AdminDashboardPage() {
   const router = useRouter();
 
-  const [checkingAccess, setCheckingAccess] = useState(true);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [githubUser, setGithubUser] = useState("");
+
+  const { checkingAccess, isAdmin } = useAdminAccess();
+  const githubUser = "Administrator";
 
   const [savedChallenges, setSavedChallenges] = useState<SavedChallenge[]>(
     []
@@ -108,58 +67,6 @@ export default function AdminDashboardPage() {
     // -----------------------------
     // Admin authentication
     // -----------------------------
-
-    async function verifyAdminAccess() {
-      console.log("1. Checking admin access...");
-
-      const {
-        data: { session },
-        error,
-      } = await supabase.auth.getSession();
-
-      console.log("2. Session:", session);
-      console.log("3. Error:", error);
-
-      const user = session?.user;
-
-      if (!user) {
-        console.log("4. No user is logged in");
-
-        setIsAdmin(false);
-        setCheckingAccess(false);
-
-        router.replace("/dashboard");
-        return;
-      }
-
-      console.log("4. User:", user);
-      console.log("5. User metadata:", user.user_metadata);
-      console.log("6. Identities:", user.identities);
-
-      const candidates = getGitHubUsernameCandidates(user);
-
-      console.log("7. GitHub username candidates:", candidates);
-
-      const adminAccess = isAdminGitHubUser(user);
-
-      console.log("8. Admin access:", adminAccess);
-      console.log("9. Expected username:", ADMIN_GITHUB_USERNAME);
-
-      setGithubUser(candidates[0] || "Unknown");
-      setIsAdmin(adminAccess);
-      setCheckingAccess(false);
-
-      if (!adminAccess) {
-        console.log("10. NOT ADMIN - redirecting to dashboard");
-
-        router.replace("/dashboard");
-        return;
-      }
-
-      console.log("10. ADMIN ACCESS GRANTED");
-    }
-
-    verifyAdminAccess();
 
     // -----------------------------
     // Cleanup
@@ -221,11 +128,7 @@ export default function AdminDashboardPage() {
           </h1>
 
           <p className="mt-2 text-sm text-slate-500">
-            Only the GitHub user{" "}
-            <span className="font-semibold">
-              {ADMIN_GITHUB_USERNAME}
-            </span>{" "}
-            can access this dashboard.
+            Your account needs administrator access to open this dashboard.
           </p>
         </div>
       </div>
