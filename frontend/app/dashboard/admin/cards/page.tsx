@@ -101,7 +101,7 @@ export default function AdminCardsPage() {
     if (!isAdmin) return;
 
     async function loadEvents() {
-      const { data, error } = await apiRequest<EventRecord[]>("/events");
+      const { data, error } = await apiRequest<EventRecord[]>("/admin/events");
 
       if (error) {
         setError(error.message);

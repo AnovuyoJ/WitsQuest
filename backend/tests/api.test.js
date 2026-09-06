@@ -48,6 +48,7 @@ beforeAll(async () => {
   process.env.ADMIN_USER_IDS = adminId;
   await mockPg.exec("CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY, raw_user_meta_data jsonb DEFAULT '{}');");
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/schema.sql"), "utf8"));
+  await mockPg.exec(readFileSync(path.join(__dirname, "../sql/content-publication.sql"), "utf8"));
   await mockPg.query("INSERT INTO auth.users (id) VALUES ($1),($2),($3)", [adminId,oneId,twoId]);
   server = app.listen(0, "127.0.0.1");
   await new Promise(resolve => server.once("listening", resolve));
@@ -61,6 +62,55 @@ beforeEach(async () => {
     starts_at: new Date(Date.now()-3600000).toISOString(), ends_at: new Date(Date.now()+3600000).toISOString() })).data;
   card = (await request("/admin/cards", "admin", "POST", { event_id: event.id, title: "Reward", rarity: "Gold", points: 60, tag: "History" })).data;
   challenge = (await request("/admin/challenges", "admin", "POST", { event_id: event.id, question_text: "Answer?", question_type: "multiple_choice", options: ["Yes","No"], correct_answer: "Yes", card_id: card.id })).data;
+  await publish("events", event);
+  await publish("challenges", challenge);
+});
+
+async function publish(kind, row) {
+  const body = { revision: row.draft_revision };
+  expect((await request(`/admin/${kind}/${row.id}/review`, "admin", "POST", body)).status).toBe(200);
+  expect((await request(`/admin/${kind}/${row.id}/publish`, "admin", "POST", body)).status).toBe(200);
+}
+
+test("draft events and questions stay private even when addressed directly", async () => {
+  const draft = (await request("/admin/events", "admin", "POST", { ...event, title: "Private draft" })).data;
+  expect((await request("/admin/events")).status).toBe(403);
+  expect((await request("/admin/events", "admin")).data.some(row => row.id === draft.id)).toBe(true);
+  expect((await request("/events")).data.some(row => row.id === draft.id)).toBe(false);
+  expect((await request("/events/active")).data.some(row => row.id === draft.id)).toBe(false);
+  expect((await request(`/events/${draft.id}/verify-location`, "one", "POST", { latitude: draft.latitude, longitude: draft.longitude })).status).toBe(404);
+  expect((await request(`/events/${draft.id}/challenge`)).status).toBe(410);
+  const question = (await request("/admin/challenges", "admin", "POST", { ...challenge, question_text: "Secret draft" })).data;
+  await request(`/events/${event.id}/verify-location`, "one", "POST", { latitude: event.latitude, longitude: event.longitude });
+  expect((await request(`/events/${event.id}/submit-answer`, "one", "POST", { challengeId: question.id, answer: "Yes" })).status).toBe(404);
+  expect((await request(`/admin/challenges/${question.id}/review`)).status).toBe(403);
+  expect((await request(`/admin/events/${draft.id}/publish`, "one", "POST", { revision: 1 })).status).toBe(403);
+  expect((await request(`/admin/events/${draft.id}/publish`, "admin", "POST", { revision: 1 })).status).toBe(409);
+  await publish("events", draft);
+  expect((await request("/events")).data.some(row => row.id === draft.id)).toBe(true);
+});
+
+test("edits preserve live answers and invalidate a stale review", async () => {
+  const draft = (await request(`/admin/challenges/${challenge.id}`, "admin", "PUT", { ...challenge, question_text: "New question", correct_answer: "No" })).data;
+  expect((await request(`/admin/challenges/${draft.id}/review`, "admin")).data.correct_answer).toBe("No");
+  await request(`/events/${event.id}/verify-location`, "one", "POST", { latitude: event.latitude, longitude: event.longitude });
+  expect((await request(`/events/${event.id}/challenge`)).data.question_text).toBe("Answer?");
+  expect((await request(`/events/${event.id}/submit-answer`, "one", "POST", { challengeId: draft.id, answer: "Yes" })).data.correct).toBe(true);
+  await request(`/admin/challenges/${draft.id}/review`, "admin", "POST", { revision: draft.draft_revision });
+  const newer = (await request(`/admin/challenges/${draft.id}`, "admin", "PUT", { ...draft, question_text: "Latest question" })).data;
+  expect((await request(`/admin/challenges/${draft.id}/publish`, "admin", "POST", { revision: draft.draft_revision })).status).toBe(409);
+  expect((await request(`/admin/challenges/${draft.id}/publish`, "admin", "POST", { revision: newer.draft_revision })).status).toBe(409);
+  await publish("challenges", newer);
+  await request(`/events/${event.id}/verify-location`, "two", "POST", { latitude: event.latitude, longitude: event.longitude });
+  expect((await request(`/events/${event.id}/challenge`, "two")).data.question_text).toBe("Latest question");
+  expect((await request(`/events/${event.id}/submit-answer`, "two", "POST", { challengeId: draft.id, answer: "No" })).data.correct).toBe(true);
+});
+
+test("publication migration reruns never publish drafts", async () => {
+  const draft = (await request("/admin/events", "admin", "POST", { ...event, title: "Keep private" })).data;
+  await mockPg.exec(readFileSync(path.join(__dirname, "../sql/content-publication.sql"), "utf8"));
+  expect((await request("/events")).data.some(row => row.id === draft.id)).toBe(false);
+  expect((await request("/events")).data.some(row => row.id === event.id)).toBe(true);
 });
 
 afterAll(async () => {
@@ -112,6 +162,8 @@ test("admin writes validate fields, preserve JSON options, and parameterize valu
   const title = "Robert'); DROP TABLE events; --";
   const result = await request(`/admin/events/${event.id}`, "admin", "PUT", { ...event, title });
   expect(result.status).toBe(200);
+  expect((await request("/events")).data[0].title).toBe("Campus event");
+  await publish("events", result.data);
   expect((await request("/events")).data[0].title).toBe(title);
   expect((await request("/admin/challenges?eventId="+event.id,"one")).status).toBe(403);
 });
@@ -184,6 +236,7 @@ test("wrong answers cannot claim a reward, and attempts apply per question", asy
   const wrong=await request(`/events/${event.id}/submit-answer`, "one", "POST", { challengeId: challenge.id, answer: "No", correct: true, cardAwarded: true });
   expect(wrong.data).toMatchObject({ correct: false, cardAwarded: false });
   const next=(await request("/admin/challenges", "admin", "POST", { event_id: event.id, question_text: "Second?", question_type: "text", correct_answer: "Second", card_id: card.id })).data;
+  await publish("challenges", next);
   expect((await request(`/events/${event.id}/challenge`)).data.id).toBe(next.id);
   expect((await request(`/events/${event.id}/submit-answer`, "one", "POST", { challengeId: next.id, answer: "second" })).data.cardAwarded).toBe(true);
   expect((await mockPg.query("SELECT * FROM public.challenge_attempts")).rows).toHaveLength(2);

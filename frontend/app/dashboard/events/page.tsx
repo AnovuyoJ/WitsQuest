@@ -113,55 +113,54 @@ export default function EventsPage() {
             return (
               <div
                 key={event.id}
-                className="overflow-hidden rounded-2xl bg-white shadow-[0_1px_16px_-4px_rgba(4,54,115,0.15)]"
+                className={`overflow-hidden rounded-2xl border-t-4 bg-white shadow-[0_1px_16px_-4px_rgba(4,54,115,0.15)] ${active ? "border-[#C9A24B]" : "border-[#8CA8C8]"}`}
               >
                 <div className="p-4">
-                  <div className="flex items-start justify-between gap-3">
+                  <div className="-mx-4 -mt-4 flex items-start justify-between gap-3 bg-[#FAF8F3] p-4">
                     <div className="min-w-0">
-                      <h3 className="truncate text-base font-bold tracking-tight" style={{ color: WITS_BLUE }}>
+                      <h3 className="text-base font-bold tracking-tight text-slate-800">
                         {event.title}
                       </h3>
                       {event.description && (
-                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-gray-500">
+                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">
                           {event.description}
                         </p>
                       )}
                     </div>
                     <div
                       className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                      style={{ background: `${WITS_BLUE}10`, color: WITS_BLUE }}
+                      style={{ background: "#C9A24B", color: WITS_BLUE }}
                     >
                       <MapPinIcon size={16} />
                     </div>
                   </div>
 
                   <div
-                    className="mt-3 flex items-center gap-2 rounded-lg px-3 py-2"
-                    style={{ background: `${WITS_BLUE}08` }}
+                    className="mt-3 flex items-center gap-2 rounded-lg border border-[#E8D9B6] bg-[#FAF4E7] px-3 py-2 text-[#775718]"
                   >
                     <MapPinIcon size={14} />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold" style={{ color: WITS_BLUE }}>
                         {formatDistance(event.distanceMeters)}
                       </p>
-                      <p className="text-[11px] text-gray-500">
+                      <p className="text-[11px] text-[#775718]">
                         Radius: {event.radius_meters}m
                       </p>
                     </div>
                   </div>
 
-                  <div className="mt-3 flex items-center gap-1.5">
+                  <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ${active ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
                     <span
                       className={`h-2 w-2 rounded-full ${active ? "bg-green-500" : "bg-gray-300"}`}
                     />
-                    <span className="text-[11px] font-medium text-gray-500">
+                    <span className="text-[11px] font-semibold">
                       {active ? "Active" : "Inactive"}
                     </span>
                   </div>
                 </div>
 
                 {active && (
-                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-3">
+                  <div className="border-t border-stone-200 bg-stone-50 px-4 py-3">
                     {verified ? (
                       <ChallengeCard eventId={event.id} />
                     ) : (

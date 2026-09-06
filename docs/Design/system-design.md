@@ -70,6 +70,14 @@ graph TD
   B -->|Leaflet map tiles| H[OpenStreetMap tile service]
 ```
 
+### Content drafts and publication
+
+Events and challenges have a saved draft and a separate published JSON snapshot in PostgreSQL. Admin POST/PUT routes edit drafts and increment a revision. Admins preview the server-saved content and explicitly mark that revision reviewed before publishing. The publish operation checks the current draft revision and reviewing admin in its SQL update, so a draft changed after review cannot be published using that stale review.
+
+Player event lists, active-event lists, location verification, question loading and answer grading use the backend-only `live_events` and `live_challenges` views of published snapshots. New drafts are hidden. Draft edits preserve the live version until republished. The admin dashboard reads publication status from Express instead of browser local storage. Authors may review their own work; an independent reviewer is not required. Reward-card edits and content deletion remain immediate admin operations.
+
+Deploy `backend/sql/content-publication.sql` before the backend update. The migration preserves existing live content on first application and does not publish new drafts on reruns. See the [draft/review API contract](../handwritten-api.md#draft-review-and-publication-workflow) for endpoint details.
+
 ### External API integration: campus landmark validation
 
 The admin event form sends coordinates to `POST /api/admin/landmarks/lookup` after typing pauses. Express requires an authenticated administrator, validates the numeric coordinates, and calls the Overpass API with a fixed query. It searches within 150 metres for a named building, historic feature, artwork, or museum, restricted to a mapped university or college area containing the coordinates.

@@ -13,12 +13,12 @@ router.get("/me", (req, res) => {
 
 router.get("/events", async (_req, res) => {
   const { rows } = await database.query(`SELECT id, title, description, latitude, longitude,
-    radius_meters, starts_at, ends_at, created_at FROM public.events ORDER BY starts_at`);
+    radius_meters, starts_at, ends_at, created_at FROM public.live_events ORDER BY starts_at`);
   res.json(rows);
 });
 
 router.get("/events/active", async (_req, res) => {
-  const { rows } = await database.query(`SELECT id, title, description, ends_at FROM public.events
+  const { rows } = await database.query(`SELECT id, title, description, ends_at FROM public.live_events
     WHERE starts_at <= now() AND ends_at >= now() ORDER BY ends_at LIMIT 3`);
   res.json(rows);
 });
