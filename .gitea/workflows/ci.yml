@@ -37,7 +37,7 @@ jobs:
         run: |
           curl -Os https://cli.codecov.io/v0.6.0/linux/codecov
           chmod +x codecov
-          ./codecov upload-process -t ${{ secrets.CODECOV_TOKEN }} -f coverage/lcov.info -F frontend --git-service github
+          ./codecov upload-process -t ${{ secrets.CODECOV_TOKEN }} -f coverage/lcov.info -F frontend --git-service github-actions
 
 
       - name: Generate Next.js types
@@ -78,7 +78,7 @@ jobs:
         run: |
           curl -Os https://cli.codecov.io/v0.6.0/linux/codecov
           chmod +x codecov
-          ./codecov upload-process -t ${{ secrets.CODECOV_TOKEN }} -f coverage/lcov.info -F backend --git-service github
+          ./codecov upload-process -t ${{ secrets.CODECOV_TOKEN }} -f coverage/lcov.info -F backend --git-service github-actions
 
 
       - name: Type check
