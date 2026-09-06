@@ -86,6 +86,8 @@ See the [API reference: landmark lookup](../handwritten-api.md#post-apiadminland
 
 ## 3. Technologies
 
+See the [third-party dependency and attribution register](../third-party-dependencies.md) for library versions, source links, licence metadata, selection rationales, external services, and reused assets.
+
 | Technology | Purpose |
 |---|---|
 | Next.js | Main web application framework |

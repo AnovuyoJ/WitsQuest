@@ -30,6 +30,12 @@ The project uses a combination of technologies and development tools to support 
 
 Together, these technologies and tools provide the development, collaboration, version control, documentation, and deployment infrastructure required for the project.
 
+## Bug Tracking
+
+The team uses the Git repository's **Issues** feature as its bug tracker. Bug reports are recorded there so defects can be discussed and tracked alongside the code. Taiga is used for sprint planning, user stories, and tasks.
+
+Bug reports should include a clear title, steps to reproduce, expected and actual behaviour, and relevant screenshots or error messages with sensitive information removed. Related fixes should reference the issue in their pull request, and the issue should be closed once the fix has been verified.
+
 ## Branching & Version Control Strategy:
 
 The team follows a feature-branch workflow using Git and Gitea. The main branch represents the stable version of the project and team members do not develop features directly on it.

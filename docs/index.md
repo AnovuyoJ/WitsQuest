@@ -20,7 +20,7 @@ This site contains the technical and process documentation for the Wits Quest So
 | **Frontend** | Next.js, React, TypeScript, Tailwind CSS |
 | **Backend** | Node.js, Express |
 | **Database** | Supabase (PostgreSQL) |
-| **Tracking** | Taiga |
+| **Tracking** | Taiga for sprint planning; Git repository Issues for bug tracking |
 
 ## Quick Links
 
