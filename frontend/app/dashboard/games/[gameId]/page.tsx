@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import { ScreenSkeleton } from "@/components/WitsScreen";
 
 const WITS_BLUE = "#043673";
 
@@ -788,11 +789,7 @@ export default function GameRoomPage() {
   if (loading) {
     return (
       <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
-        <div className="flex min-h-[400px] items-center justify-center">
-          <p className="text-sm text-slate-500">
-            Loading battle...
-          </p>
-        </div>
+        <ScreenSkeleton cards={3} />
       </div>
     );
   }
@@ -806,8 +803,8 @@ export default function GameRoomPage() {
   if (!game) {
     return (
       <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
-        <div className="rounded-[28px] bg-white p-10 text-center shadow">
-          <h1 className="font-serif text-2xl text-[#043673]">
+        <div className="rounded-2xl border border-[#043673]/12 bg-white p-8 text-center sm:p-10">
+          <h1 className="text-2xl font-black tracking-tight text-[#043673]">
             Game unavailable
           </h1>
 
@@ -844,7 +841,7 @@ export default function GameRoomPage() {
             Card Battle
           </p>
 
-          <h1 className="mt-2 font-serif text-3xl text-[#043673]">
+          <h1 className="mt-2 text-4xl font-black tracking-[-0.045em] text-[#043673]">
             {game.category} Battle
           </h1>
 
@@ -876,12 +873,12 @@ export default function GameRoomPage() {
 
       {!game.player_two_id &&
         game.status === "waiting" && (
-          <section className="rounded-[28px] border border-[#043673]/10 bg-white p-10 text-center shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)]">
+          <section className="rounded-2xl border border-[#043673]/12 bg-white p-8 text-center sm:p-10">
             <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl bg-[#043673]/10 text-[#043673]">
               <OpponentIcon />
             </div>
 
-            <h2 className="mt-5 font-serif text-2xl text-[#043673]">
+            <h2 className="mt-5 text-2xl font-black tracking-tight text-[#043673]">
               Waiting for an opponent
             </h2>
 
@@ -905,11 +902,11 @@ export default function GameRoomPage() {
       {/* FORFEITED / FINISHED GAME */}
 
       {game.status === "finished" && (
-        <section className="rounded-[28px] bg-white p-10 text-center shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)]">
+        <section className="rounded-2xl border border-[#043673]/12 bg-white p-8 text-center sm:p-10">
           <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#C9A24B]">
             Match finished
           </p>
-          <h2 className="mt-3 font-serif text-3xl text-[#043673]">
+          <h2 className="mt-3 text-3xl font-black tracking-tight text-[#043673]">
             {game.winner_id === playerId
               ? "You won by forfeit"
               : `${opponentName} won by forfeit`}
@@ -933,13 +930,13 @@ export default function GameRoomPage() {
         <div className="space-y-6">
           {/* ROUND HEADER */}
 
-          <section className="flex flex-col gap-4 rounded-[26px] bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.15)] sm:flex-row sm:items-center sm:justify-between">
+          <section className="flex flex-col gap-4 rounded-2xl border border-[#043673]/12 bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
                 Current round
               </p>
 
-              <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-[#043673]">
                 Round{" "}
                 {round.round_number}
               </h2>
@@ -971,7 +968,7 @@ export default function GameRoomPage() {
                     Your move
                   </p>
 
-                  <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+                  <h2 className="mt-1 text-2xl font-black tracking-tight text-[#043673]">
                     Choose your card
                   </h2>
 
@@ -983,7 +980,7 @@ export default function GameRoomPage() {
                 </div>
 
                 {myCards.length === 0 ? (
-                  <div className="rounded-[26px] border border-dashed border-slate-300 bg-white p-8 text-center">
+                  <div className="rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
                     <p className="font-semibold text-[#043673]">
                       No cards available
                     </p>
@@ -1021,7 +1018,7 @@ export default function GameRoomPage() {
                                   row.id
                                 )
                               }
-                              className={`relative overflow-hidden rounded-[24px] border-2 p-5 text-left text-white shadow-xl transition hover:-translate-y-1 ${
+                              className={`relative min-h-72 overflow-hidden rounded-2xl border-2 p-5 text-left text-white shadow-[0_22px_48px_-32px_rgba(4,54,115,.85)] transition hover:-translate-y-0.5 active:scale-[.99] ${
                                 selected
                                   ? "border-[#C9A24B]"
                                   : "border-transparent"
@@ -1034,7 +1031,7 @@ export default function GameRoomPage() {
                               }}
                             >
                               {selected && (
-                                <span className="absolute left-4 top-4 rounded-full bg-[#C9A24B] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em]">
+                                <span className="absolute left-4 top-4 rounded-full bg-[#C9A24B] px-2.5 py-1 text-[9px] font-bold uppercase tracking-[0.18em] text-[#082C58]">
                                   Selected
                                 </span>
                               )}
@@ -1050,7 +1047,7 @@ export default function GameRoomPage() {
                                   Wits Quest
                                 </p>
 
-                                <h3 className="mt-3 font-serif text-2xl">
+                                <h3 className="mt-3 text-2xl font-black tracking-tight">
                                   {
                                     card.title
                                   }
@@ -1068,7 +1065,7 @@ export default function GameRoomPage() {
                                   Points
                                 </p>
 
-                                <p className="font-serif text-3xl font-bold">
+                                <p className="text-3xl font-black">
                                   {
                                     card.points
                                   }
@@ -1109,12 +1106,12 @@ export default function GameRoomPage() {
             !bothCardsSubmitted &&
             round.status !==
               "finished" && (
-              <section className="rounded-[28px] border border-[#043673]/10 bg-white p-10 text-center shadow-sm">
+              <section className="rounded-2xl border border-[#043673]/12 bg-white p-8 text-center sm:p-10">
                 <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl bg-[#043673]/10 text-[#043673]">
                   <CardIcon />
                 </div>
 
-                <h2 className="mt-5 font-serif text-xl text-[#043673]">
+                <h2 className="mt-5 text-xl font-black tracking-tight text-[#043673]">
                   Card submitted
                 </h2>
 
@@ -1129,13 +1126,13 @@ export default function GameRoomPage() {
           {/* BOTH CARDS READY */}
 
           {bothCardsSubmitted && (
-            <section className="rounded-[28px] bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)]">
+            <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
               <div className="mb-6 text-center">
                 <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-[#C9A24B]">
                   Battle
                 </p>
 
-                <h2 className="mt-2 font-serif text-2xl text-[#043673]">
+                <h2 className="mt-2 text-2xl font-black tracking-tight text-[#043673]">
                   Card Reveal
                 </h2>
               </div>
@@ -1213,7 +1210,7 @@ export default function GameRoomPage() {
                     {round.winner_id ===
                     null ? (
                       <>
-                        <p className="font-serif text-2xl text-[#043673]">
+                        <p className="text-2xl font-black tracking-tight text-[#043673]">
                           Draw!
                         </p>
 
@@ -1230,7 +1227,7 @@ export default function GameRoomPage() {
                           Round winner
                         </p>
 
-                        <h3 className="mt-2 font-serif text-2xl text-[#043673]">
+                        <h3 className="mt-2 text-2xl font-black tracking-tight text-[#043673]">
                           {round.winner_id ===
                           playerId
                             ? "You won!"
@@ -1256,7 +1253,7 @@ export default function GameRoomPage() {
                       disabled={
                         startingRound
                       }
-                      className="rounded-xl bg-[#C9A24B] px-6 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-60"
+                      className="rounded-xl bg-[#C9A24B] px-6 py-3 text-sm font-bold text-[#082C58] transition hover:brightness-105 active:scale-[.98] disabled:opacity-60"
                     >
                       {startingRound
                         ? "Starting..."
@@ -1294,16 +1291,16 @@ function BattleCard({
 }) {
   if (hidden) {
     return (
-      <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-[26px] border-2 border-[#C9A24B]/60 bg-[#043673] p-6 text-white shadow-xl">
+      <div className="relative flex min-h-[300px] items-center justify-center overflow-hidden rounded-2xl border-2 border-[#C9A24B]/60 bg-[#043673] p-6 text-white shadow-[0_22px_48px_-32px_rgba(4,54,115,.85)]">
         <div className="absolute inset-3 rounded-[20px] border border-white/20" />
         <div className="relative text-center">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#C9A24B]/60 bg-white/10 font-serif text-xl text-[#C9A24B]">
+          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-2xl border border-[#C9A24B]/60 bg-white/10 text-xl font-black text-[#C9A24B]">
             WQ
           </div>
           <p className="mt-5 text-xs font-semibold uppercase tracking-[0.25em] text-white/70">
             {title}
           </p>
-          <p className="mt-2 font-serif text-2xl">Hidden Card</p>
+          <p className="mt-2 text-2xl font-black tracking-tight">Hidden Card</p>
           <p className="mt-2 text-sm text-white/60">Revealed when the round is resolved</p>
         </div>
       </div>
@@ -1312,7 +1309,7 @@ function BattleCard({
 
   if (!card) {
     return (
-      <div className="rounded-[24px] border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+      <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
         <p className="text-sm text-slate-500">
           Card loading...
         </p>
@@ -1322,7 +1319,7 @@ function BattleCard({
 
   return (
     <div
-      className={`relative overflow-hidden rounded-[26px] border-2 p-6 text-white shadow-xl ${
+      className={`relative overflow-hidden rounded-2xl border-2 p-6 text-white shadow-[0_22px_48px_-32px_rgba(4,54,115,.85)] ${
         winner
           ? "border-[#C9A24B]"
           : "border-transparent"
@@ -1348,7 +1345,7 @@ function BattleCard({
           {title}
         </p>
 
-        <h3 className="mt-3 font-serif text-2xl">
+        <h3 className="mt-3 text-2xl font-black tracking-tight">
           {card.title}
         </h3>
 
@@ -1362,7 +1359,7 @@ function BattleCard({
           Points
         </p>
 
-        <p className="mt-1 font-serif text-4xl font-bold">
+        <p className="mt-1 text-4xl font-black">
           {points ?? card.points}
         </p>
       </div>

@@ -630,7 +630,7 @@ useEffect(() => {
    */
 
   return (
-    <div className="space-y-8 p-4 md:p-6">
+    <div className="space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
 
       {/* HEADER */}
 
@@ -645,7 +645,7 @@ useEffect(() => {
         </p>
 
         <h1
-          className="mt-2 font-serif text-3xl"
+          className="mt-2 text-4xl font-black tracking-[-0.045em]"
           style={{
             color: WITS_BLUE,
           }}
@@ -674,7 +674,7 @@ useEffect(() => {
 
       {/* EVENT SELECTOR */}
 
-      <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+      <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
 
         <p
           className="text-xs font-semibold uppercase tracking-[0.2em]"
@@ -686,7 +686,7 @@ useEffect(() => {
         </p>
 
         <h2
-          className="mt-2 font-serif text-xl"
+          className="mt-2 text-xl font-black tracking-tight"
           style={{
             color: WITS_BLUE,
           }}
@@ -730,7 +730,7 @@ useEffect(() => {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]"
+          className="rounded-2xl border border-[#043673]/12 bg-white p-6"
         >
           <p
             className="text-xs font-semibold uppercase tracking-[0.2em]"
@@ -744,7 +744,7 @@ useEffect(() => {
           </p>
 
           <h2
-            className="mt-2 font-serif text-2xl"
+            className="mt-2 text-2xl font-black tracking-tight"
             style={{
               color: WITS_BLUE,
             }}
@@ -996,7 +996,7 @@ useEffect(() => {
 
         {/* EXISTING CHALLENGES */}
 
-        <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+        <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
 
           <div className="flex items-center justify-between gap-4">
             <div>
@@ -1011,7 +1011,7 @@ useEffect(() => {
               </p>
 
               <h2
-                className="mt-1 font-serif text-2xl"
+                className="mt-1 text-2xl font-black tracking-tight"
                 style={{
                   color:
                     WITS_BLUE,

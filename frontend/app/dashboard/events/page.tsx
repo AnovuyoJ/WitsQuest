@@ -5,9 +5,9 @@ import EventLocationCheck from "@/components/EventLocationCheck";
 import ChallengeCard from "@/components/ChallengeCard";
 import { supabase } from "@/lib/supabaseClient";
 import { haversineDistanceMeters } from "@/lib/distance";
+import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 
 const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
 
 type Event = {
   id: string;
@@ -99,40 +99,14 @@ export default function EventsPage() {
 
   return (
     <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
-      <header className="mb-6">
-        <div className="flex items-baseline gap-2.5">
-          <h1 className="font-serif text-2xl tracking-tight" style={{ color: WITS_BLUE }}>
-            Events &amp; Locations
-          </h1>
-          <span
-            className="text-xs font-medium uppercase tracking-widest"
-            style={{ color: WITS_GOLD }}
-          >
-            Wits Quest
-          </span>
-        </div>
-        <div
-          className="mt-2 h-[3px] w-14 rounded-full"
-          style={{ background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})` }}
-        />
-        <p className="mt-3 text-sm text-gray-500">Events closest to your current location.</p>
-      </header>
+      <ScreenHeader eyebrow="Challenge board" title="Events and locations" description="Campus quests are ordered by distance when your location is available." />
 
       {loading && (
-        <div className="py-10 text-center">
-          <p className="text-sm text-gray-500">Finding nearby events...</p>
-        </div>
+        <ScreenSkeleton cards={3} />
       )}
 
       {!loading && events.length === 0 && (
-        <div className="rounded-2xl bg-white p-6 text-center shadow-sm">
-          <p className="font-serif text-lg" style={{ color: WITS_BLUE }}>
-            No events available
-          </p>
-          <p className="mt-1 text-sm text-gray-500">
-            Check back later for new campus quests.
-          </p>
-        </div>
+        <StatePanel title="No events available" description="The challenge board is quiet right now. Check back later for a new campus quest." />
       )}
 
       {!loading && events.length > 0 && (
@@ -149,7 +123,7 @@ export default function EventsPage() {
                 <div className="p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <h3 className="truncate font-serif text-base" style={{ color: WITS_BLUE }}>
+                      <h3 className="truncate text-base font-bold tracking-tight" style={{ color: WITS_BLUE }}>
                         {event.title}
                       </h3>
                       {event.description && (

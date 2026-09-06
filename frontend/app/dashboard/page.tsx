@@ -1,232 +1,58 @@
 "use client";
 
-import ProfileMenuContainer from "@/components/ProfileMenuContainer";
+import Link from "next/link";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import ProfileMenuContainer from "@/components/ProfileMenuContainer";
+import { ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
+import { supabase } from "@/lib/supabaseClient";
 
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+type ActiveEvent = { id: string; title: string; description: string | null; ends_at: string };
 
 export default function DashboardPage() {
   const router = useRouter();
+  const [checkingSession, setCheckingSession] = useState(true);
+  const [loadingEvents, setLoadingEvents] = useState(true);
+  const [events, setEvents] = useState<ActiveEvent[]>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function load() {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!mounted) return;
+      if (!user) { router.replace("/"); return; }
+      setCheckingSession(false);
+      const now = new Date().toISOString();
+      const { data } = await supabase.from("events").select("id,title,description,ends_at").lte("starts_at", now).gte("ends_at", now).order("ends_at", { ascending: true }).limit(3);
+      if (!mounted) return;
+      setEvents((data ?? []) as ActiveEvent[]);
+      setLoadingEvents(false);
+    }
+    load();
+    return () => { mounted = false; };
+  }, [router]);
+
+  if (checkingSession) return <div className="min-h-full p-5 sm:p-8"><ScreenSkeleton cards={3} /></div>;
 
   return (
-    <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
-      {/* Header */}
-      <header className="mb-10">
-        <div className="flex items-center justify-between">
-          <div>
-            <div className="flex items-baseline gap-2.5">
-              <h1
-                className="font-serif text-3xl tracking-tight"
-                style={{ color: WITS_BLUE }}
-              >
-                Campus Quest
-              </h1>
-
-              <span
-                className="text-sm font-medium uppercase tracking-widest"
-                style={{ color: WITS_GOLD }}
-              >
-                Wits Quest
-              </span>
-            </div>
-
-            <div
-              className="mt-2 h-[3px] w-16 rounded-full"
-              style={{
-                background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})`,
-              }}
-            />
-          </div>
-
-          <ProfileMenuContainer />
-        </div>
+    <div className="min-h-full px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
+      <header className="mb-7 flex items-start justify-between gap-4">
+        <div><p className="text-[10px] font-bold uppercase tracking-[0.28em] text-[#9A741E]">WitsQuest field desk</p><h1 className="mt-2 text-[clamp(2rem,6vw,3.2rem)] font-black leading-none tracking-[-0.055em] text-[#043673]">What is in play?</h1><p className="mt-3 max-w-xl text-sm leading-6 text-slate-600">Pick up an active challenge, scan the campus map or check the cards you have earned.</p></div>
+        <ProfileMenuContainer />
       </header>
 
-      {/* Welcome */}
-      <section className="mb-10">
-        <h2
-          className="font-serif text-2xl"
-          style={{ color: WITS_BLUE }}
-        >
-          Welcome to Wits Quest
-        </h2>
-
-        <p className="mt-2 max-w-2xl text-gray-500">
-          Explore campus, discover nearby events, complete location-based
-          challenges, and collect reward cards along the way.
-        </p>
+      <section className="grid gap-4 lg:grid-cols-[1.4fr_.6fr]">
+        <Link href="/dashboard/map" className="group relative min-h-60 overflow-hidden rounded-2xl bg-[#043673] p-6 text-white transition hover:-translate-y-0.5 active:scale-[.995] sm:p-8">
+          <div className="absolute -bottom-20 -right-14 h-64 w-64 rounded-full border-[36px] border-white/5 transition-transform group-hover:scale-105" />
+          <p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#E2C66F]">Live campus map</p><h2 className="mt-4 max-w-md text-3xl font-black tracking-[-0.045em] sm:text-4xl">Find the next pin before your next lecture.</h2><span className="absolute bottom-6 left-6 text-sm font-bold sm:bottom-8 sm:left-8">Open map →</span>
+        </Link>
+        <Link href="/dashboard/cards" className="group flex min-h-52 flex-col justify-between rounded-2xl border border-[#C9A24B]/35 bg-[#F1E6C7] p-6 text-[#082C58] transition hover:-translate-y-0.5 active:scale-[.995] sm:p-8"><span className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#765816]">Your collection</span><div><h2 className="text-3xl font-black tracking-[-0.04em]">Cards worth the walk.</h2><p className="mt-3 text-sm leading-6 text-[#082C58]/70">Review every reward and prepare your battle deck.</p></div><span className="text-sm font-bold">View cards →</span></Link>
       </section>
 
-      {/* Main Actions */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Events */}
-        <div className="group rounded-2xl bg-white p-7 shadow-[0_2px_30px_-8px_rgba(4,54,115,0.2)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_35px_-10px_rgba(4,54,115,0.3)]">
-          <div
-            className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl"
-            style={{
-              background: `${WITS_BLUE}12`,
-              color: WITS_BLUE,
-            }}
-          >
-            <MapIcon />
-          </div>
-
-          <h3
-            className="font-serif text-2xl"
-            style={{ color: WITS_BLUE }}
-          >
-            Explore Events
-          </h3>
-
-          <p className="mt-2 text-sm leading-6 text-gray-500">
-            Find active events around campus, check how close you are, and
-            unlock challenges when you reach the event location.
-          </p>
-
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard/events")}
-            className="mt-6 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all hover:brightness-110"
-            style={{ background: WITS_BLUE }}
-          >
-            View Events
-          </button>
-        </div>
-
-        {/* Cards */}
-        <div className="group rounded-2xl bg-white p-7 shadow-[0_2px_30px_-8px_rgba(4,54,115,0.2)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[0_8px_35px_-10px_rgba(201,162,75,0.3)]">
-          <div
-            className="mb-6 flex h-14 w-14 items-center justify-center rounded-2xl"
-            style={{
-              background: `${WITS_GOLD}20`,
-              color: WITS_GOLD,
-            }}
-          >
-            <QuestIcon />
-          </div>
-
-          <h3
-            className="font-serif text-2xl"
-            style={{ color: WITS_BLUE }}
-          >
-            My Collection
-          </h3>
-
-          <p className="mt-2 text-sm leading-6 text-gray-500">
-            View the reward cards you have earned by successfully completing
-            challenges across campus.
-          </p>
-
-          <button
-            type="button"
-            onClick={() => router.push("/dashboard/cards")}
-            className="mt-6 rounded-xl px-6 py-3 text-sm font-semibold text-white transition-all hover:brightness-110"
-            style={{ background: WITS_GOLD }}
-          >
-            View My Cards
-          </button>
-        </div>
-      </div>
-
-      {/* Explore Section */}
-      <section className="mt-8 rounded-2xl bg-white p-6 shadow-[0_2px_30px_-8px_rgba(4,54,115,0.15)]">
-        <div className="flex items-start gap-4">
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl"
-            style={{
-              background: `${WITS_BLUE}12`,
-              color: WITS_BLUE,
-            }}
-          >
-            <CompassIcon />
-          </div>
-
-          <div>
-            <h3
-              className="font-semibold"
-              style={{ color: WITS_BLUE }}
-            >
-              Start exploring Wits
-            </h3>
-
-            <p className="mt-1 text-sm leading-6 text-gray-500">
-              Open the Events page to see what is available nearby. When you
-              reach an event location, verify your position and complete its
-              challenge to earn rewards.
-            </p>
-          </div>
-        </div>
+      <section className="mt-9" aria-labelledby="active-heading">
+        <div className="mb-4 flex items-end justify-between gap-4"><div><p className="text-[10px] font-bold uppercase tracking-[0.24em] text-[#9A741E]">Happening now</p><h2 id="active-heading" className="mt-1 text-2xl font-black tracking-tight text-[#043673]">Active challenges</h2></div><Link href="/dashboard/events" className="text-sm font-bold text-[#043673] hover:underline">See all</Link></div>
+        {loadingEvents ? <ScreenSkeleton cards={3} /> : events.length === 0 ? <StatePanel title="No active challenges nearby" description="Campus is quiet right now. Check the map again later or browse your card collection while new quests are prepared."><Link href="/dashboard/map" className="inline-block rounded-xl bg-[#043673] px-5 py-3 text-sm font-bold text-white">Check the map</Link></StatePanel> : <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">{events.map((event, index) => <Link href="/dashboard/events" key={event.id} className="rounded-2xl border border-[#043673]/12 bg-white p-5 transition hover:border-[#C9A24B] hover:shadow-[0_16px_36px_-28px_rgba(4,54,115,.7)] active:scale-[.99]"><div className="flex items-center justify-between"><span className="font-mono text-[10px] font-bold text-[#9A741E]">QUEST {String(index + 1).padStart(2, "0")}</span><span className="h-2 w-2 rounded-full bg-emerald-500" /></div><h3 className="mt-5 text-lg font-bold text-[#043673]">{event.title}</h3><p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600">{event.description || "Reach the location to reveal this campus challenge."}</p><p className="mt-5 text-xs font-semibold text-slate-500">Ends {new Date(event.ends_at).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}</p></Link>)}</div>}
       </section>
     </div>
-  );
-}
-
-/* -------------------------------------------------- */
-/* Map Icon */
-/* -------------------------------------------------- */
-
-function MapIcon() {
-  return (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M3 6l6-3 6 3 6-3v15l-6 3-6-3-6 3V6Z" />
-      <path d="M9 3v15" />
-      <path d="M15 6v15" />
-    </svg>
-  );
-}
-
-/* -------------------------------------------------- */
-/* Star / Quest Icon */
-/* -------------------------------------------------- */
-
-function QuestIcon() {
-  return (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M12 2l3.1 6.3L22 9.2l-5 4.9 1.2 6.9L12 17.8 5.8 21l1.2-6.9-5-4.9 6.9-.9L12 2Z" />
-    </svg>
-  );
-}
-
-/* -------------------------------------------------- */
-/* Compass Icon */
-/* -------------------------------------------------- */
-
-function CompassIcon() {
-  return (
-    <svg
-      width="22"
-      height="22"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <circle cx="12" cy="12" r="9" />
-      <path d="m15 9-2 4-4 2 2-4 4-2Z" />
-    </svg>
   );
 }

@@ -96,6 +96,7 @@ export default function CampusMap() {
 
   const [error, setError] =
     useState<string | null>(null);
+  const [locating, setLocating] = useState(true);
 
   /*
    * Load events from Supabase
@@ -147,6 +148,7 @@ export default function CampusMap() {
       setError(
         "Geolocation is not supported by your browser."
       );
+      setLocating(false);
       return;
     }
 
@@ -165,6 +167,7 @@ export default function CampusMap() {
           ]);
 
           setError(null);
+          setLocating(false);
         },
 
         (locationError) => {
@@ -173,9 +176,10 @@ export default function CampusMap() {
             locationError
           );
 
-          setError(
-            "Unable to retrieve your location. Please enable location access."
-          );
+          setError(locationError.code === locationError.PERMISSION_DENIED
+            ? "Location permission is off. Allow location access in your browser settings to see your position."
+            : "We could not find your location. Check your connection and try again.");
+          setLocating(false);
         },
 
         {
@@ -262,10 +266,15 @@ export default function CampusMap() {
 
   return (
     <div className="relative h-full w-full">
+      {locating && (
+        <div className="absolute inset-x-4 top-4 z-[1000] mx-auto max-w-sm rounded-2xl border border-[#043673]/15 bg-white/95 p-4 shadow-xl backdrop-blur" role="status">
+          <div className="flex items-center gap-3"><span className="h-3 w-3 animate-pulse rounded-full bg-[#C9A24B]" /><div><p className="text-sm font-bold text-[#043673]">Finding your position</p><p className="mt-0.5 text-xs text-slate-500">Keep this screen open while GPS connects.</p></div></div>
+        </div>
+      )}
       {/* ERROR MESSAGE */}
       {error && (
-        <div className="absolute left-4 top-4 z-[1000] max-w-sm rounded-xl border border-red-200 bg-white px-4 py-3 text-sm text-red-600 shadow">
-          {error}
+        <div className="absolute inset-x-4 top-4 z-[1000] max-w-sm rounded-2xl border border-red-200 bg-white p-4 shadow-xl">
+          <p className="text-sm font-bold text-red-700">Location unavailable</p><p className="mt-1 text-xs leading-5 text-red-600">{error}</p>
         </div>
       )}
 
@@ -357,7 +366,7 @@ export default function CampusMap() {
       </MapContainer>
 
       {/* MAP LEGEND */}
-      <div className="absolute bottom-4 left-4 z-[1000] rounded-xl bg-white p-3 text-xs shadow-lg">
+      <div className="absolute bottom-4 left-4 z-[1000] rounded-xl border border-[#043673]/10 bg-white/95 p-3 text-xs shadow-lg backdrop-blur">
         <p className="mb-2 font-semibold text-[#043673]">
           Map key
         </p>

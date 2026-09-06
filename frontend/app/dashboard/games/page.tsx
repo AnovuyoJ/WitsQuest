@@ -3,11 +3,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 
 
 
 const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
 
 
 type Card = {
@@ -582,12 +582,8 @@ export default function GamesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
-        <div className="flex min-h-[300px] items-center justify-center">
-          <p className="text-sm text-slate-500">
-            Loading your cards...
-          </p>
-        </div>
+      <div className="min-h-full px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
+        <ScreenSkeleton cards={3} />
       </div>
     );
   }
@@ -599,37 +595,10 @@ export default function GamesPage() {
    */
 
   return (
-    <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
+    <div className="min-h-full px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
       {/* HEADER */}
 
-      <header className="mb-8">
-        <p
-          className="text-[10px] font-semibold uppercase tracking-[0.28em]"
-          style={{
-            color: WITS_GOLD,
-          }}
-        >
-          Wits Quest
-        </p>
-
-        <h1
-          className="mt-2 font-serif text-3xl"
-          style={{
-            color: WITS_BLUE,
-          }}
-        >
-          Card Battle
-        </h1>
-
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-          Choose a category and one
-          of your cards. You will be
-          matched with another player
-          using the same category.
-          The highest point value
-          wins the round.
-        </p>
-      </header>
+      <ScreenHeader eyebrow="Battle arena" title="Card battle" description="Choose a category and card, then match with a player using the same deck. Highest points take the round." />
 
       {/* ERROR */}
 
@@ -642,7 +611,7 @@ export default function GamesPage() {
       {/* EMPTY COLLECTION */}
 
       {playerCards.length === 0 ? (
-        <section className="rounded-[28px] border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
+        <StatePanel title="You need cards to play" description="Complete a campus challenge and collect a reward card before entering the arena.">
           <div
             className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
             style={{
@@ -655,21 +624,7 @@ export default function GamesPage() {
             <GameIcon />
           </div>
 
-          <h2
-            className="mt-5 font-serif text-xl"
-            style={{
-              color: WITS_BLUE,
-            }}
-          >
-            You need cards to play
-          </h2>
-
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-            Complete campus challenges
-            and collect reward cards
-            before entering a battle.
-          </p>
-        </section>
+        </StatePanel>
       ) : !selectedCategory ? (
         /*
          * =================================================
@@ -684,7 +639,7 @@ export default function GamesPage() {
                 Step 1
               </p>
 
-              <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-[#043673]">
                 Choose your deck
               </h2>
 
@@ -715,7 +670,7 @@ export default function GamesPage() {
                       deck.category
                     )
                   }
-                  className="group overflow-hidden rounded-[26px] border border-slate-200 bg-white text-left shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)] transition hover:-translate-y-1 hover:border-[#043673]/30 hover:shadow-[0_10px_30px_-12px_rgba(4,54,115,0.28)]"
+                  className="group overflow-hidden rounded-2xl border border-[#043673]/12 bg-white text-left shadow-[0_16px_36px_-30px_rgba(4,54,115,.7)] transition hover:-translate-y-0.5 hover:border-[#C9A24B] active:scale-[.99]"
                 >
                   <div
                     className="h-2"
@@ -735,7 +690,7 @@ export default function GamesPage() {
                           Category deck
                         </p>
 
-                        <h3 className="mt-2 font-serif text-2xl text-[#043673]">
+                        <h3 className="mt-2 text-2xl font-black tracking-tight text-[#043673]">
                           {
                             deck.category
                           }
@@ -816,13 +771,13 @@ export default function GamesPage() {
         <section className="space-y-6">
           {/* SELECTED DECK HEADER */}
 
-          <div className="flex flex-col gap-4 rounded-[26px] bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 rounded-2xl border border-[#043673]/12 bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
                 Selected deck
               </p>
 
-              <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-[#043673]">
                 {selectedCategory}
               </h2>
 
@@ -865,7 +820,7 @@ export default function GamesPage() {
               Step 2
             </p>
 
-            <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-[#043673]">
               Choose a card
             </h2>
 
@@ -905,7 +860,7 @@ export default function GamesPage() {
                         null
                       );
                     }}
-                    className={`relative overflow-hidden rounded-[24px] border-2 p-5 text-left text-white shadow-xl transition hover:-translate-y-1 ${
+                    className={`relative min-h-72 overflow-hidden rounded-2xl border-2 p-5 text-left text-white shadow-[0_22px_48px_-32px_rgba(4,54,115,.85)] transition hover:-translate-y-0.5 active:scale-[.99] ${
                       selected
                         ? "border-[#C9A24B]"
                         : "border-transparent"
@@ -938,7 +893,7 @@ export default function GamesPage() {
                         Wits Quest
                       </p>
 
-                      <h3 className="mt-3 font-serif text-2xl">
+                      <h3 className="mt-3 text-2xl font-black tracking-tight">
                         {
                           card.title
                         }
@@ -959,7 +914,7 @@ export default function GamesPage() {
                           Points
                         </p>
 
-                        <p className="mt-1 font-serif text-3xl font-bold">
+                        <p className="mt-1 text-3xl font-black">
                           {
                             card.points
                           }
@@ -980,14 +935,14 @@ export default function GamesPage() {
           {/* FIND OPPONENT */}
 
           {selectedCard && (
-            <div className="rounded-[26px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)]">
+            <div className="rounded-2xl border border-[#043673]/12 bg-white p-6">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
                     Ready for battle
                   </p>
 
-                  <h3 className="mt-1 font-serif text-xl text-[#043673]">
+                  <h3 className="mt-1 text-xl font-black tracking-tight text-[#043673]">
                     {
                       selectedCard
                         .cards?.title
@@ -1037,7 +992,7 @@ export default function GamesPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
             Your battles
           </p>
-          <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-[#043673]">
             Pending Games
           </h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -1069,7 +1024,7 @@ export default function GamesPage() {
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
                         {game.category} battle
                       </p>
-                      <h3 className="mt-2 font-serif text-xl text-[#043673]">
+                      <h3 className="mt-2 text-xl font-black tracking-tight text-[#043673]">
                         {waiting ? "Waiting for an opponent" : "Opponent found"}
                       </h3>
                     </div>

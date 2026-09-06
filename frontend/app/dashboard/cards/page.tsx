@@ -2,9 +2,9 @@
 
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 
 const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
 
 type Card = {
   id: string;
@@ -114,35 +114,12 @@ export default function CardsPage() {
     <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
       {/* HEADER */}
 
-      <header className="mb-8">
-        <p
-          className="text-[10px] font-semibold uppercase tracking-[0.28em]"
-          style={{ color: WITS_GOLD }}
-        >
-          Collection
-        </p>
-
-        <h1
-          className="mt-2 font-serif text-3xl"
-          style={{ color: WITS_BLUE }}
-        >
-          My Cards
-        </h1>
-
-        <p className="mt-2 text-sm text-slate-500">
-          View the reward cards you have earned by completing
-          challenges around campus.
-        </p>
-      </header>
+      <ScreenHeader eyebrow="Collection archive" title="My cards" description="Every card marks a challenge completed somewhere across Wits campus." />
 
       {/* LOADING */}
 
       {loading && (
-        <div className="rounded-[28px] bg-white p-10 text-center shadow-sm">
-          <p className="text-sm text-slate-500">
-            Loading your collection...
-          </p>
-        </div>
+        <ScreenSkeleton cards={3} />
       )}
 
       {/* ERROR */}
@@ -156,28 +133,7 @@ export default function CardsPage() {
       {/* NO CARDS */}
 
       {!loading && !error && cards.length === 0 && (
-        <div className="rounded-[28px] border border-dashed border-slate-300 bg-white/60 p-10 text-center shadow-[0_2px_20px_-10px_rgba(4,54,115,0.12)]">
-          <div
-            className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
-            style={{
-              background: `${WITS_BLUE}10`,
-              color: WITS_BLUE,
-            }}
-          >
-            <CardIcon />
-          </div>
-
-          <h2
-            className="mt-5 font-serif text-xl"
-            style={{ color: WITS_BLUE }}
-          >
-            No cards collected yet
-          </h2>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Answer a challenge correctly to earn your first card.
-          </p>
-        </div>
+        <StatePanel title="Your collection starts here" description="Reach an active campus challenge and answer correctly to earn your first card." />
       )}
 
       {/* CARDS */}
@@ -186,7 +142,7 @@ export default function CardsPage() {
         <>
           <div className="mb-5 flex items-center justify-between">
             <h2
-              className="font-serif text-xl"
+              className="text-xl font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               Your Collection
@@ -217,7 +173,7 @@ export default function CardsPage() {
               return (
                 <div
                   key={playerCard.id}
-                  className="relative overflow-hidden rounded-[24px] border border-slate-200 p-5 text-white shadow-xl"
+                  className="relative min-h-72 overflow-hidden rounded-2xl border border-white/20 p-5 text-white shadow-[0_22px_48px_-32px_rgba(4,54,115,.85)] transition hover:-translate-y-1 active:scale-[.99]"
                   style={{
                     background: `linear-gradient(135deg, ${accent}, rgba(0,0,0,0.85))`,
                   }}
@@ -239,7 +195,7 @@ export default function CardsPage() {
                       </span>
                     </div>
 
-                    <h2 className="mt-3 font-serif text-2xl leading-tight">
+                    <h2 className="mt-3 text-2xl font-black leading-tight tracking-tight">
                       {card.title}
                     </h2>
 
@@ -256,7 +212,7 @@ export default function CardsPage() {
                         Points
                       </p>
 
-                      <p className="mt-1 font-serif text-2xl font-semibold">
+                      <p className="mt-1 text-2xl font-black">
                         {card.points}
                       </p>
                     </div>
@@ -281,33 +237,5 @@ export default function CardsPage() {
         </>
       )}
     </div>
-  );
-}
-
-function CardIcon() {
-  return (
-    <svg
-      width="26"
-      height="26"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <rect
-        x="5"
-        y="3"
-        width="14"
-        height="18"
-        rx="2"
-      />
-
-      <path d="M9 7h6" />
-      <path d="M9 11h6" />
-      <path d="M9 15h4" />
-    </svg>
   );
 }
