@@ -30,6 +30,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+<<<<<<< Updated upstream
+=======
+      - name: Run tests with coverage
+        run: npx jest --coverage
+
+      - name: Upload coverage to Codecov (legacy uploader)
+        run: |
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          chmod +x codecov
+          ./codecov -t "${{ secrets.CODECOV_TOKEN }}" -f coverage/lcov.info -F frontend
+
+
+>>>>>>> Stashed changes
       - name: Generate Next.js types
         run: npx next typegen
 
@@ -61,6 +74,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+<<<<<<< Updated upstream
+=======
+      - name: Run tests with coverage
+        run: npx jest --coverage
+      
+      - name: Upload coverage to Codecov (legacy uploader)
+        run: |
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
+          chmod +x codecov
+          ./codecov -t "${{ secrets.CODECOV_TOKEN }}" -f coverage/lcov.info -F Backend
+
+
+>>>>>>> Stashed changes
       - name: Type check
         run: npm run typecheck --if-present
 
