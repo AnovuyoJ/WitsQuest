@@ -1,0 +1,442 @@
+
+<!doctype html>
+<html lang="en">
+
+<head>
+    <title>Code coverage report for backend/routes/admin.ts</title>
+    <meta charset="utf-8" />
+    <link rel="stylesheet" href="../../prettify.css" />
+    <link rel="stylesheet" href="../../base.css" />
+    <link rel="shortcut icon" type="image/x-icon" href="../../favicon.png" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style type='text/css'>
+        .coverage-summary .sorter {
+            background-image: url(../../sort-arrow-sprite.png);
+        }
+    </style>
+</head>
+    
+<body>
+<div class='wrapper'>
+    <div class='pad1'>
+        <h1><a href="../../index.html">All files</a> / <a href="index.html">backend/routes</a> admin.ts</h1>
+        <div class='clearfix'>
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">63.04% </span>
+                <span class="quiet">Statements</span>
+                <span class='fraction'>58/92</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">47.82% </span>
+                <span class="quiet">Branches</span>
+                <span class='fraction'>22/46</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">56.25% </span>
+                <span class="quiet">Functions</span>
+                <span class='fraction'>9/16</span>
+            </div>
+        
+            
+            <div class='fl pad1y space-right2'>
+                <span class="strong">73.07% </span>
+                <span class="quiet">Lines</span>
+                <span class='fraction'>57/78</span>
+            </div>
+        
+            
+        </div>
+        <p class="quiet">
+            Press <em>n</em> or <em>j</em> to go to the next uncovered block, <em>b</em>, <em>p</em> or <em>k</em> for the previous block.
+        </p>
+        <template id="filterTemplate">
+            <div class="quiet">
+                Filter:
+                <input type="search" id="fileSearch">
+            </div>
+        </template>
+    </div>
+    <div class='status-line medium'></div>
+    <pre><table class="coverage">
+<tr><td class="line-count quiet"><a name='L1'></a><a href='#L1'>1</a>
+<a name='L2'></a><a href='#L2'>2</a>
+<a name='L3'></a><a href='#L3'>3</a>
+<a name='L4'></a><a href='#L4'>4</a>
+<a name='L5'></a><a href='#L5'>5</a>
+<a name='L6'></a><a href='#L6'>6</a>
+<a name='L7'></a><a href='#L7'>7</a>
+<a name='L8'></a><a href='#L8'>8</a>
+<a name='L9'></a><a href='#L9'>9</a>
+<a name='L10'></a><a href='#L10'>10</a>
+<a name='L11'></a><a href='#L11'>11</a>
+<a name='L12'></a><a href='#L12'>12</a>
+<a name='L13'></a><a href='#L13'>13</a>
+<a name='L14'></a><a href='#L14'>14</a>
+<a name='L15'></a><a href='#L15'>15</a>
+<a name='L16'></a><a href='#L16'>16</a>
+<a name='L17'></a><a href='#L17'>17</a>
+<a name='L18'></a><a href='#L18'>18</a>
+<a name='L19'></a><a href='#L19'>19</a>
+<a name='L20'></a><a href='#L20'>20</a>
+<a name='L21'></a><a href='#L21'>21</a>
+<a name='L22'></a><a href='#L22'>22</a>
+<a name='L23'></a><a href='#L23'>23</a>
+<a name='L24'></a><a href='#L24'>24</a>
+<a name='L25'></a><a href='#L25'>25</a>
+<a name='L26'></a><a href='#L26'>26</a>
+<a name='L27'></a><a href='#L27'>27</a>
+<a name='L28'></a><a href='#L28'>28</a>
+<a name='L29'></a><a href='#L29'>29</a>
+<a name='L30'></a><a href='#L30'>30</a>
+<a name='L31'></a><a href='#L31'>31</a>
+<a name='L32'></a><a href='#L32'>32</a>
+<a name='L33'></a><a href='#L33'>33</a>
+<a name='L34'></a><a href='#L34'>34</a>
+<a name='L35'></a><a href='#L35'>35</a>
+<a name='L36'></a><a href='#L36'>36</a>
+<a name='L37'></a><a href='#L37'>37</a>
+<a name='L38'></a><a href='#L38'>38</a>
+<a name='L39'></a><a href='#L39'>39</a>
+<a name='L40'></a><a href='#L40'>40</a>
+<a name='L41'></a><a href='#L41'>41</a>
+<a name='L42'></a><a href='#L42'>42</a>
+<a name='L43'></a><a href='#L43'>43</a>
+<a name='L44'></a><a href='#L44'>44</a>
+<a name='L45'></a><a href='#L45'>45</a>
+<a name='L46'></a><a href='#L46'>46</a>
+<a name='L47'></a><a href='#L47'>47</a>
+<a name='L48'></a><a href='#L48'>48</a>
+<a name='L49'></a><a href='#L49'>49</a>
+<a name='L50'></a><a href='#L50'>50</a>
+<a name='L51'></a><a href='#L51'>51</a>
+<a name='L52'></a><a href='#L52'>52</a>
+<a name='L53'></a><a href='#L53'>53</a>
+<a name='L54'></a><a href='#L54'>54</a>
+<a name='L55'></a><a href='#L55'>55</a>
+<a name='L56'></a><a href='#L56'>56</a>
+<a name='L57'></a><a href='#L57'>57</a>
+<a name='L58'></a><a href='#L58'>58</a>
+<a name='L59'></a><a href='#L59'>59</a>
+<a name='L60'></a><a href='#L60'>60</a>
+<a name='L61'></a><a href='#L61'>61</a>
+<a name='L62'></a><a href='#L62'>62</a>
+<a name='L63'></a><a href='#L63'>63</a>
+<a name='L64'></a><a href='#L64'>64</a>
+<a name='L65'></a><a href='#L65'>65</a>
+<a name='L66'></a><a href='#L66'>66</a>
+<a name='L67'></a><a href='#L67'>67</a>
+<a name='L68'></a><a href='#L68'>68</a>
+<a name='L69'></a><a href='#L69'>69</a>
+<a name='L70'></a><a href='#L70'>70</a>
+<a name='L71'></a><a href='#L71'>71</a>
+<a name='L72'></a><a href='#L72'>72</a>
+<a name='L73'></a><a href='#L73'>73</a>
+<a name='L74'></a><a href='#L74'>74</a>
+<a name='L75'></a><a href='#L75'>75</a>
+<a name='L76'></a><a href='#L76'>76</a>
+<a name='L77'></a><a href='#L77'>77</a>
+<a name='L78'></a><a href='#L78'>78</a>
+<a name='L79'></a><a href='#L79'>79</a>
+<a name='L80'></a><a href='#L80'>80</a>
+<a name='L81'></a><a href='#L81'>81</a>
+<a name='L82'></a><a href='#L82'>82</a>
+<a name='L83'></a><a href='#L83'>83</a>
+<a name='L84'></a><a href='#L84'>84</a>
+<a name='L85'></a><a href='#L85'>85</a>
+<a name='L86'></a><a href='#L86'>86</a>
+<a name='L87'></a><a href='#L87'>87</a>
+<a name='L88'></a><a href='#L88'>88</a>
+<a name='L89'></a><a href='#L89'>89</a>
+<a name='L90'></a><a href='#L90'>90</a>
+<a name='L91'></a><a href='#L91'>91</a>
+<a name='L92'></a><a href='#L92'>92</a>
+<a name='L93'></a><a href='#L93'>93</a>
+<a name='L94'></a><a href='#L94'>94</a>
+<a name='L95'></a><a href='#L95'>95</a>
+<a name='L96'></a><a href='#L96'>96</a>
+<a name='L97'></a><a href='#L97'>97</a>
+<a name='L98'></a><a href='#L98'>98</a>
+<a name='L99'></a><a href='#L99'>99</a>
+<a name='L100'></a><a href='#L100'>100</a>
+<a name='L101'></a><a href='#L101'>101</a>
+<a name='L102'></a><a href='#L102'>102</a>
+<a name='L103'></a><a href='#L103'>103</a>
+<a name='L104'></a><a href='#L104'>104</a>
+<a name='L105'></a><a href='#L105'>105</a>
+<a name='L106'></a><a href='#L106'>106</a>
+<a name='L107'></a><a href='#L107'>107</a>
+<a name='L108'></a><a href='#L108'>108</a>
+<a name='L109'></a><a href='#L109'>109</a>
+<a name='L110'></a><a href='#L110'>110</a>
+<a name='L111'></a><a href='#L111'>111</a>
+<a name='L112'></a><a href='#L112'>112</a>
+<a name='L113'></a><a href='#L113'>113</a>
+<a name='L114'></a><a href='#L114'>114</a>
+<a name='L115'></a><a href='#L115'>115</a>
+<a name='L116'></a><a href='#L116'>116</a>
+<a name='L117'></a><a href='#L117'>117</a>
+<a name='L118'></a><a href='#L118'>118</a>
+<a name='L119'></a><a href='#L119'>119</a>
+<a name='L120'></a><a href='#L120'>120</a></td><td class="line-coverage quiet"><span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">21x</span>
+<span class="cline-any cline-yes">20x</span>
+<span class="cline-any cline-yes">20x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">20x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-yes">30x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">18x</span>
+<span class="cline-any cline-yes">17x</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">15x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">3x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">19x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">16x</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-no">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-neutral">&nbsp;</span>
+<span class="cline-any cline-yes">1x</span>
+<span class="cline-any cline-neutral">&nbsp;</span></td><td class="text"><pre class="prettyprint lang-js">import { Router } from "express";
+import { requireLandmark } from "../services/landmarkService";
+import { database } from "../services/database";
+import { requireAuth } from "../middleware/requireAuth";
+import { requireAdmin } from "../middleware/requireAdmin";
+import { id, text, number, optionalText, HttpError } from "../services/validation";
+&nbsp;
+const router = Router();
+router.use(requireAuth, requireAdmin);
+&nbsp;
+router.post("/landmarks/lookup", async (req, res) =&gt; {
+  res.json(await requireLandmark(req.body.latitude, req.body.longitude));
+});
+&nbsp;
+function eventValues(body: Record&lt;string, unknown&gt;) {
+  const start = text(body.starts_at, "Start time");
+  const end = text(body.ends_at, "End time");
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (!Number.isFinite(Date.parse(start)) || !Number.isFinite(Date.parse(end)) || Date.parse(end) &lt;= Date.parse(start)) {
+<span class="cstat-no" title="statement not covered" >    throw new HttpError(400, "End time must be after start time.");</span>
+  }
+  return [text(body.title, "Title", 200), optionalText(body.description, "Description"),
+    number(body.latitude, "Latitude", -90, 90), number(body.longitude, "Longitude", -180, 180),
+    number(body.radius_meters, "Radius", 1, 10000), start, end];
+}
+&nbsp;
+function cardValues(body: Record&lt;string, unknown&gt;) {
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (!["Blue", "Black", "Gold"].includes(String(body.rarity))) <span class="cstat-no" title="statement not covered" >throw new HttpError(400, "Invalid rarity.");</span>
+  const points = number(body.points, "Points", 0, 100000);
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (!Number.isInteger(points)) <span class="cstat-no" title="statement not covered" >throw new HttpError(400, "Points must be an integer.");</span>
+  return [id(body.event_id), text(body.title, "Title", 200), body.rarity,
+    optionalText(body.description, "Description"), optionalText(body.accent, "Accent"),
+    optionalText(body.badge, "Badge"), optionalText(body.strength, "Strength"), points, optionalText(body.tag, "Tag")];
+}
+&nbsp;
+async function challengeValues(body: Record&lt;string, unknown&gt;) {
+  const eventId = id(body.event_id);
+  const answer = text(body.correct_answer, "Answer");
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (!["text", "multiple_choice", "true_false"].includes(String(body.question_type))) <span class="cstat-no" title="statement not covered" >throw new HttpError(400, "Invalid question type.");</span>
+  let options = null;
+  if (body.question_type === "multiple_choice") {
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!Array.isArray(body.options) || body.options.length &lt; 2 || body.options.length &gt; 20) <span class="cstat-no" title="statement not covered" >throw new HttpError(400, "Provide 2–20 options.");</span>
+    options = body.options.map(value =&gt; text(value, "Option"));
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!options.includes(answer)) <span class="cstat-no" title="statement not covered" >throw new HttpError(400, "Answer must match an option.");</span>
+  }
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (body.question_type === "true_false" &amp;&amp; <span class="branch-1 cbranch-no" title="branch not covered" >!["True", "False"].includes(answer))</span> <span class="cstat-no" title="statement not covered" >throw new HttpError(400, "Answer must be True or False.");</span>
+  const cardId = body.card_id ? id(body.card_id) : <span class="branch-1 cbranch-no" title="branch not covered" >null;</span>
+  <span class="missing-if-branch" title="else path not taken" >E</span>if (cardId) {
+    const card = await database.query("SELECT id FROM public.cards WHERE id = $1 AND event_id = $2", [cardId, eventId]);
+    <span class="missing-if-branch" title="if path not taken" >I</span>if (!card.rowCount) <span class="cstat-no" title="statement not covered" >throw new HttpError(400, "Reward card must belong to this event.");</span>
+  }
+  return [eventId, text(body.question_text, "Question"), body.question_type, options === null ? null : JSON.stringify(options), answer, cardId];
+}
+&nbsp;
+router.get("/cards", <span class="fstat-no" title="function not covered" >async </span>(req, res) =&gt; {
+  const eventId = <span class="cstat-no" title="statement not covered" >req.query.eventId === undefined ? null : id(req.query.eventId);</span>
+  const { rows } = <span class="cstat-no" title="statement not covered" >await database.query("SELECT * FROM public.cards WHERE ($1::uuid IS NULL OR event_id = $1) ORDER BY created_at DESC", [eventId]);</span>
+<span class="cstat-no" title="statement not covered" >  res.json(rows);</span>
+});
+router.get("/challenges", <span class="fstat-no" title="function not covered" >async </span>(req, res) =&gt; {
+  const { rows } = <span class="cstat-no" title="statement not covered" >await database.query("SELECT * FROM public.challenges WHERE event_id = $1 ORDER BY created_at", [id(req.query.eventId)]);</span>
+<span class="cstat-no" title="statement not covered" >  res.json(rows);</span>
+});
+&nbsp;
+router.post("/events", async (req, res) =&gt; {
+  const values = eventValues(req.body);
+  await requireLandmark(req.body.latitude, req.body.longitude);
+  const { rows } = await database.query(`INSERT INTO public.events (title, description, latitude, longitude, radius_meters, starts_at, ends_at)
+    VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, values);
+  res.status(201).json(rows[0]);
+});
+router.put("/events/:id", async (req, res) =&gt; {
+  const values = [...eventValues(req.body), id(req.params.id)];
+  await requireLandmark(req.body.latitude, req.body.longitude);
+  const { rows } = await database.query(`UPDATE public.events SET title=$1, description=$2, latitude=$3,
+    longitude=$4, radius_meters=$5, starts_at=$6, ends_at=$7 WHERE id=$8 RETURNING *`, values);
+  <span class="missing-if-branch" title="if path not taken" >I</span>if (!rows[0]) <span class="cstat-no" title="statement not covered" >throw new HttpError(404, "Event not found.");</span>
+  res.json(rows[0]);
+});
+router.delete("/events/:id", <span class="fstat-no" title="function not covered" >async </span>(req, res) =&gt; {
+  const result = <span class="cstat-no" title="statement not covered" >await database.query("DELETE FROM public.events WHERE id=$1", [id(req.params.id)]);</span>
+<span class="cstat-no" title="statement not covered" >  if (!result.rowCount) <span class="cstat-no" title="statement not covered" >throw new HttpError(404, "Event not found.");</span></span>
+<span class="cstat-no" title="statement not covered" >  res.json({ success: true });</span>
+});
+&nbsp;
+router.post("/cards", async (req, res) =&gt; {
+  const { rows } = await database.query(`INSERT INTO public.cards (event_id,title,rarity,description,accent,badge,strength,points,tag)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`, cardValues(req.body));
+  res.status(201).json(rows[0]);
+});
+router.put("/cards/:id", <span class="fstat-no" title="function not covered" >async </span>(req, res) =&gt; {
+  const { rows } = <span class="cstat-no" title="statement not covered" >await database.query(`UPDATE public.cards SET event_id=$1,title=$2,rarity=$3,description=$4,</span>
+    accent=$5,badge=$6,strength=$7,points=$8,tag=$9 WHERE id=$10 RETURNING *`, [...cardValues(req.body), id(req.params.id)]);
+<span class="cstat-no" title="statement not covered" >  if (!rows[0]) <span class="cstat-no" title="statement not covered" >throw new HttpError(404, "Card not found.");</span></span>
+<span class="cstat-no" title="statement not covered" >  res.json(rows[0]);</span>
+});
+router.delete("/cards/:id", <span class="fstat-no" title="function not covered" >async </span>(req, res) =&gt; {
+  const result = <span class="cstat-no" title="statement not covered" >await database.query("DELETE FROM public.cards WHERE id=$1", [id(req.params.id)]);</span>
+<span class="cstat-no" title="statement not covered" >  if (!result.rowCount) <span class="cstat-no" title="statement not covered" >throw new HttpError(404, "Card not found.");</span></span>
+<span class="cstat-no" title="statement not covered" >  res.json({ success: true });</span>
+});
+&nbsp;
+router.post("/challenges", async (req, res) =&gt; {
+  const { rows } = await database.query(`INSERT INTO public.challenges (event_id,question_text,question_type,options,correct_answer,card_id)
+    VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`, await challengeValues(req.body));
+  res.status(201).json(rows[0]);
+});
+router.put("/challenges/:id", <span class="fstat-no" title="function not covered" >async </span>(req, res) =&gt; {
+  const { rows } = <span class="cstat-no" title="statement not covered" >await database.query(`UPDATE public.challenges SET event_id=$1,question_text=$2,</span>
+    question_type=$3,options=$4,correct_answer=$5,card_id=$6 WHERE id=$7 RETURNING *`, [...await challengeValues(req.body), id(req.params.id)]);
+<span class="cstat-no" title="statement not covered" >  if (!rows[0]) <span class="cstat-no" title="statement not covered" >throw new HttpError(404, "Challenge not found.");</span></span>
+<span class="cstat-no" title="statement not covered" >  res.json(rows[0]);</span>
+});
+router.delete("/challenges/:id", <span class="fstat-no" title="function not covered" >async </span>(req, res) =&gt; {
+  const result = <span class="cstat-no" title="statement not covered" >await database.query("DELETE FROM public.challenges WHERE id=$1", [id(req.params.id)]);</span>
+<span class="cstat-no" title="statement not covered" >  if (!result.rowCount) <span class="cstat-no" title="statement not covered" >throw new HttpError(404, "Challenge not found.");</span></span>
+<span class="cstat-no" title="statement not covered" >  res.json({ success: true });</span>
+});
+&nbsp;
+export default router;
+&nbsp;</pre></td></tr></table></pre>
+
+                <div class='push'></div><!-- for sticky footer -->
+            </div><!-- /wrapper -->
+            <div class='footer quiet pad2 space-top1 center small'>
+                Code coverage generated by
+                <a href="https://istanbul.js.org/" target="_blank" rel="noopener noreferrer">istanbul</a>
+                at 2026-09-06T21:02:09.268Z
+            </div>
+        <script src="../../prettify.js"></script>
+        <script>
+            window.onload = function () {
+                prettyPrint();
+            };
+        </script>
+        <script src="../../sorter.js"></script>
+        <script src="../../block-navigation.js"></script>
+    </body>
+</html>
+    

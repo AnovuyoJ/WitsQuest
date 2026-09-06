@@ -1,4 +1,5 @@
 const { createDefaultPreset } = require("ts-jest");
+const path = require("node:path");
 
 const tsJestTransformCfg = createDefaultPreset().transform;
 
@@ -8,5 +9,5 @@ module.exports = {
   transform: {
     ...tsJestTransformCfg,
   },
-  coverageReporters: ["lcov", "text"],
+  coverageReporters: [["lcov", { projectRoot: path.resolve(__dirname, "..") }], "text"],
 };
