@@ -22,6 +22,14 @@ body {
 
 button, a, input { -webkit-tap-highlight-color: transparent; }
 
+/* Opacity is confined to the SVG fill so page content stays fully opaque. */
+.question-mark-background {
+  background-color: #fff;
+  background-image: url("/question-mark-pattern.svg");
+  background-repeat: repeat;
+  background-size: 192px 192px;
+}
+
 :focus-visible { outline: 3px solid rgba(201, 162, 75, 0.7); outline-offset: 3px; }
 
 @media (prefers-reduced-motion: reduce) {

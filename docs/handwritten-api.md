@@ -34,38 +34,571 @@ No migration, remote configuration change, or deployment is run automatically by
 
 ## Endpoint contract
 
-All `/api` routes require a valid Bearer token. Request bodies and responses are JSON. Errors contain `message`; authentication, authorization, invalid input, missing records, and conflicts use appropriate HTTP status codes.
+### Base URL, headers and authentication
 
-| Endpoint | Behavior |
+Use `http://localhost:5000` locally or `https://witsquest-backend.onrender.com` for the deployed backend. Paths below include `/api`; do not add it twice.
+
+Every endpoint below except `GET /` requires a Supabase Auth **access token** from a signed-in session. Send these headers when sending JSON:
+
+```http
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+The public Supabase publishable/anon key is not a user's access token. Sign-in and token refresh use Supabase Auth, not an Express login endpoint. Administrator routes additionally require the authenticated user's UUID in the backend's `ADMIN_USER_IDS`. Game routes restrict access to participants; collection and notification routes use the authenticated user's identity.
+
+Browser origins must be in the backend's `FRONTEND_URL` list. CORS does not replace token validation. Requests have a 32 KB JSON body limit. GET requests have no body; POST actions documented with no body can omit it.
+
+For example, replace the placeholder with your session access token:
+
+```bash
+curl "http://localhost:5000/api/me" \
+  -H "Authorization: Bearer <access_token>"
+```
+
+Responses are direct JSON objects, arrays, or `null`, not wrapped in `data`. Lists return `[]` when empty and have no pagination. UUID fields are strings in canonical UUID format; timestamps are ISO 8601 strings. Examples use fictional IDs and dates. Responses from handlers that return complete database rows may include additional columns on an existing deployment.
+
+### Shared errors and validation
+
+All authenticated endpoints can return the following errors, in addition to the endpoint-specific errors listed below:
+
+| Status | Meaning / example response |
 | --- | --- |
-| `GET /api/me` | Current ID and backend administrator status |
-| `GET /api/events` | Event list for map and events screens |
-| `GET /api/events/active` | Three active events, ordered by end time |
-| `POST /api/events/:eventId/verify-location` | Validate coordinates, active window and radius; record verification |
-| `GET /api/events/:eventId/challenge` | Next unanswered question; never returns the answer |
-| `POST /api/events/:eventId/submit-answer` | `{ challengeId, answer }`; grade and award transactionally |
-| `GET /api/me/cards` | Only the authenticated player's collection |
-| `GET /api/cards?ids=...` | Card presentation details for played cards |
-| `GET /api/me/notifications` | Only the authenticated player's notifications |
-| `POST /api/me/notifications/read` | `{ ids }`; mark only owned notifications read |
-| `GET /api/admin/cards?eventId=...` | Admin card list with optional event filter |
-| `GET /api/admin/challenges?eventId=...` | Admin questions, including answers |
-| `POST /api/admin/events`, `/cards`, `/challenges` | Explicit validated creation handlers |
-| `PUT /api/admin/events/:id`, `/cards/:id`, `/challenges/:id` | Explicit validated update handlers |
-| `DELETE /api/admin/events/:id`, `/cards/:id`, `/challenges/:id` | Admin-only deletion; database dependencies may block deletion |
-| `GET /api/games` | Current player's waiting and active matches |
-| `POST /api/games/matchmake` | `{ cardId, category }`; check ownership and atomically join/create a lobby |
-| `GET /api/games/:id`, `/:id/round`, `/:id/players` | Participant-only game, latest round, and names |
-| `POST /api/games/:id/cancel` | Creator may cancel a waiting lobby |
-| `POST /api/games/:id/forfeit` | Active participant forfeits to the opponent |
-| `POST /api/games/:id/presence` | Record participant presence |
-| `POST /api/games/:id/rounds/:roundId/card` | `{ cardId }`; validate ownership, category, and one submission |
-| `POST /api/games/:id/rounds/:roundId/resolve` | Compare stored points and transfer the losing card transactionally |
-| `POST /api/games/:id/rounds/:roundId/next` | Create the next round once after the previous round finishes |
+| 400 | Invalid UUID, missing/invalid fields, or malformed JSON: `{"message":"A valid UUID is required."}` |
+| 401 | Missing token: `{"message":"Missing or invalid Authorization header."}`; rejected token: `{"message":"Invalid or expired session."}` |
+| 403 | Admin routes only: `{"message":"Administrator access required."}` |
+| 409 | Foreign-key or uniqueness conflict: `{"message":"This operation conflicts with existing records.","code":"23503"}` (or `23505`) |
+| 413 | `{"message":"Request body is too large."}` |
+| 500 | Unexpected server/database failure: `{"message":"The server could not complete the request."}` |
 
-Location verification expires after 15 minutes. Repeat answers return the recorded result without another award. Attempts and awards commit together. Game resolution is idempotent; ties leave both collections unchanged. The backend never accepts a caller-supplied player ID, score, winner, or correctness flag as authoritative.
+Unknown routes return `404 {"message":"Route not found."}` after applicable authentication middleware. Unless otherwise noted, successful requests return **200**.
 
-If a submitted card is no longer owned or no longer matches the category, the round view treats that choice as unsubmitted and the affected player can choose a replacement. Valid submissions stay locked. Resolving a round still checks both players' ownership. Transfers move an existing collection row and preserve duplicate copies, matching the live database; older databases with unique constraints on collection ownership must remove those constraints before using duplicate-card transfers.
+Required text must be nonblank and is trimmed; the default maximum is 2,000 characters. Titles and game categories have a 200-character maximum. Optional text accepts omission, `null`, or an empty string as `null`; otherwise the same 2,000-character limit applies. Numbers must be finite JSON numbers, not numeric strings. All path IDs (`id`, `eventId`, `roundId`) must be UUIDs.
+
+### Response models
+
+The examples below define the shared response shapes referenced by individual endpoints.
+
+#### Event
+
+```json
+{
+  "id": "11111111-1111-4111-8111-111111111111",
+  "title": "Campus Discovery",
+  "description": "Find the library.",
+  "latitude": -26.191,
+  "longitude": 28.03,
+  "radius_meters": 100,
+  "starts_at": "2026-09-06T08:00:00.000Z",
+  "ends_at": "2026-09-06T16:00:00.000Z",
+  "created_at": "2026-09-01T08:00:00.000Z"
+}
+```
+
+`description` can be null. Coordinates and radius are numbers.
+
+#### Card
+
+```json
+{
+  "id": "22222222-2222-4222-8222-222222222222",
+  "event_id": "11111111-1111-4111-8111-111111111111",
+  "title": "Library Explorer",
+  "rarity": "Blue",
+  "description": "A campus discovery reward.",
+  "accent": null,
+  "badge": null,
+  "strength": null,
+  "points": 50,
+  "tag": "Knowledge",
+  "created_at": "2026-09-01T08:00:00.000Z"
+}
+```
+
+`rarity` is `Blue`, `Black`, or `Gold`; `points` is an integer. Description, accent, badge, strength, and tag are nullable strings. Existing database rows can have a null `event_id`; admin writes require an event UUID.
+
+#### Challenge
+
+```json
+{
+  "id": "33333333-3333-4333-8333-333333333333",
+  "event_id": "11111111-1111-4111-8111-111111111111",
+  "question_text": "Which building contains the books?",
+  "question_type": "multiple_choice",
+  "options": ["Library", "Gym"],
+  "card_id": "22222222-2222-4222-8222-222222222222"
+}
+```
+
+Player responses omit the answer and creation timestamp. Admin responses additionally contain `correct_answer` (for example `"Library"`) and `created_at`. Question types are `text`, `multiple_choice`, and `true_false`. Options are a string array for multiple choice and null otherwise; `card_id` can be null.
+
+#### Game
+
+```json
+{
+  "id": "44444444-4444-4444-8444-444444444444",
+  "player_one_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "player_two_id": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb",
+  "category": "Knowledge",
+  "status": "active",
+  "winner_id": null,
+  "created_at": "2026-09-06T10:00:00.000Z",
+  "started_at": "2026-09-06T10:01:00.000Z",
+  "finished_at": null,
+  "player_one_last_seen_at": null,
+  "player_two_last_seen_at": null
+}
+```
+
+Status is `waiting`, `active`, `finished`, or `cancelled`. Player two, winner, and timestamps other than creation can be null.
+
+#### Round
+
+```json
+{
+  "id": "55555555-5555-4555-8555-555555555555",
+  "game_id": "44444444-4444-4444-8444-444444444444",
+  "round_number": 1,
+  "player_one_card_id": "22222222-2222-4222-8222-222222222222",
+  "player_two_card_id": null,
+  "player_one_points": null,
+  "player_two_points": null,
+  "winner_id": null,
+  "status": "waiting",
+  "created_at": "2026-09-06T10:00:00.000Z",
+  "finished_at": null
+}
+```
+
+Status is `waiting`, `ready`, or `finished`. Card IDs, integer points, winner, and finish time are nullable. The latest-round endpoint may also return a `selection_issue` string.
+
+### Health and current user
+
+| Method and path | Auth / inputs | Success response |
+| --- | --- | --- |
+| `GET /` | Public; no parameters | `{"message":"Campus Quest backend is running."}` |
+| `GET /api/me` | Signed-in user; no parameters | `{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","isAdmin":false}` |
+
+### Events and challenges
+
+#### GET /api/events
+
+Any signed-in user. No parameters. Returns an array of **Event** objects, ordered by start time ascending. Includes inactive events.
+
+#### GET /api/events/active
+
+Any signed-in user. No parameters. Returns at most three currently active events, ordered by end time ascending. Each item contains only:
+
+```json
+[
+  {
+    "id": "11111111-1111-4111-8111-111111111111",
+    "title": "Campus Discovery",
+    "description": "Find the library.",
+    "ends_at": "2026-09-06T16:00:00.000Z"
+  }
+]
+```
+
+#### POST /api/events/:eventId/verify-location
+
+Any signed-in user; `eventId` identifies the event.
+
+| Body field | Required | Type / constraints |
+| --- | --- | --- |
+| latitude | Yes | Number, -90 to 90 |
+| longitude | Yes | Number, -180 to 180 |
+| accuracy | No | Number in meters, 0 to 100000; values over 100 receive 422 |
+
+Request:
+
+```json
+{"latitude":-26.191,"longitude":28.03,"accuracy":15}
+```
+
+Success records a location verification valid for 15 minutes:
+
+```json
+{"withinRange":true,"distanceMeters":0,"message":"Location verified. You can attempt this event's challenge."}
+```
+
+Endpoint errors:
+
+| Status | Response |
+| --- | --- |
+| 403 | `{"message":"You are too far from this event to attempt the challenge.","withinRange":false,"distanceMeters":250,"eventActive":true}` |
+| 404 | `{"message":"Event not found."}` |
+| 410 | `{"message":"This event is not currently active.","withinRange":true,"distanceMeters":0,"eventActive":false}` |
+| 422 | `{"message":"Location accuracy too low. Move to an area with better GPS signal."}` |
+
+Distances and range flags in these examples depend on the submitted coordinates.
+
+#### GET /api/events/:eventId/challenge
+
+Signed-in user with a location verification for this event within the last 15 minutes. No body/query parameters. Returns the next unanswered **Challenge** object, ordered by creation time then ID, or JSON `null` when none remain. Never includes `correct_answer`.
+
+Returns 403 with `{"message":"Verify your location at this event before answering."}` if verification is absent/expired, or 410 with `{"message":"This event is not currently active."}` if the event is inactive or does not exist.
+
+#### POST /api/events/:eventId/submit-answer
+
+Same authentication, active-event, and location requirements as fetching a challenge.
+
+| Body field | Required | Type / constraints |
+| --- | --- | --- |
+| challengeId | Yes | UUID of a challenge belonging to the event |
+| answer | Yes | Nonblank string, maximum 2000 characters |
+
+Request:
+
+```json
+{"challengeId":"33333333-3333-4333-8333-333333333333","answer":"Library"}
+```
+
+Success:
+
+```json
+{"correct":true,"correctAnswer":"Library","alreadyCompleted":false,"cardAwarded":true}
+```
+
+All flags are booleans; `correctAnswer` is a string. Comparison ignores case and surrounding whitespace. Incorrect answers are also recorded and complete the question. A correct answer awards the configured card only if the player does not already own that card for the event. No reward card means `cardAwarded:false`.
+
+Repeating a submission returns the original correctness with `alreadyCompleted:true` and `cardAwarded:false`; it still requires an active event and fresh verification. Attempt recording and awarding are transactional.
+
+Errors: the same 403/410 as fetching a challenge; 404 `{"message":"Challenge not found for this event."}`.
+
+### Cards and notifications
+
+#### GET /api/me/cards
+
+Signed-in user; no parameters. Returns only that user's collection, newest awards first. Each item has UUID fields `id` (the owned copy), `player_id`, `event_id`, `card_id`, timestamp `awarded_at`, and a nested full **Card** object under `cards`.
+
+Example item (the nested object uses the Card model above):
+
+```json
+[
+  {
+    "id": "66666666-6666-4666-8666-666666666666",
+    "player_id": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    "event_id": "11111111-1111-4111-8111-111111111111",
+    "card_id": "22222222-2222-4222-8222-222222222222",
+    "awarded_at": "2026-09-06T09:00:00.000Z",
+    "cards": {
+      "id": "22222222-2222-4222-8222-222222222222",
+      "event_id": "11111111-1111-4111-8111-111111111111",
+      "title": "Library Explorer",
+      "rarity": "Blue",
+      "description": "A campus discovery reward.",
+      "accent": null,
+      "badge": null,
+      "strength": null,
+      "points": 50,
+      "tag": "Knowledge",
+      "created_at": "2026-09-01T08:00:00.000Z"
+    }
+  }
+]
+```
+
+Duplicate copies can exist. Game requests use `card_id`, not the collection row's `id`.
+
+#### GET /api/cards?ids=...
+
+Signed-in user. Optional `ids` query string: up to 100 comma-separated UUIDs, without spaces. Example: `/api/cards?ids=22222222-2222-4222-8222-222222222222`.
+
+Returns an array of **Card** presentation objects, excluding `event_id` and `created_at`. Omitted IDs return `[]`; nonexistent IDs are skipped; ordering is unspecified. An empty string or invalid UUID returns 400. More than 100 IDs returns 400 `{"message":"Too many card IDs."}`. Ownership is not required for these presentation details.
+
+#### GET /api/me/notifications
+
+Signed-in user; no parameters. Returns only that user's notifications, newest first:
+
+```json
+[
+  {
+    "id": "77777777-7777-4777-8777-777777777777",
+    "title": "Round completed",
+    "message": "Round 1 ended in a draw. Both players keep their cards.",
+    "href": null,
+    "read_at": null,
+    "created_at": "2026-09-06T10:05:00.000Z"
+  }
+]
+```
+
+Title and message are strings; href is a nullable string, read_at a nullable timestamp.
+
+#### POST /api/me/notifications/read
+
+Signed-in user. Required body `ids`: array of up to 500 UUID strings; an empty array is allowed.
+
+```json
+{"ids":["77777777-7777-4777-8777-777777777777"]}
+```
+
+Returns `{"success":true}`. Only owned notifications are updated; nonexistent or other users' IDs are ignored. Already-read timestamps are retained. Invalid array/too many IDs returns 400 `{"message":"Provide up to 500 notification IDs."}`.
+
+### Administrator endpoints
+
+#### POST /api/admin/landmarks/lookup
+
+This external API integration validates event locations and supplies a suggested event title. Its place in the application is shown in [System Architecture](Design/system-design.md#2-system-architecture).
+
+Administrator token required. Send JSON `{"latitude":-26.1924,"longitude":28.0308}`. Both fields are required finite numbers in the usual latitude/longitude ranges. Returns 200 `{"name":"Great Hall","osmUrl":"https://www.openstreetmap.org/way/123"}` (illustrative result).
+
+Express calls the external **OpenStreetMap Overpass API**. Coordinates must be inside a mapped area tagged `amenity=university` or `amenity=college`, with a named building, historic feature, artwork, or museum within 150 metres. Overpass checks feature geometry; representative centres rank multiple matches. This checks mapped campus features, not legal ownership or physical access. Missing campus boundaries or names can prevent a match even at a real campus location.
+
+Errors: 400 invalid coordinates, 401 missing/invalid session, 403 nonadmin, 422 no matching campus feature, 503 upstream timeout, throttling, or invalid/incomplete response. Errors use `{"message":"..."}`. The fixed upstream endpoint is `https://overpass-api.de/api/interpreter`; no API key is needed. Only the entered event coordinates are sent upstream, not user tokens or personal details. Requests time out after 20 seconds; results are cached for five minutes with a 200-entry limit.
+
+**Both event creation and event updates require this lookup to succeed before writing**, even if called outside the UI. These endpoints therefore also return 422 or 503 for landmark lookup failures. Existing records are not automatically revalidated; they are checked when saved. There is no manual bypass on an outage or missing map coverage.
+
+The admin form looks up coordinates after typing pauses, fills an empty event title with the suggested name, and offers a button to replace an existing title. The title stays editable. A matching landmark is required independently of the chosen title; the landmark itself is not stored as a separate database field. This integration affects whether events can be saved, rather than only rendering a map.
+
+Map data: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). Query reference: [Overpass QL](https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL).
+
+##### Local test: Great Hall
+
+Run the frontend and backend locally, set `NEXT_PUBLIC_API_URL=http://localhost:5000`, and include `http://localhost:3000` in the backend's `FRONTEND_URL`. Sign in with an account listed in `ADMIN_USER_IDS`, open **Admin → Events**, and enter latitude `-26.1924` and longitude `28.0308`. Leave the title empty to see the returned name filled automatically.
+
+These coordinates returned the following response during integration testing (OpenStreetMap data may change):
+
+```json
+{"name":"Great Hall","osmUrl":"https://www.openstreetmap.org/way/452712704"}
+```
+
+To exercise the endpoint directly with a valid admin session:
+
+```bash
+curl "http://localhost:5000/api/admin/landmarks/lookup" \
+  -H "Authorization: Bearer <access_token>" \
+  -H "Content-Type: application/json" \
+  -d '{"latitude":-26.1924,"longitude":28.0308}'
+```
+
+An internet connection is required for uncached lookups; deployment and an Overpass API key are not required. Correcting coordinates starts a fresh form lookup. The **Retry lookup** button repeats the request, but an existing cached result can remain for up to five minutes.
+
+All endpoints in this section require both a valid token and membership in `ADMIN_USER_IDS`; otherwise 401/403. Use `GET /api/events` for the event list; there is no separate admin event-list endpoint.
+
+#### Lists
+
+| Method and path | Query parameters | Success response |
+| --- | --- | --- |
+| `GET /api/admin/cards` | Optional `eventId` UUID; omission lists all cards | Array of full **Card** objects, newest first |
+| `GET /api/admin/challenges` | **Required** `eventId` UUID | Array of admin **Challenge** objects, oldest first, including `correct_answer` and `created_at` |
+
+Missing/invalid required query UUIDs return 400; an event with no matching records returns `[]`.
+
+#### Event write body
+
+Used by both event POST and PUT.
+
+| Field | Required | Type / constraints |
+| --- | --- | --- |
+| title | Yes | Nonblank string, at most 200 characters |
+| description | No | Nullable text |
+| latitude | Yes | Number, -90 to 90 |
+| longitude | Yes | Number, -180 to 180 |
+| radius_meters | Yes | Number, 1 to 10000; use whole meters for the integer database column |
+| starts_at | Yes | Parseable date/time string; send ISO 8601 with timezone |
+| ends_at | Yes | Parseable date/time string strictly after starts_at |
+
+```json
+{
+  "title":"Campus Discovery",
+  "description":"Find the library.",
+  "latitude":-26.191,
+  "longitude":28.03,
+  "radius_meters":100,
+  "starts_at":"2026-09-06T08:00:00Z",
+  "ends_at":"2026-09-06T16:00:00Z"
+}
+```
+
+Invalid dates/order return 400 `{"message":"End time must be after start time."}`.
+
+#### Card write body
+
+| Field | Required | Type / constraints |
+| --- | --- | --- |
+| event_id | Yes | Existing event UUID |
+| title | Yes | Nonblank string, at most 200 characters |
+| rarity | Yes | Exactly Blue, Black, or Gold |
+| points | Yes | Integer, 0 to 100000 |
+| description, accent, badge, strength, tag | No | Nullable text fields |
+
+```json
+{"event_id":"11111111-1111-4111-8111-111111111111","title":"Library Explorer","rarity":"Blue","points":50,"tag":"Knowledge"}
+```
+
+Invalid rarity or noninteger points returns 400. A nonexistent event reference returns 409.
+
+#### Challenge write body
+
+| Field | Required | Type / constraints |
+| --- | --- | --- |
+| event_id | Yes | Existing event UUID |
+| question_text | Yes | Nonblank text |
+| question_type | Yes | text, multiple_choice, or true_false |
+| correct_answer | Yes | Nonblank text; true_false requires exactly True or False |
+| options | For multiple_choice | Array of 2–20 nonblank strings; correct_answer must exactly match a trimmed option |
+| card_id | No | Reward card UUID or null; card must belong to this event |
+
+```json
+{
+  "event_id":"11111111-1111-4111-8111-111111111111",
+  "question_text":"Which building contains the books?",
+  "question_type":"multiple_choice",
+  "options":["Library","Gym"],
+  "correct_answer":"Library",
+  "card_id":"22222222-2222-4222-8222-222222222222"
+}
+```
+
+For other question types, options are stored as null. An omitted/null card removes the reward. Invalid type/options/answer returns 400; an invalid reward association returns 400 `{"message":"Reward card must belong to this event."}`. A nonexistent event reference returns 409.
+
+#### Create, update and delete
+
+PUT requires the **complete write body**, just like POST; it is not a partial update. Omitted optional text fields become null.
+
+| Method and path | Body | Success response | Endpoint-specific errors |
+| --- | --- | --- | --- |
+| `POST /api/admin/events` | Event write body | **201**, full **Event** object | 400 validation; 409 record conflict |
+| `PUT /api/admin/events/:id` | Event write body | 200, updated **Event** object | 400 validation; 404 Event not found.; 409 conflict |
+| `DELETE /api/admin/events/:id` | None | 200, `{"success":true}` | 404 Event not found.; 409 dependent records |
+| `POST /api/admin/cards` | Card write body | **201**, full **Card** object | 400 validation; 409 record conflict |
+| `PUT /api/admin/cards/:id` | Card write body | 200, updated **Card** object | 400 validation; 404 Card not found.; 409 conflict |
+| `DELETE /api/admin/cards/:id` | None | 200, `{"success":true}` | 404 Card not found.; 409 dependent records |
+| `POST /api/admin/challenges` | Challenge write body | **201**, admin **Challenge** object | 400 validation; 409 record conflict |
+| `PUT /api/admin/challenges/:id` | Challenge write body | 200, updated admin **Challenge** object | 400 validation; 404 Challenge not found.; 409 conflict |
+| `DELETE /api/admin/challenges/:id` | None | 200, `{"success":true}` | 404 Challenge not found.; 409 dependent records |
+
+404 messages use the shared JSON format, for example `{"message":"Card not found."}`. Delete behavior follows database foreign-key constraints; dependent records can prevent deletion.
+
+### Games
+
+All game endpoints require a signed-in user. Except listing and matchmaking, requests are restricted to the game's participants. Missing/inaccessible games return 404 `{"message":"Game not found."}`, with the cancellation exception below.
+
+#### GET /api/games
+
+No parameters. Returns the current user's waiting and active games, newest first, with only these fields:
+
+```json
+[{"id":"44444444-4444-4444-8444-444444444444","player_one_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","player_two_id":null,"category":"Knowledge","status":"waiting"}]
+```
+
+#### POST /api/games/matchmake
+
+Required body: `cardId` (card UUID, not collection-copy UUID) and `category` (nonblank string, at most 200 characters).
+
+```json
+{"cardId":"22222222-2222-4222-8222-222222222222","category":"Knowledge"}
+```
+
+The caller must own the card in that category. Category is the card's trimmed tag, or `General` for an empty/null tag; comparison is case-sensitive. Returns 200:
+
+```json
+{"id":"44444444-4444-4444-8444-444444444444"}
+```
+
+Returns an existing waiting/active game if the caller has one (after validating ownership), otherwise joins a waiting lobby in the category or creates one. The submitted card becomes the first-round choice when joining/creating. Ownership/category mismatch returns 409 `{"message":"You must own a card in this game's category."}`.
+
+#### GET /api/games/:id
+
+Participant only; no body/query. Returns the full **Game** object. Missing/inaccessible game: 404.
+
+#### GET /api/games/:id/round
+
+Participant only; no body/query. Returns the latest **Round** object or `null` if none exists. Missing/inaccessible game: 404.
+
+For unfinished rounds, the opponent's card stays hidden as null until both choices are valid. Cards no longer owned or no longer in the category appear unsubmitted. The affected player also receives:
+
+```json
+{"selection_issue":"Your selected card is no longer available in this category. Choose another card."}
+```
+
+This field is added to the Round object, not returned alone. Reading a round does not modify stored choices. Finished rounds expose the recorded result.
+
+#### GET /api/games/:id/players
+
+Participant only; no body/query. Returns:
+
+```json
+{"player_one_name":"Alex","player_two_name":null}
+```
+
+Names are strings from Auth display metadata, with Player 1/Player 2 fallbacks. Player two's name is null for an empty lobby. Missing/inaccessible game: 404.
+
+#### POST /api/games/:id/cancel
+
+Waiting game's creator only. No body. Returns `{"id":"44444444-4444-4444-8444-444444444444"}` and sets status to cancelled. Any nonexistent game, other caller, or nonwaiting state returns **409** `{"message":"This waiting game cannot be cancelled."}`.
+
+#### POST /api/games/:id/forfeit
+
+Active participant only. No body. Returns `{"success":true}`, finishes the game, sets the opponent as winner, and creates notifications. Missing/inaccessible game: 404; nonactive game: 409 `{"message":"Game is not active."}`.
+
+#### POST /api/games/:id/presence
+
+Active participant only. No body. Returns `{"success":true}` and updates only that participant's last-seen timestamp. Missing/inaccessible game: 404; nonactive game: 409 `{"message":"Game is not active."}`.
+
+#### POST /api/games/:id/rounds/:roundId/card
+
+Active participant only; round must belong to the game. Required body:
+
+```json
+{"cardId":"22222222-2222-4222-8222-222222222222"}
+```
+
+Returns `{"success":true}`. Requires ownership in the game's category. A valid previous submission is locked; an invalid previous choice can be replaced.
+
+Errors: 404 missing/inaccessible game; 409 with one of these messages:
+
+- `Game is not active.`
+- `Round is not accepting cards.` (including missing/wrong-game rounds)
+- `Your card is already submitted.`
+- `You must own a card in this game's category.`
+
+Each is returned as `{"message":"..."}`.
+
+#### POST /api/games/:id/rounds/:roundId/resolve
+
+Participant only; no body. Returns the full finished **Round**, for example:
+
+```json
+{
+  "id":"55555555-5555-4555-8555-555555555555",
+  "game_id":"44444444-4444-4444-8444-444444444444",
+  "round_number":1,
+  "player_one_card_id":"22222222-2222-4222-8222-222222222222",
+  "player_two_card_id":"88888888-8888-4888-8888-888888888888",
+  "player_one_points":50,
+  "player_two_points":30,
+  "winner_id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+  "status":"finished",
+  "created_at":"2026-09-06T10:00:00.000Z",
+  "finished_at":"2026-09-06T10:05:00.000Z"
+}
+```
+
+Compares stored card points and transfers one existing losing collection copy to the winner. A tie has null winner and transfers nothing. Repeated resolution returns the stored round without another transfer, even if the game has since finished.
+
+Errors: 404 game inaccessible/missing or `{"message":"Round not found."}`; 409 `{"message":"Both players must submit a card in an active game."}`; or 409 if either selected card is no longer owned/in-category, with a message identifying Player 1 or Player 2 and asking them to choose another card.
+
+#### POST /api/games/:id/rounds/:roundId/next
+
+Active participant only; `roundId` identifies the finished previous round. No body. Returns the next round's ID:
+
+```json
+{"id":"99999999-9999-4999-8999-999999999999"}
+```
+
+Creates the next numbered round with no cards selected, or returns its ID if it already exists. Errors: 404 game inaccessible/missing; 409 `{"message":"Game is not active."}` or `{"message":"Finish the current round first."}` (including missing/wrong-game previous rounds).
+
+### Typical client flows
+
+1. Sign in using Supabase Auth, then call `GET /api/me` with the access token.
+2. Discover events, verify location, fetch the next challenge, and submit its answer. Verify location again after 15 minutes.
+3. Read your collection, choose a card/category, and matchmake. Read the game/round, send presence while active, submit cards when needed, resolve when both players have selected, then request the next round.
+4. Administrators use the admin write bodies above. The server determines user identity, ownership, correctness, points, and winners; clients do not supply authoritative values for them.
+
+Game transfers preserve duplicate collection copies. Existing databases with unique constraints on collection ownership must review those constraints before using duplicate-card transfers.
 
 ## Verification
 

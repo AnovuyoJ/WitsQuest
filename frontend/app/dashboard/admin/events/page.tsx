@@ -32,6 +32,32 @@ export default function AdminEventsPage() {
   const [description, setDescription] = useState("");
   const [latitude, setLatitude] = useState("");
   const [longitude, setLongitude] = useState("");
+  const [landmark, setLandmark] = useState<{ name: string; osmUrl: string } | null>(null);
+  const [lookupError, setLookupError] = useState("");
+  const [lookingUp, setLookingUp] = useState(false);
+  const [lookupRetry, setLookupRetry] = useState(0);
+
+  useEffect(() => {
+    setLandmark(null);
+    setLookupError("");
+    setLookingUp(false);
+    if (!admin || !latitude.trim() || !longitude.trim()) return;
+    const lat = Number(latitude), lon = Number(longitude);
+    if (!Number.isFinite(lat) || !Number.isFinite(lon) || Math.abs(lat) > 90 || Math.abs(lon) > 180) return;
+    let active = true;
+    setLookingUp(true);
+    const timer = setTimeout(async () => {
+      const result = await apiRequest<{ name: string; osmUrl: string }>("/admin/landmarks/lookup", "POST", { latitude: lat, longitude: lon });
+      if (!active) return;
+      setLookingUp(false);
+      if (result.error) setLookupError(result.error.message);
+      else if (result.data) {
+        setLandmark(result.data);
+        setTitle(current => current.trim() ? current : result.data!.name.slice(0, 200));
+      }
+    }, 800);
+    return () => { active = false; clearTimeout(timer); };
+  }, [admin, latitude, longitude, lookupRetry]);
   const [radius, setRadius] = useState("50");
   const [startsAt, setStartsAt] = useState("");
   const [endsAt, setEndsAt] = useState("");
@@ -526,6 +552,17 @@ export default function AdminEventsPage() {
             <p className="mt-2 text-xs text-slate-400">
               Players must be within this radius of the coordinates to verify the event.
             </p>
+            <div className="mt-3 rounded-xl border border-slate-200 bg-slate-50 p-3 text-sm" aria-live="polite">
+              {lookingUp ? <p>Checking campus landmarks…</p> : landmark ? (
+                <div>
+                  <p>Nearby campus landmark: <strong>{landmark.name}</strong></p>
+                  <button type="button" onClick={() => setTitle(landmark.name.slice(0, 200))} className="mt-2 font-semibold text-[#043673] underline">Use this name as the event title</button>
+                  <p className="mt-2 text-xs text-slate-500">Data © <a href={landmark.osmUrl} target="_blank" rel="noreferrer" className="underline">OpenStreetMap contributors</a></p>
+                </div>
+              ) : lookupError ? (
+                <div><p className="text-red-700">{lookupError}</p><button type="button" onClick={() => setLookupRetry(value => value + 1)} className="mt-2 underline">Retry lookup</button></div>
+              ) : <p>Enter coordinates to find a named building or landmark within 150 metres on a mapped university or college campus. Saving requires a match.</p>}
+            </div>
           </div>
 
           {/* DATES */}

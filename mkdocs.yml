@@ -13,6 +13,7 @@ extra_css:
 
 nav:
   - Home: index.md
+  - API Reference: handwritten-api.md
   - Planning:
     - Project Plan: Planning/project-plan.md
     - Sprint Plan: 

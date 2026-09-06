@@ -32,10 +32,10 @@ export default function DashboardLayout({
 
         <div
           className={`min-w-0 flex-1 transition-colors duration-200 ${
-            darkMode ? "bg-[#0b1220] text-white" : "bg-[#f5f7fb] text-slate-900"
+            darkMode ? "bg-[#0b1220] text-white" : "question-mark-background text-slate-900"
           }`}
         >
-          <main className={`${darkMode ? "bg-[#0b1220]" : "bg-[#f5f7fb]"}`}>{children}</main>
+          <main>{children}</main>
         </div>
       </div>
     </div>

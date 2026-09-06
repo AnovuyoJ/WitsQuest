@@ -3,6 +3,9 @@ const { readFileSync } = require("node:fs");
 const path = require("node:path");
 
 const mockPg = new PGlite();
+jest.mock("../services/landmarkService", () => ({
+  requireLandmark: jest.fn(async () => ({ name: "Great Hall", osmUrl: "https://www.openstreetmap.org/way/123" })),
+}));
 const mockClient = {
   async query(sql, values) {
     const result = await mockPg.query(sql, values);
@@ -52,6 +55,7 @@ beforeAll(async () => {
 }, 60000);
 
 beforeEach(async () => {
+  require("../services/landmarkService").requireLandmark.mockResolvedValue({ name: "Great Hall", osmUrl: "https://www.openstreetmap.org/way/123" });
   await mockPg.exec("TRUNCATE public.events, public.cards, public.challenges, public.location_verifications, public.challenge_attempts, public.player_cards, public.card_games, public.game_rounds, public.notifications CASCADE;");
   event = (await request("/admin/events", "admin", "POST", { title: "Campus event", description: "Test", latitude: -26.1924, longitude: 28.0308, radius_meters: 50,
     starts_at: new Date(Date.now()-3600000).toISOString(), ends_at: new Date(Date.now()+3600000).toISOString() })).data;
@@ -85,6 +89,21 @@ test("authentication and administrator authorization are enforced before SQL wri
   expect((await request("/me", "one")).data.isAdmin).toBe(false);
   expect((await request("/me", "admin")).data.isAdmin).toBe(true);
   expect((await request("/events")).data).toHaveLength(1);
+});
+
+test("landmark lookup is admin-only and event writes cannot bypass verification", async () => {
+  const { requireLandmark } = require("../services/landmarkService");
+  const { HttpError } = require("../services/validation");
+  requireLandmark.mockClear();
+  expect((await request("/admin/landmarks/lookup", "one", "POST", { latitude: 0, longitude: 0 })).status).toBe(403);
+  expect(requireLandmark).not.toHaveBeenCalled();
+  expect((await request("/admin/landmarks/lookup", "admin", "POST", { latitude: -26.1924, longitude: 28.0308 })).data.name).toBe("Great Hall");
+  for (const status of [422, 503]) {
+    requireLandmark.mockRejectedValue(new HttpError(status, "Lookup failed"));
+    expect((await request("/admin/events", "admin", "POST", { ...event, title: "Blocked" })).status).toBe(status);
+    expect((await request(`/admin/events/${event.id}`, "admin", "PUT", { ...event, title: "Blocked" })).status).toBe(status);
+    expect((await request("/events")).data.map(item => item.title)).toEqual(["Campus event"]);
+  }
 });
 
 test("admin writes validate fields, preserve JSON options, and parameterize values", async () => {

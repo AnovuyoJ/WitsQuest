@@ -31,7 +31,7 @@ It includes:
 
 ### Application Logic Layer
 
-The application logic layer handles the main rules and functionality of the game.
+The application logic layer uses handwritten **Express routes and TypeScript services** to handle the main rules and functionality of the game. It validates Supabase Auth access tokens and accesses PostgreSQL through parameterized SQL using `pg`.
 
 This includes:
 
@@ -41,6 +41,7 @@ This includes:
 - Challenge answer submission
 - Authentication and access control
 - Card awarding
+- Campus landmark validation through the external OpenStreetMap Overpass API before event creation or updates
 
 ### Data Layer
 
@@ -60,11 +61,28 @@ The overall architecture can be represented as:
 ```mermaid
 graph TD
   A[User] --> B[Next.js / React Frontend]
-  B --> C[Application / API Logic]
-  C --> D[Supabase]
-  D --> E[Authentication]
-  D --> F[PostgreSQL Database]
+  B -->|Bearer token and application requests| C[Handwritten Express API]
+  B -->|Sign-in and session refresh| E[Supabase Auth]
+  C -->|Validate access token| E
+  C -->|Parameterized SQL via pg| F[Supabase-hosted PostgreSQL]
+  C -->|Campus coordinates and landmark query| G[OpenStreetMap Overpass API]
+  G -->|Matching landmark name and identity| C
+  B -->|Leaflet map tiles| H[OpenStreetMap tile service]
 ```
+
+### External API integration: campus landmark validation
+
+The admin event form sends coordinates to `POST /api/admin/landmarks/lookup` after typing pauses. Express requires an authenticated administrator, validates the numeric coordinates, and calls the Overpass API with a fixed query. It searches within 150 metres for a named building, historic feature, artwork, or museum, restricted to a mapped university or college area containing the coordinates.
+
+The returned landmark name fills an empty event title. Administrators can also select **Use this name as the event title** to replace an existing title, then edit it. The response includes an OpenStreetMap link for attribution and inspection.
+
+Both `POST /api/admin/events` and `PUT /api/admin/events/:id` independently require a successful lookup before writing to PostgreSQL. A caller cannot bypass this by skipping the form lookup. This means external API data directly controls whether an event can be saved, as well as supplying its suggested title. Leaflet's separate tile requests provide the visual map.
+
+The backend caches lookup results for five minutes (up to 200 coordinate entries) and applies a 20-second request timeout. No match returns HTTP 422; an upstream failure returns HTTP 503 and prevents saving. Missing OpenStreetMap campus boundaries or landmark names may cause valid real-world locations to fail validation. Only event coordinates are sent upstream, not user tokens. The selected name can be saved as the event title; no separate landmark database field is added.
+
+The Great Hall test coordinates `-26.1924, 28.0308` returned **Great Hall** during integration testing. Map data can change, so this is a test example rather than a guaranteed future response. Player GPS verification remains a separate process using browser coordinates and the backend's distance calculation.
+
+See the [API reference: landmark lookup](../handwritten-api.md#post-apiadminlandmarkslookup) for request headers, response examples, and errors. Map data is provided by [OpenStreetMap contributors](https://www.openstreetmap.org/copyright).
 
 ## 3. Technologies
 
@@ -75,6 +93,8 @@ graph TD
 | TypeScript | Type-safe application development |
 | Tailwind CSS | Styling and responsive design |
 | Supabase | Authentication and database services |
+| Express and pg | Handwritten application endpoints and parameterized SQL |
+| OpenStreetMap Overpass API | Campus landmark lookup and validation before saving events |
 | PostgreSQL | Persistent data storage |
 | Leaflet | Interactive campus map |
 | React Leaflet | Integration of Leaflet with React |
