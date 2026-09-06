@@ -187,6 +187,16 @@ Status is `waiting`, `ready`, or `finished`. Card IDs, integer points, winner, a
 
 Any signed-in user. No parameters. Returns an array of published **Event** snapshots, ordered by start time ascending. Includes inactive published events; unpublished drafts and draft edits are hidden. Administrators use `GET /api/admin/events` to list saved drafts.
 
+#### GET /api/events/quest-summaries
+
+Signed-in user; no body or query parameters. Returns 200 with one summary per published event, ordered by event start time:
+
+```json
+[{"event_id":"11111111-1111-4111-8111-111111111111","total_questions":4,"completed_questions":2,"rewards":[{"id":"22222222-2222-4222-8222-222222222222","title":"Library Explorer","rarity":"Gold","points":60}]}]
+```
+
+Counts include only published questions. Completed questions count the authenticated player's recorded attempts, including incorrect answers; they do not mean rewards were earned. Reward cards are deduplicated and contain only ID, title, rarity and card points. No question text, options or answers are exposed. Draft events/questions are excluded. An event with no published questions returns zero counts and an empty reward array. Shared 401/500 errors apply. The player Events page uses these summaries for reward previews and progress bars, refreshing after answer submission.
+
 #### GET /api/events/active
 
 Any signed-in user. No parameters. Returns at most three currently active events, ordered by end time ascending. Each item contains only:

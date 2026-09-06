@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useChallenge } from "@/lib/useChallenge";
 
-export default function ChallengeCard({ eventId }: { eventId: string }) {
+export default function ChallengeCard({ eventId, onAnswered }: { eventId: string; onAnswered?: () => void }) {
   const { state, submit, nextQuestion } = useChallenge(eventId);
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
   const [textAnswer, setTextAnswer] = useState("");
+  useEffect(() => { if (state.status === "result") onAnswered?.(); }, [state, onAnswered]);
 
   if (state.status === "loading") return <div className="animate-pulse rounded-2xl border border-[#043673]/10 bg-white p-6" role="status"><div className="h-3 w-24 rounded bg-slate-200" /><div className="mt-5 h-6 w-full rounded bg-slate-200" /><div className="mt-5 h-12 rounded-xl bg-slate-100" /><div className="mt-3 h-12 rounded-xl bg-slate-100" /><span className="sr-only">Loading challenge</span></div>;
   if (state.status === "error") return <div className="rounded-2xl border border-red-200 bg-red-50 p-5 text-sm font-medium text-red-700">{state.message}</div>;

@@ -90,6 +90,27 @@ test("draft events and questions stay private even when addressed directly", asy
   expect((await request("/events")).data.some(row => row.id === draft.id)).toBe(true);
 });
 
+test("quest summaries show published rewards and only the caller's progress", async () => {
+  const draftEvent = (await request("/admin/events", "admin", "POST", { ...event, title: "Hidden" })).data;
+  await request("/admin/challenges", "admin", "POST", { ...challenge, question_text: "Unpublished" });
+  const initial = await request("/events/quest-summaries");
+  expect(initial.status).toBe(200);
+  expect(initial.data).toEqual([{ event_id: event.id, total_questions: 1, completed_questions: 0,
+    rewards: [{ id: card.id, title: card.title, rarity: card.rarity, points: card.points }] }]);
+  expect(initial.data.some(item => item.event_id === draftEvent.id)).toBe(false);
+  expect(JSON.stringify(initial.data)).not.toContain("correct_answer");
+  await request(`/events/${event.id}/verify-location`, "one", "POST", { latitude: event.latitude, longitude: event.longitude });
+  await request(`/events/${event.id}/submit-answer`, "one", "POST", { challengeId: challenge.id, answer: "No" });
+  expect((await request("/events/quest-summaries")).data[0].completed_questions).toBe(1);
+  expect((await request("/events/quest-summaries", "two")).data[0].completed_questions).toBe(0);
+  const next = (await request("/admin/challenges", "admin", "POST", { ...challenge, question_text: "Second" })).data;
+  await publish("challenges", next);
+  expect((await request("/events/quest-summaries")).data[0]).toMatchObject({ total_questions: 2, completed_questions: 1, rewards: [{ id: card.id }] });
+  expect((await request("/events/quest-summaries")).data[0].rewards).toHaveLength(1);
+  await publish("events", draftEvent);
+  expect((await request("/events/quest-summaries")).data.find(item => item.event_id === draftEvent.id)).toMatchObject({ total_questions: 0, completed_questions: 0, rewards: [] });
+});
+
 test("edits preserve live answers and invalidate a stale review", async () => {
   const draft = (await request(`/admin/challenges/${challenge.id}`, "admin", "PUT", { ...challenge, question_text: "New question", correct_answer: "No" })).data;
   expect((await request(`/admin/challenges/${draft.id}/review`, "admin")).data.correct_answer).toBe("No");

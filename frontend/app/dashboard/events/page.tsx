@@ -1,7 +1,8 @@
 "use client";
 
 import { apiRequest, type EventRecord } from "@/lib/api";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
+import QuestProgress, { type QuestSummary } from "@/components/QuestProgress";
 import EventLocationCheck from "@/components/EventLocationCheck";
 import ChallengeCard from "@/components/ChallengeCard";
 import { haversineDistanceMeters } from "@/lib/distance";
@@ -27,6 +28,19 @@ type EventWithDistance = Event & {
 export default function EventsPage() {
   const [events, setEvents] = useState<EventWithDistance[]>([]);
   const [loading, setLoading] = useState(true);
+  const [summaries, setSummaries] = useState<QuestSummary[]>([]);
+  const [summaryError, setSummaryError] = useState("");
+  const [summaryVersion, setSummaryVersion] = useState(0);
+  const refreshProgress = useCallback(() => setSummaryVersion(value => value + 1), []);
+  useEffect(() => {
+    let active = true;
+    apiRequest<QuestSummary[]>("/events/quest-summaries").then(result => {
+      if (!active) return;
+      setSummaryError(result.error ? "Progress and rewards could not be refreshed." : "");
+      if (result.data) setSummaries(result.data);
+    });
+    return () => { active = false; };
+  }, [summaryVersion]);
   const [verifiedEventIds, setVerifiedEventIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
@@ -109,6 +123,7 @@ export default function EventsPage() {
           {events.map((event) => {
             const active = isEventActive(event);
             const verified = verifiedEventIds.has(event.id);
+            const summary = summaries.find(item => item.event_id === event.id);
 
             return (
               <div
@@ -149,6 +164,8 @@ export default function EventsPage() {
                     </div>
                   </div>
 
+                  {summary && <QuestProgress summary={summary} />}
+                  {summaryError ? <p className="mt-3 text-xs text-amber-800" role="status">{summaryError} <button type="button" onClick={refreshProgress} className="underline">Retry</button></p> : !summary && <p className="mt-3 text-xs text-slate-500">Loading progress and rewards…</p>}
                   <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ${active ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
                     <span
                       className={`h-2 w-2 rounded-full ${active ? "bg-green-500" : "bg-gray-300"}`}
@@ -162,7 +179,7 @@ export default function EventsPage() {
                 {active && (
                   <div className="border-t border-stone-200 bg-stone-50 px-4 py-3">
                     {verified ? (
-                      <ChallengeCard eventId={event.id} />
+                      <ChallengeCard eventId={event.id} onAnswered={refreshProgress} />
                     ) : (
                       <EventLocationCheck
                         compact

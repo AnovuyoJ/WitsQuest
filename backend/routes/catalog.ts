@@ -23,6 +23,20 @@ router.get("/events/active", async (_req, res) => {
   res.json(rows);
 });
 
+router.get("/events/quest-summaries", async (req, res) => {
+  const { rows } = await database.query(`SELECT e.id AS event_id,
+    (SELECT count(*)::int FROM public.live_challenges c WHERE c.event_id=e.id) AS total_questions,
+    (SELECT count(*)::int FROM public.live_challenges c JOIN public.challenge_attempts a
+      ON a.challenge_id=c.id AND a.player_id=$1 WHERE c.event_id=e.id) AS completed_questions,
+    COALESCE((SELECT jsonb_agg(reward ORDER BY reward.title, reward.id) FROM (
+      SELECT DISTINCT card.id, card.title, card.rarity, card.points
+      FROM public.live_challenges c JOIN public.cards card ON card.id=c.card_id
+      WHERE c.event_id=e.id
+    ) reward), '[]'::jsonb) AS rewards
+    FROM public.live_events e ORDER BY e.starts_at`, [req.user!.id]);
+  res.json(rows);
+});
+
 router.get("/me/cards", async (req, res) => {
   const { rows } = await database.query(`SELECT pc.id, pc.player_id, pc.event_id, pc.card_id,
     pc.awarded_at, row_to_json(c) AS cards FROM public.player_cards pc
