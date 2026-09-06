@@ -33,11 +33,11 @@ jobs:
       - name: Run tests with coverage
         run: npx jest --coverage
 
-      - name: Upload coverage to Codecov
+      - name: Upload coverage to Codecov (legacy uploader)
         run: |
-          curl -Os https://cli.codecov.io/v0.6.0/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
           chmod +x codecov
-          ./codecov upload-process -t ${{ secrets.CODECOV_TOKEN }} -f coverage/lcov.info -F frontend --git-service github-actions
+          ./codecov -t ${{ secrets.CODECOV_TOKEN }} -f coverage/lcov.info -F frontend
 
 
       - name: Generate Next.js types
@@ -74,11 +74,11 @@ jobs:
       - name: Run tests with coverage
         run: npx jest --coverage
       
-      - name: Upload coverage to Codecov
+      - name: Upload coverage to Codecov (legacy uploader)
         run: |
-          curl -Os https://cli.codecov.io/v0.6.0/linux/codecov
+          curl -Os https://uploader.codecov.io/latest/linux/codecov
           chmod +x codecov
-          ./codecov upload-process -t ${{ secrets.CODECOV_TOKEN }} -f coverage/lcov.info -F backend --git-service github-actions
+          ./codecov -t ${{ secrets.CODECOV_TOKEN }} -f coverage/lcov.info -F Backend
 
 
       - name: Type check
