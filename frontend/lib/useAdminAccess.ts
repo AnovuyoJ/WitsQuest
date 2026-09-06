@@ -1,17 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { supabase } from "./supabaseClient";
-
-async function getAdminAccess(): Promise<boolean> {
-  const response = await fetch("/api/admin/access", { credentials: "include" });
-  if (!response.ok) return false;
-
-  const result: unknown = await response.json();
-  return typeof result === "boolean"
-    ? result
-    : typeof result === "object" && result !== null &&
-        "isAdmin" in result && result.isAdmin === true;
-}
+import { getAdminAccess } from "./api";
 
 export function useAdminAccess() {
   const [access, setAccess] = useState({ checkingAccess: true, isAdmin: false });

@@ -1,4 +1,4 @@
-// Runtime configuration is expected to be loaded by the app entrypoint or environment.
+import "../config";
 import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
 // Supabase is used only for identity verification. Application data uses database.ts.

@@ -2,6 +2,8 @@
 
 ## 1. Introduction
 
+**API migration:** Application data now goes through handwritten Express routes and direct PostgreSQL SQL. Supabase is retained for Auth and database hosting only. See [the current API contract and deployment guide](../handwritten-api.md). The RLS policies and database tables described below record the earlier deployment; the checked-in SQL and new API guide document the migration requirements.
+
 Wits Quest is a location-based campus game designed for students at the University of the Witwatersrand. Players move around campus, discover active events, verify that they are physically within an event area, and complete challenges to earn collectible cards.
 
 The system also provides an administrative interface where authorised administrators can create events, create challenges, manage cards, and control game content.

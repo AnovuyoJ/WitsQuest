@@ -1,5 +1,6 @@
 import { Router } from "express";
-import { supabaseAdmin } from "../../services/supabaseAdminClient";
+import { database } from "../../services/database";
+import { id, number } from "../../services/validation";
 import { verifyPlayerLocation } from "../../services/locationService";
 import { requireAuth } from "../../middleware/requireAuth";
 
@@ -14,8 +15,11 @@ const router = Router();
  * the frontend proceed to fetch and let the player attempt the challenge.
  */
 router.post("/:eventId/verify-location", requireAuth, async (req, res) => {
-  const { eventId } = req.params;
+  const eventId = id(req.params.eventId);
   const { latitude, longitude, accuracy } = req.body;
+  number(latitude, "Latitude", -90, 90);
+  number(longitude, "Longitude", -180, 180);
+  if (accuracy !== undefined) number(accuracy, "Accuracy", 0, 100000);
 
   if (typeof latitude !== "number" || typeof longitude !== "number") {
     return res.status(400).json({ message: "latitude and longitude are required." });
@@ -28,13 +32,11 @@ router.post("/:eventId/verify-location", requireAuth, async (req, res) => {
     });
   }
 
-  const { data: event, error } = await supabaseAdmin
-    .from("events")
-    .select("latitude, longitude, radius_meters, starts_at, ends_at")
-    .eq("id", eventId)
-    .single();
+  const { rows } = await database.query(`SELECT latitude, longitude, radius_meters, starts_at, ends_at
+    FROM public.events WHERE id=$1`, [eventId]);
+  const event = rows[0];
 
-  if (error || !event) {
+  if (!event) {
     return res.status(404).json({ message: "Event not found." });
   }
 
@@ -59,12 +61,8 @@ router.post("/:eventId/verify-location", requireAuth, async (req, res) => {
   // the frontend to have called this endpoint at all.
   const playerId = req.user!.id; // set by requireAuth middleware
 
-  await supabaseAdmin.from("location_verifications").insert({
-    player_id: playerId,
-    event_id: eventId,
-    distance_meters: result.distanceMeters,
-    verified_at: new Date().toISOString(),
-  });
+  await database.query(`INSERT INTO public.location_verifications (player_id,event_id,distance_meters,verified_at)
+    VALUES ($1,$2,$3,now())`, [playerId,eventId,result.distanceMeters]);
 
   return res.status(200).json({
     withinRange: true,

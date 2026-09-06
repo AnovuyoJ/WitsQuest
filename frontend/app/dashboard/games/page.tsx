@@ -1,13 +1,14 @@
 "use client";
 
+import { apiRequest, type PlayerCardRecord } from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
+import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 
 
 
 const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
 
 
 type Card = {
@@ -114,30 +115,7 @@ export default function GamesPage() {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from("player_cards")
-        .select(`
-          id,
-          player_id,
-          event_id,
-          card_id,
-          awarded_at,
-          cards (
-            id,
-            title,
-            rarity,
-            description,
-            accent,
-            badge,
-            strength,
-            points,
-            tag
-          )
-        `)
-        .eq("player_id", playerId)
-        .order("awarded_at", {
-          ascending: false,
-        });
+      const { data, error } = await apiRequest<PlayerCardRecord[]>("/me/cards");
 
       if (error) {
         console.error(
@@ -169,12 +147,7 @@ export default function GamesPage() {
     async function loadPendingGames() {
       setLoadingPendingGames(true);
 
-      const { data, error } = await supabase
-        .from("card_games")
-        .select("id, player_one_id, player_two_id, category, status")
-        .or(`player_one_id.eq.${playerId},player_two_id.eq.${playerId}`)
-        .in("status", ["waiting", "active"])
-        .order("created_at", { ascending: false });
+      const { data, error } = await apiRequest<PendingGame[]>("/games");
 
       if (error) {
         console.error("PENDING GAMES LOAD ERROR:", error);
@@ -201,14 +174,7 @@ export default function GamesPage() {
     setCancellingGameId(gameId);
     setError(null);
 
-    const { data, error } = await supabase
-      .from("card_games")
-      .update({ status: "cancelled" })
-      .eq("id", gameId)
-      .eq("player_one_id", playerId)
-      .eq("status", "waiting")
-      .select("id")
-      .maybeSingle();
+    const { data, error } = await apiRequest<{ id: string }>(`/games/${gameId}/cancel`, "POST");
 
     if (error) {
       console.error("PENDING GAME DELETE ERROR:", error);
@@ -232,9 +198,7 @@ export default function GamesPage() {
     setForfeitingGameId(gameId);
     setError(null);
 
-    const { error } = await supabase.rpc("forfeit_card_game", {
-      p_game_id: gameId,
-    });
+    const { error } = await apiRequest(`/games/${gameId}/forfeit`, "POST");
 
     if (error) {
       console.error("GAME FORFEIT ERROR:", error);
@@ -330,248 +294,12 @@ export default function GamesPage() {
    */
 
   async function findOpponent() {
-    if (
-      !playerId ||
-      !selectedCategory ||
-      !selectedCard
-    ) {
-      setError(
-        "Please choose a deck and a card first."
-      );
-      return;
-    }
-
-    setMatching(true);
-    setError(null);
-
-    try {
-      /*
-       * ----------------------------------------------
-       * LOOK FOR ANOTHER WAITING PLAYER
-       * ----------------------------------------------
-       */
-
-      const {
-        data: waitingGames,
-        error: waitingError,
-      } = await supabase
-        .from("card_games")
-        .select(
-          "id, player_one_id, category, status"
-        )
-        .eq(
-          "category",
-          selectedCategory
-        )
-        .eq("status", "waiting")
-        .neq(
-          "player_one_id",
-          playerId
-        )
-        .order("created_at", {
-          ascending: true,
-        })
-        .limit(1);
-
-      if (waitingError) {
-        throw waitingError;
-      }
-
-      /*
-       * ----------------------------------------------
-       * JOIN EXISTING GAME
-       * ----------------------------------------------
-       */
-
-      if (
-        waitingGames &&
-        waitingGames.length > 0
-      ) {
-        const waitingGame =
-          waitingGames[0];
-
-        const {
-          data: joinedGame,
-          error: joinError,
-        } = await supabase
-          .from("card_games")
-          .update({
-            player_two_id: playerId,
-            status: "active",
-            started_at:
-              new Date().toISOString(),
-          })
-          .eq(
-            "id",
-            waitingGame.id
-          )
-          .eq(
-            "status",
-            "waiting"
-          )
-          .select()
-          .single();
-
-        if (joinError) {
-          throw joinError;
-        }
-
-        if (!joinedGame) {
-          throw new Error(
-            "The game could not be joined."
-          );
-        }
-
-        /*
-         * Find round 1 created
-         * by Player 1.
-         */
-        const {
-          data: existingRound,
-          error: roundLookupError,
-        } = await supabase
-          .from("game_rounds")
-          .select(
-            "id, player_one_card_id, player_two_card_id"
-          )
-          .eq(
-            "game_id",
-            joinedGame.id
-          )
-          .eq(
-            "round_number",
-            1
-          )
-          .maybeSingle();
-
-        if (roundLookupError) {
-          throw roundLookupError;
-        }
-
-        /*
-         * Normally Player 1 already created
-         * round 1.
-         */
-        if (existingRound) {
-          const {
-            error:
-              updateRoundError,
-          } = await supabase
-            .from("game_rounds")
-            .update({
-              player_two_card_id:
-                selectedCard.card_id,
-            })
-            .eq(
-              "id",
-              existingRound.id
-            );
-
-          if (updateRoundError) {
-            throw updateRoundError;
-          }
-        } else {
-          /*
-           * Fallback in case round 1
-           * wasn't created.
-           */
-          const {
-            error:
-              createRoundError,
-          } = await supabase
-            .from("game_rounds")
-            .insert({
-              game_id:
-                joinedGame.id,
-              round_number: 1,
-              player_two_card_id:
-                selectedCard.card_id,
-              status: "waiting",
-            });
-
-          if (createRoundError) {
-            throw createRoundError;
-          }
-        }
-
-        router.push(
-          `/dashboard/games/${joinedGame.id}`
-        );
-
-        return;
-      }
-
-      /*
-       * ----------------------------------------------
-       * CREATE NEW WAITING GAME
-       * ----------------------------------------------
-       */
-
-      const {
-        data: newGame,
-        error: createError,
-      } = await supabase
-        .from("card_games")
-        .insert({
-          player_one_id:
-            playerId,
-          category:
-            selectedCategory,
-          status: "waiting",
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        throw createError;
-      }
-
-      if (!newGame) {
-        throw new Error(
-          "The game could not be created."
-        );
-      }
-
-      /*
-       * Create round 1 and save
-       * Player 1's chosen card.
-       */
-      const {
-        error: roundError,
-      } = await supabase
-        .from("game_rounds")
-        .insert({
-          game_id: newGame.id,
-          round_number: 1,
-          player_one_card_id:
-            selectedCard.card_id,
-          status: "waiting",
-        });
-
-      if (roundError) {
-        throw roundError;
-      }
-
-      /*
-       * Go to waiting/battle room.
-       */
-      router.push(
-        `/dashboard/games/${newGame.id}`
-      );
-    } catch (err) {
-      console.error(
-        "MATCHMAKING ERROR:",
-        err
-      );
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong while finding an opponent."
-      );
-
-      setMatching(false);
-    }
+    if (!selectedCard || !selectedCategory) { setError("Please choose a deck and card first."); return; }
+    setMatching(true); setError(null);
+    const { data, error } = await apiRequest<{ id: string }>("/games/matchmake", "POST", { cardId: selectedCard.card_id, category: selectedCategory });
+    if (error || !data) setError(error?.message || "Could not find a game.");
+    else router.push(`/dashboard/games/${data.id}`);
+    setMatching(false);
   }
 
   /*
@@ -582,12 +310,8 @@ export default function GamesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
-        <div className="flex min-h-[300px] items-center justify-center">
-          <p className="text-sm text-slate-500">
-            Loading your cards...
-          </p>
-        </div>
+      <div className="min-h-full px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
+        <ScreenSkeleton cards={3} />
       </div>
     );
   }
@@ -599,37 +323,10 @@ export default function GamesPage() {
    */
 
   return (
-    <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
+    <div className="min-h-full px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
       {/* HEADER */}
 
-      <header className="mb-8">
-        <p
-          className="text-[10px] font-semibold uppercase tracking-[0.28em]"
-          style={{
-            color: WITS_GOLD,
-          }}
-        >
-          Wits Quest
-        </p>
-
-        <h1
-          className="mt-2 font-serif text-3xl"
-          style={{
-            color: WITS_BLUE,
-          }}
-        >
-          Card Battle
-        </h1>
-
-        <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-          Choose a category and one
-          of your cards. You will be
-          matched with another player
-          using the same category.
-          The highest point value
-          wins the round.
-        </p>
-      </header>
+      <ScreenHeader eyebrow="Battle arena" title="Card battle" description="Choose a category and card, then match with a player using the same deck. Highest points take the round." />
 
       {/* ERROR */}
 
@@ -642,7 +339,7 @@ export default function GamesPage() {
       {/* EMPTY COLLECTION */}
 
       {playerCards.length === 0 ? (
-        <section className="rounded-[28px] border border-dashed border-slate-300 bg-white p-10 text-center shadow-sm">
+        <StatePanel title="You need cards to play" description="Complete a campus challenge and collect a reward card before entering the arena.">
           <div
             className="mx-auto flex h-14 w-14 items-center justify-center rounded-2xl"
             style={{
@@ -655,21 +352,7 @@ export default function GamesPage() {
             <GameIcon />
           </div>
 
-          <h2
-            className="mt-5 font-serif text-xl"
-            style={{
-              color: WITS_BLUE,
-            }}
-          >
-            You need cards to play
-          </h2>
-
-          <p className="mx-auto mt-2 max-w-md text-sm leading-6 text-slate-500">
-            Complete campus challenges
-            and collect reward cards
-            before entering a battle.
-          </p>
-        </section>
+        </StatePanel>
       ) : !selectedCategory ? (
         /*
          * =================================================
@@ -684,7 +367,7 @@ export default function GamesPage() {
                 Step 1
               </p>
 
-              <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-[#043673]">
                 Choose your deck
               </h2>
 
@@ -715,7 +398,7 @@ export default function GamesPage() {
                       deck.category
                     )
                   }
-                  className="group overflow-hidden rounded-[26px] border border-slate-200 bg-white text-left shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)] transition hover:-translate-y-1 hover:border-[#043673]/30 hover:shadow-[0_10px_30px_-12px_rgba(4,54,115,0.28)]"
+                  className="group overflow-hidden rounded-2xl border border-[#043673]/12 bg-white text-left shadow-[0_16px_36px_-30px_rgba(4,54,115,.7)] transition hover:-translate-y-0.5 hover:border-[#C9A24B] active:scale-[.99]"
                 >
                   <div
                     className="h-2"
@@ -735,7 +418,7 @@ export default function GamesPage() {
                           Category deck
                         </p>
 
-                        <h3 className="mt-2 font-serif text-2xl text-[#043673]">
+                        <h3 className="mt-2 text-2xl font-black tracking-tight text-[#043673]">
                           {
                             deck.category
                           }
@@ -816,13 +499,13 @@ export default function GamesPage() {
         <section className="space-y-6">
           {/* SELECTED DECK HEADER */}
 
-          <div className="flex flex-col gap-4 rounded-[26px] bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex flex-col gap-4 rounded-2xl border border-[#043673]/12 bg-white p-6 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
                 Selected deck
               </p>
 
-              <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+              <h2 className="mt-1 text-2xl font-black tracking-tight text-[#043673]">
                 {selectedCategory}
               </h2>
 
@@ -865,7 +548,7 @@ export default function GamesPage() {
               Step 2
             </p>
 
-            <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+            <h2 className="mt-1 text-2xl font-black tracking-tight text-[#043673]">
               Choose a card
             </h2>
 
@@ -905,7 +588,7 @@ export default function GamesPage() {
                         null
                       );
                     }}
-                    className={`relative overflow-hidden rounded-[24px] border-2 p-5 text-left text-white shadow-xl transition hover:-translate-y-1 ${
+                    className={`relative min-h-72 overflow-hidden rounded-2xl border-2 p-5 text-left text-white shadow-[0_22px_48px_-32px_rgba(4,54,115,.85)] transition hover:-translate-y-0.5 active:scale-[.99] ${
                       selected
                         ? "border-[#C9A24B]"
                         : "border-transparent"
@@ -938,7 +621,7 @@ export default function GamesPage() {
                         Wits Quest
                       </p>
 
-                      <h3 className="mt-3 font-serif text-2xl">
+                      <h3 className="mt-3 text-2xl font-black tracking-tight">
                         {
                           card.title
                         }
@@ -959,7 +642,7 @@ export default function GamesPage() {
                           Points
                         </p>
 
-                        <p className="mt-1 font-serif text-3xl font-bold">
+                        <p className="mt-1 text-3xl font-black">
                           {
                             card.points
                           }
@@ -980,14 +663,14 @@ export default function GamesPage() {
           {/* FIND OPPONENT */}
 
           {selectedCard && (
-            <div className="rounded-[26px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.18)]">
+            <div className="rounded-2xl border border-[#043673]/12 bg-white p-6">
               <div className="flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
                     Ready for battle
                   </p>
 
-                  <h3 className="mt-1 font-serif text-xl text-[#043673]">
+                  <h3 className="mt-1 text-xl font-black tracking-tight text-[#043673]">
                     {
                       selectedCard
                         .cards?.title
@@ -1037,7 +720,7 @@ export default function GamesPage() {
           <p className="text-xs font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
             Your battles
           </p>
-          <h2 className="mt-1 font-serif text-2xl text-[#043673]">
+          <h2 className="mt-1 text-2xl font-black tracking-tight text-[#043673]">
             Pending Games
           </h2>
           <p className="mt-1 text-sm text-slate-500">
@@ -1069,7 +752,7 @@ export default function GamesPage() {
                       <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#C9A24B]">
                         {game.category} battle
                       </p>
-                      <h3 className="mt-2 font-serif text-xl text-[#043673]">
+                      <h3 className="mt-2 text-xl font-black tracking-tight text-[#043673]">
                         {waiting ? "Waiting for an opponent" : "Opponent found"}
                       </h3>
                     </div>

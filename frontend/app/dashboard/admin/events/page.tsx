@@ -1,14 +1,13 @@
 "use client";
 
+import { useAdminAccess } from "@/lib/useAdminAccess";
+
+import { apiRequest, type EventRecord } from "@/lib/api";
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import type { User } from "@supabase/supabase-js";
-
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
-const ADMIN_GITHUB_USERNAME = "AnovuyoJ";
+
 
 type Event = {
   id: string;
@@ -22,20 +21,9 @@ type Event = {
   created_at: string | null;
 };
 
-function getUsername(user: User | null) {
-  return (
-    user?.user_metadata?.user_name ||
-    user?.user_metadata?.login ||
-    user?.user_metadata?.preferred_username ||
-    user?.identities?.[0]?.identity_data?.user_name ||
-    ""
-  );
-}
-
 export default function AdminEventsPage() {
-  const router = useRouter();
 
-  const [admin, setAdmin] = useState(false);
+  const { checkingAccess, isAdmin: admin } = useAdminAccess();
   const [loading, setLoading] = useState(true);
 
   const [events, setEvents] = useState<Event[]>([]);
@@ -60,25 +48,6 @@ export default function AdminEventsPage() {
    * ----------------------------------------------------
    */
 
-  useEffect(() => {
-    async function checkAdmin() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const user = session?.user;
-
-      if (!user || getUsername(user) !== ADMIN_GITHUB_USERNAME) {
-        router.replace("/dashboard");
-        return;
-      }
-
-      setAdmin(true);
-    }
-
-    checkAdmin();
-  }, [router]);
-
   /*
    * ----------------------------------------------------
    * Load events
@@ -88,14 +57,7 @@ export default function AdminEventsPage() {
   async function loadEvents() {
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("events")
-      .select(
-        "id,title,description,latitude,longitude,radius_meters,starts_at,ends_at,created_at"
-      )
-      .order("starts_at", {
-        ascending: true,
-      });
+    const { data, error } = await apiRequest<EventRecord[]>("/events");
 
     if (error) {
       setError(error.message);
@@ -112,8 +74,6 @@ export default function AdminEventsPage() {
 
     loadEvents();
   }, [admin]);
-
-  
 
   /*
    * ----------------------------------------------------
@@ -221,18 +181,9 @@ export default function AdminEventsPage() {
     let result;
 
     if (editingId) {
-      result = await supabase
-        .from("events")
-        .update(eventData)
-        .eq("id", editingId)
-        .select()
-        .single();
+      result = await apiRequest<EventRecord>(`/admin/events/${editingId}`, "PUT", eventData);
     } else {
-      result = await supabase
-        .from("events")
-        .insert(eventData)
-        .select()
-        .single();
+      result = await apiRequest<EventRecord>("/admin/events", "POST", eventData);
     }
 
     setSaving(false);
@@ -307,10 +258,7 @@ export default function AdminEventsPage() {
     setError("");
     setMessage("");
 
-    const { error } = await supabase
-      .from("events")
-      .delete()
-      .eq("id", id);
+    const { error } = await apiRequest(`/admin/events/${id}`, "DELETE");
 
     if (error) {
       setError(error.message);
@@ -390,7 +338,7 @@ export default function AdminEventsPage() {
   if (!admin) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
-        Checking admin access...
+        {checkingAccess ? "Checking admin access..." : "Administrator access is required."}
       </div>
     );
   }
@@ -402,7 +350,7 @@ export default function AdminEventsPage() {
    */
 
   return (
-    <div className="space-y-8 p-4 md:p-6">
+    <div className="space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
 
       {/* HEADER */}
 
@@ -416,7 +364,7 @@ export default function AdminEventsPage() {
           </p>
 
           <h1
-            className="mt-2 font-serif text-3xl"
+            className="mt-2 text-4xl font-black tracking-[-0.045em]"
             style={{ color: WITS_BLUE }}
           >
             Events
@@ -451,7 +399,7 @@ export default function AdminEventsPage() {
 
       {/* CREATE / EDIT FORM */}
 
-      <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+      <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
 
         <div className="mb-6">
           <p
@@ -462,7 +410,7 @@ export default function AdminEventsPage() {
           </p>
 
           <h2
-            className="mt-2 font-serif text-2xl"
+            className="mt-2 text-2xl font-black tracking-tight"
             style={{ color: WITS_BLUE }}
           >
             {editingId
@@ -514,7 +462,7 @@ export default function AdminEventsPage() {
 
           <div>
             <h3
-              className="mb-3 font-serif text-lg"
+              className="mb-3 text-lg font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               Location
@@ -584,7 +532,7 @@ export default function AdminEventsPage() {
 
           <div>
             <h3
-              className="mb-3 font-serif text-lg"
+              className="mb-3 text-lg font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               Availability
@@ -658,7 +606,7 @@ export default function AdminEventsPage() {
 
       {/* EVENTS LIST */}
 
-      <section className="rounded-[28px] border border-[#043673]/10 bg-white p-6 shadow-[0_2px_24px_-10px_rgba(4,54,115,0.2)]">
+      <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
 
         <div className="mb-6 flex items-center justify-between gap-4">
           <div>
@@ -670,7 +618,7 @@ export default function AdminEventsPage() {
             </p>
 
             <h2
-              className="mt-1 font-serif text-2xl"
+              className="mt-1 text-2xl font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               Existing events
@@ -689,7 +637,7 @@ export default function AdminEventsPage() {
         ) : events.length === 0 ? (
           <div className="rounded-2xl bg-slate-50 p-8 text-center">
             <p
-              className="font-serif text-lg"
+              className="text-lg font-black tracking-tight"
               style={{ color: WITS_BLUE }}
             >
               No events yet
@@ -718,7 +666,7 @@ export default function AdminEventsPage() {
                       <div className="flex flex-wrap items-center gap-2">
 
                         <h3
-                          className="font-serif text-xl"
+                          className="text-xl font-black tracking-tight"
                           style={{ color: WITS_BLUE }}
                         >
                           {event.title}

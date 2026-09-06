@@ -1,6 +1,3 @@
-// This file is loaded for side effects to initialize environment configuration.
-// The config module is resolved at runtime and does not ship with TypeScript typings.
-// @ts-expect-error - runtime config loader is intentionally untyped
 import "../config";
 import { Pool, PoolClient } from "pg";
 
