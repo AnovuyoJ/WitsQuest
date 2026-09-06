@@ -1,60 +1,13 @@
 import { Router } from "express";
 import { requireAuth } from "../../middleware/requireAuth";
-import { submitAnswer } from "../../services/challengeService";
+import { loadChallenge, submitAnswer } from "../../services/challengeService";
+import { id, text } from "../../services/validation";
 
 const router = Router();
-
-/**
- * POST /api/events/:eventId/submit-answer
- * Body: { answer: string }
- *
- * Requires the player to have already passed location verification
- * for this event (see verify-location). The game decides correctness
- * server-side — never trust a "correct: true" sent from the client.
- * Each player can only attempt each event's challenge once.
- */
-router.post("/:eventId/submit-answer", requireAuth, async (req, res) => {
-  const { eventId } = req.params;
-  const { answer } = req.body;
-
-  if (typeof eventId !== "string" || eventId.trim() === "") {
-    return res.status(400).json({ message: "A valid event ID is required." });
-  }
-
-  if (typeof answer !== "string" || answer.trim() === "") {
-    return res.status(400).json({ message: "An answer is required." });
-  }
-
-  const playerId = req.user!.id;
-
-  try {
-    const result = await submitAnswer(playerId, eventId, answer);
-
-    if (result.outcome === "no-verification") {
-      return res.status(403).json({
-        message: "You need to verify your location at this event before answering.",
-      });
-    }
-
-    if (result.outcome === "already-answered") {
-      return res.status(200).json({
-        message: "You've already completed this event's challenge.",
-        correct: result.wasCorrect,
-        correctAnswer: result.correctAnswer,
-        cardAwarded: false,
-        alreadyCompleted: true,
-      });
-    }
-
-    return res.status(200).json({
-      correct: result.correct,
-      correctAnswer: result.correctAnswer,
-      cardAwarded: result.cardAwarded,
-      alreadyCompleted: false,
-    });
-  } catch (err) {
-    return res.status(404).json({ message: "No challenge found for this event." });
-  }
+router.get("/:eventId/challenge", requireAuth, async (req, res) => {
+  res.json(await loadChallenge(req.user!.id, id(req.params.eventId)));
 });
-
+router.post("/:eventId/submit-answer", requireAuth, async (req, res) => {
+  res.json(await submitAnswer(req.user!.id, id(req.params.eventId), id(req.body.challengeId), text(req.body.answer, "Answer")));
+});
 export default router;

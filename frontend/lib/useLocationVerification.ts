@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
+import { API_URL } from "@/lib/api";
 
 type VerificationState =
   | { status: "idle" }
@@ -40,7 +41,7 @@ export function useLocationVerification(eventId: string) {
 
         try {
           const res = await fetch(
-            `${process.env.NEXT_PUBLIC_API_URL}/api/events/${eventId}/verify-location`,
+            `${API_URL}/api/events/${encodeURIComponent(eventId)}/verify-location`,
             {
               method: "POST",
               headers: {

@@ -9,4 +9,5 @@ if (!supabaseUrl || !supabaseAnonKey) {
   );
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Expose authentication only: data access must go through lib/api.ts.
+export const supabase = { auth: createClient(supabaseUrl, supabaseAnonKey).auth };

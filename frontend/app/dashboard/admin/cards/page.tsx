@@ -1,13 +1,12 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import type { User } from "@supabase/supabase-js";
+import { useAdminAccess } from "@/lib/useAdminAccess";
 
+import { apiRequest, type EventRecord, type CardRecord } from "@/lib/api";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
-const ADMIN_GITHUB_USERNAME = "AnovuyoJ";
+
 
 type CardRarity = "Blue" | "Black" | "Gold";
 
@@ -29,48 +28,6 @@ type Card = {
   created_at: string | null;
   event_id: string | null;
 };
-
-function getGitHubUsernameCandidates(user: User | null | undefined): string[] {
-  if (!user) return [];
-
-  const values = [
-    user?.user_metadata?.user_name,
-    user?.user_metadata?.login,
-    user?.user_metadata?.preferred_username,
-    user?.user_metadata?.name,
-    user?.email?.split("@")[0],
-
-    user?.identities?.map((identity) => identity?.identity_data?.user_name),
-
-    user?.identities?.map((identity) => identity?.identity_data?.login),
-
-    user?.identities?.map(
-      (identity) => identity?.identity_data?.preferred_username
-    ),
-  ];
-
-  return values
-    .flat()
-    .filter(
-      (value): value is string =>
-        typeof value === "string"
-    )
-    .map((value) => value.trim())
-    .filter(Boolean);
-}
-
-function isAdminGitHubUser(user: User | null| undefined) {
-  if (!user) return false;
-
-  const candidates =
-    getGitHubUsernameCandidates(user).map((value) =>
-      value.toLowerCase()
-    );
-
-  return candidates.includes(
-    ADMIN_GITHUB_USERNAME.toLowerCase()
-  );
-}
 
 function getCardTheme(rarity: CardRarity) {
   if (rarity === "Gold") {
@@ -97,12 +54,8 @@ function getCardTheme(rarity: CardRarity) {
 }
 
 export default function AdminCardsPage() {
-  const router = useRouter();
 
-  const [checkingAccess, setCheckingAccess] =
-    useState(true);
-
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { checkingAccess, isAdmin } = useAdminAccess();
 
   const [events, setEvents] = useState<Event[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
@@ -138,72 +91,6 @@ export default function AdminCardsPage() {
    * -----------------------------------------
    */
 
-  useEffect(() => {
-    let mounted = true;
-
-    async function checkAdmin() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const user = session?.user;
-
-      if (!user) {
-        if (!mounted) return;
-
-        setCheckingAccess(false);
-        setIsAdmin(false);
-
-        router.replace("/dashboard");
-        return;
-      }
-
-      const adminAccess =
-        isAdminGitHubUser(user);
-
-      if (!mounted) return;
-
-      setIsAdmin(adminAccess);
-      setCheckingAccess(false);
-
-      if (!adminAccess) {
-        router.replace("/dashboard");
-      }
-    }
-
-    checkAdmin();
-
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange(
-      (_event, session) => {
-        const user = session?.user;
-
-        if (!user) {
-          setIsAdmin(false);
-          setCheckingAccess(false);
-          router.replace("/dashboard");
-          return;
-        }
-
-        const adminAccess =
-          isAdminGitHubUser(user);
-
-        setIsAdmin(adminAccess);
-        setCheckingAccess(false);
-
-        if (!adminAccess) {
-          router.replace("/dashboard");
-        }
-      }
-    );
-
-    return () => {
-      mounted = false;
-      subscription.unsubscribe();
-    };
-  }, [router]);
-
   /*
    * -----------------------------------------
    * LOAD EVENTS
@@ -214,12 +101,7 @@ export default function AdminCardsPage() {
     if (!isAdmin) return;
 
     async function loadEvents() {
-      const { data, error } = await supabase
-        .from("events")
-        .select("id,title")
-        .order("created_at", {
-          ascending: false,
-        });
+      const { data, error } = await apiRequest<EventRecord[]>("/events");
 
       if (error) {
         setError(error.message);
@@ -248,14 +130,7 @@ export default function AdminCardsPage() {
     if (!isAdmin) return;
 
     async function loadCards() {
-      const { data, error } = await supabase
-        .from("cards")
-        .select(
-          "id,title,rarity,description,accent,badge,strength,points,tag,created_at,event_id"
-        )
-        .order("created_at", {
-          ascending: false,
-        });
+      const { data, error } = await apiRequest<CardRecord[]>("/admin/cards");
 
       if (error) {
         setError(error.message);
@@ -338,12 +213,7 @@ export default function AdminCardsPage() {
     setSaving(true);
 
     if (editingId) {
-      const { data, error } = await supabase
-        .from("cards")
-        .update(cardData)
-        .eq("id", editingId)
-        .select()
-        .single();
+      const { data, error } = await apiRequest<CardRecord>(`/admin/cards/${editingId}`, "PUT", cardData);
 
       setSaving(false);
 
@@ -365,11 +235,7 @@ export default function AdminCardsPage() {
       return;
     }
 
-    const { data, error } = await supabase
-      .from("cards")
-      .insert(cardData)
-      .select()
-      .single();
+    const { data, error } = await apiRequest<CardRecord>("/admin/cards", "POST", cardData);
 
     setSaving(false);
 
@@ -428,10 +294,7 @@ export default function AdminCardsPage() {
     setMessage("");
     setError("");
 
-    const { error } = await supabase
-      .from("cards")
-      .delete()
-      .eq("id", id);
+    const { error } = await apiRequest(`/admin/cards/${id}`, "DELETE");
 
     if (error) {
       setError(error.message);

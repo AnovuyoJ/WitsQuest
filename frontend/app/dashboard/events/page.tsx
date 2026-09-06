@@ -1,9 +1,9 @@
 "use client";
 
+import { apiRequest, type EventRecord } from "@/lib/api";
 import { useEffect, useState } from "react";
 import EventLocationCheck from "@/components/EventLocationCheck";
 import ChallengeCard from "@/components/ChallengeCard";
-import { supabase } from "@/lib/supabaseClient";
 import { haversineDistanceMeters } from "@/lib/distance";
 import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 
@@ -33,12 +33,7 @@ export default function EventsPage() {
     async function loadEvents() {
       // This is the actual database — the same "events" table your
       // admin console writes to. No localStorage involved anywhere here.
-      const { data, error } = await supabase
-        .from("events")
-        .select(
-          "id, title, description, latitude, longitude, radius_meters, starts_at, ends_at"
-        )
-        .order("starts_at", { ascending: true });
+      const { data, error } = await apiRequest<EventRecord[]>("/events");
 
       if (error) {
         console.error("Error loading events:", error);

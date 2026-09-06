@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { supabaseAdmin } from "../services/supabaseAdminClient";
+import { authClient } from "../services/authClient";
 
 // Extend Express's Request type so req.user is recognized by TypeScript
 // wherever this middleware has run.
@@ -31,7 +31,7 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
 
   const token = authHeader.replace("Bearer ", "");
 
-  const { data, error } = await supabaseAdmin.auth.getUser(token);
+  const { data, error } = await authClient.getUser(token);
 
   if (error || !data?.user) {
     return res.status(401).json({ message: "Invalid or expired session." });

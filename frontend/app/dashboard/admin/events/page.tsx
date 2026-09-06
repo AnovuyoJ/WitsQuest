@@ -1,14 +1,13 @@
 "use client";
 
+import { useAdminAccess } from "@/lib/useAdminAccess";
+
+import { apiRequest, type EventRecord } from "@/lib/api";
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { supabase } from "@/lib/supabaseClient";
-import type { User } from "@supabase/supabase-js";
-
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
-const ADMIN_GITHUB_USERNAME = "AnovuyoJ";
+
 
 type Event = {
   id: string;
@@ -22,20 +21,9 @@ type Event = {
   created_at: string | null;
 };
 
-function getUsername(user: User | null) {
-  return (
-    user?.user_metadata?.user_name ||
-    user?.user_metadata?.login ||
-    user?.user_metadata?.preferred_username ||
-    user?.identities?.[0]?.identity_data?.user_name ||
-    ""
-  );
-}
-
 export default function AdminEventsPage() {
-  const router = useRouter();
 
-  const [admin, setAdmin] = useState(false);
+  const { checkingAccess, isAdmin: admin } = useAdminAccess();
   const [loading, setLoading] = useState(true);
 
   const [events, setEvents] = useState<Event[]>([]);
@@ -60,25 +48,6 @@ export default function AdminEventsPage() {
    * ----------------------------------------------------
    */
 
-  useEffect(() => {
-    async function checkAdmin() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-
-      const user = session?.user;
-
-      if (!user || getUsername(user) !== ADMIN_GITHUB_USERNAME) {
-        router.replace("/dashboard");
-        return;
-      }
-
-      setAdmin(true);
-    }
-
-    checkAdmin();
-  }, [router]);
-
   /*
    * ----------------------------------------------------
    * Load events
@@ -88,14 +57,7 @@ export default function AdminEventsPage() {
   async function loadEvents() {
     setLoading(true);
 
-    const { data, error } = await supabase
-      .from("events")
-      .select(
-        "id,title,description,latitude,longitude,radius_meters,starts_at,ends_at,created_at"
-      )
-      .order("starts_at", {
-        ascending: true,
-      });
+    const { data, error } = await apiRequest<EventRecord[]>("/events");
 
     if (error) {
       setError(error.message);
@@ -112,8 +74,6 @@ export default function AdminEventsPage() {
 
     loadEvents();
   }, [admin]);
-
-  
 
   /*
    * ----------------------------------------------------
@@ -221,18 +181,9 @@ export default function AdminEventsPage() {
     let result;
 
     if (editingId) {
-      result = await supabase
-        .from("events")
-        .update(eventData)
-        .eq("id", editingId)
-        .select()
-        .single();
+      result = await apiRequest<EventRecord>(`/admin/events/${editingId}`, "PUT", eventData);
     } else {
-      result = await supabase
-        .from("events")
-        .insert(eventData)
-        .select()
-        .single();
+      result = await apiRequest<EventRecord>("/admin/events", "POST", eventData);
     }
 
     setSaving(false);
@@ -307,10 +258,7 @@ export default function AdminEventsPage() {
     setError("");
     setMessage("");
 
-    const { error } = await supabase
-      .from("events")
-      .delete()
-      .eq("id", id);
+    const { error } = await apiRequest(`/admin/events/${id}`, "DELETE");
 
     if (error) {
       setError(error.message);
@@ -390,7 +338,7 @@ export default function AdminEventsPage() {
   if (!admin) {
     return (
       <div className="flex min-h-[50vh] items-center justify-center text-sm text-slate-500">
-        Checking admin access...
+        {checkingAccess ? "Checking admin access..." : "Administrator access is required."}
       </div>
     );
   }

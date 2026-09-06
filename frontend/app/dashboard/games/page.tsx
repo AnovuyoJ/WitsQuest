@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest, type PlayerCardRecord } from "@/lib/api";
 import { useEffect, useMemo, useState } from "react";
 import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
@@ -114,30 +115,7 @@ export default function GamesPage() {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
-        .from("player_cards")
-        .select(`
-          id,
-          player_id,
-          event_id,
-          card_id,
-          awarded_at,
-          cards (
-            id,
-            title,
-            rarity,
-            description,
-            accent,
-            badge,
-            strength,
-            points,
-            tag
-          )
-        `)
-        .eq("player_id", playerId)
-        .order("awarded_at", {
-          ascending: false,
-        });
+      const { data, error } = await apiRequest<PlayerCardRecord[]>("/me/cards");
 
       if (error) {
         console.error(
@@ -169,12 +147,7 @@ export default function GamesPage() {
     async function loadPendingGames() {
       setLoadingPendingGames(true);
 
-      const { data, error } = await supabase
-        .from("card_games")
-        .select("id, player_one_id, player_two_id, category, status")
-        .or(`player_one_id.eq.${playerId},player_two_id.eq.${playerId}`)
-        .in("status", ["waiting", "active"])
-        .order("created_at", { ascending: false });
+      const { data, error } = await apiRequest<PendingGame[]>("/games");
 
       if (error) {
         console.error("PENDING GAMES LOAD ERROR:", error);
@@ -201,14 +174,7 @@ export default function GamesPage() {
     setCancellingGameId(gameId);
     setError(null);
 
-    const { data, error } = await supabase
-      .from("card_games")
-      .update({ status: "cancelled" })
-      .eq("id", gameId)
-      .eq("player_one_id", playerId)
-      .eq("status", "waiting")
-      .select("id")
-      .maybeSingle();
+    const { data, error } = await apiRequest<{ id: string }>(`/games/${gameId}/cancel`, "POST");
 
     if (error) {
       console.error("PENDING GAME DELETE ERROR:", error);
@@ -232,9 +198,7 @@ export default function GamesPage() {
     setForfeitingGameId(gameId);
     setError(null);
 
-    const { error } = await supabase.rpc("forfeit_card_game", {
-      p_game_id: gameId,
-    });
+    const { error } = await apiRequest(`/games/${gameId}/forfeit`, "POST");
 
     if (error) {
       console.error("GAME FORFEIT ERROR:", error);
@@ -330,248 +294,12 @@ export default function GamesPage() {
    */
 
   async function findOpponent() {
-    if (
-      !playerId ||
-      !selectedCategory ||
-      !selectedCard
-    ) {
-      setError(
-        "Please choose a deck and a card first."
-      );
-      return;
-    }
-
-    setMatching(true);
-    setError(null);
-
-    try {
-      /*
-       * ----------------------------------------------
-       * LOOK FOR ANOTHER WAITING PLAYER
-       * ----------------------------------------------
-       */
-
-      const {
-        data: waitingGames,
-        error: waitingError,
-      } = await supabase
-        .from("card_games")
-        .select(
-          "id, player_one_id, category, status"
-        )
-        .eq(
-          "category",
-          selectedCategory
-        )
-        .eq("status", "waiting")
-        .neq(
-          "player_one_id",
-          playerId
-        )
-        .order("created_at", {
-          ascending: true,
-        })
-        .limit(1);
-
-      if (waitingError) {
-        throw waitingError;
-      }
-
-      /*
-       * ----------------------------------------------
-       * JOIN EXISTING GAME
-       * ----------------------------------------------
-       */
-
-      if (
-        waitingGames &&
-        waitingGames.length > 0
-      ) {
-        const waitingGame =
-          waitingGames[0];
-
-        const {
-          data: joinedGame,
-          error: joinError,
-        } = await supabase
-          .from("card_games")
-          .update({
-            player_two_id: playerId,
-            status: "active",
-            started_at:
-              new Date().toISOString(),
-          })
-          .eq(
-            "id",
-            waitingGame.id
-          )
-          .eq(
-            "status",
-            "waiting"
-          )
-          .select()
-          .single();
-
-        if (joinError) {
-          throw joinError;
-        }
-
-        if (!joinedGame) {
-          throw new Error(
-            "The game could not be joined."
-          );
-        }
-
-        /*
-         * Find round 1 created
-         * by Player 1.
-         */
-        const {
-          data: existingRound,
-          error: roundLookupError,
-        } = await supabase
-          .from("game_rounds")
-          .select(
-            "id, player_one_card_id, player_two_card_id"
-          )
-          .eq(
-            "game_id",
-            joinedGame.id
-          )
-          .eq(
-            "round_number",
-            1
-          )
-          .maybeSingle();
-
-        if (roundLookupError) {
-          throw roundLookupError;
-        }
-
-        /*
-         * Normally Player 1 already created
-         * round 1.
-         */
-        if (existingRound) {
-          const {
-            error:
-              updateRoundError,
-          } = await supabase
-            .from("game_rounds")
-            .update({
-              player_two_card_id:
-                selectedCard.card_id,
-            })
-            .eq(
-              "id",
-              existingRound.id
-            );
-
-          if (updateRoundError) {
-            throw updateRoundError;
-          }
-        } else {
-          /*
-           * Fallback in case round 1
-           * wasn't created.
-           */
-          const {
-            error:
-              createRoundError,
-          } = await supabase
-            .from("game_rounds")
-            .insert({
-              game_id:
-                joinedGame.id,
-              round_number: 1,
-              player_two_card_id:
-                selectedCard.card_id,
-              status: "waiting",
-            });
-
-          if (createRoundError) {
-            throw createRoundError;
-          }
-        }
-
-        router.push(
-          `/dashboard/games/${joinedGame.id}`
-        );
-
-        return;
-      }
-
-      /*
-       * ----------------------------------------------
-       * CREATE NEW WAITING GAME
-       * ----------------------------------------------
-       */
-
-      const {
-        data: newGame,
-        error: createError,
-      } = await supabase
-        .from("card_games")
-        .insert({
-          player_one_id:
-            playerId,
-          category:
-            selectedCategory,
-          status: "waiting",
-        })
-        .select()
-        .single();
-
-      if (createError) {
-        throw createError;
-      }
-
-      if (!newGame) {
-        throw new Error(
-          "The game could not be created."
-        );
-      }
-
-      /*
-       * Create round 1 and save
-       * Player 1's chosen card.
-       */
-      const {
-        error: roundError,
-      } = await supabase
-        .from("game_rounds")
-        .insert({
-          game_id: newGame.id,
-          round_number: 1,
-          player_one_card_id:
-            selectedCard.card_id,
-          status: "waiting",
-        });
-
-      if (roundError) {
-        throw roundError;
-      }
-
-      /*
-       * Go to waiting/battle room.
-       */
-      router.push(
-        `/dashboard/games/${newGame.id}`
-      );
-    } catch (err) {
-      console.error(
-        "MATCHMAKING ERROR:",
-        err
-      );
-
-      setError(
-        err instanceof Error
-          ? err.message
-          : "Something went wrong while finding an opponent."
-      );
-
-      setMatching(false);
-    }
+    if (!selectedCard || !selectedCategory) { setError("Please choose a deck and card first."); return; }
+    setMatching(true); setError(null);
+    const { data, error } = await apiRequest<{ id: string }>("/games/matchmake", "POST", { cardId: selectedCard.card_id, category: selectedCategory });
+    if (error || !data) setError(error?.message || "Could not find a game.");
+    else router.push(`/dashboard/games/${data.id}`);
+    setMatching(false);
   }
 
   /*

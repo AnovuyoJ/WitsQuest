@@ -1,5 +1,6 @@
 "use client";
 
+import { apiRequest, type EventRecord } from "@/lib/api";
 import {
   MapContainer,
   TileLayer,
@@ -11,7 +12,6 @@ import {
 
 import { useEffect, useState } from "react";
 import L from "leaflet";
-import { supabase } from "@/lib/supabaseClient";
 import { getDistanceMeters } from "@/lib/geo";
 
 import "leaflet/dist/leaflet.css";
@@ -103,23 +103,7 @@ export default function CampusMap() {
    */
   useEffect(() => {
     async function loadEvents() {
-      const { data, error } = await supabase
-        .from("events")
-        .select(
-          `
-          id,
-          title,
-          description,
-          latitude,
-          longitude,
-          radius_meters,
-          starts_at,
-          ends_at
-          `
-        )
-        .order("starts_at", {
-          ascending: true,
-        });
+      const { data, error } = await apiRequest<EventRecord[]>("/events");
 
       if (error) {
         console.error(
