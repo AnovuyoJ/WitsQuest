@@ -1,15 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useAdminAccess } from "@/lib/useAdminAccess";
+
+import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
-import { supabase } from "@/lib/supabaseClient";
-
 const WITS_BLUE = "#043673";
 const WITS_GOLD = "#C9A24B";
-
-const ADMIN_GITHUB_USERNAME = "AnovuyoJ";
 
 type NavItem = {
   label: string;
@@ -41,7 +39,7 @@ const navItems: NavItem[] = [
   {
     label: "Notifications",
     icon: <BellIcon />,
-    href: "/notifications",
+    href: "/dashboard/notifications",
   },
   {
     label: "Admin",
@@ -60,7 +58,7 @@ export default function Sidebar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [query, setQuery] = useState("");
-  const [isAdmin, setIsAdmin] = useState(false);
+  const { isAdmin } = useAdminAccess();
 
   const pathname = usePathname();
 
@@ -68,69 +66,7 @@ export default function Sidebar() {
    * Check whether the currently logged-in user
    * is the GitHub admin.
    */
-  useEffect(() => {
-    async function checkAdmin() {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
 
-      const user = session?.user;
-
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-
-      const githubUsername =
-        user.user_metadata?.user_name ||
-        user.user_metadata?.login ||
-        user.user_metadata?.preferred_username ||
-        user.identities?.[0]?.identity_data?.user_name ||
-        user.identities?.[0]?.identity_data?.login;
-
-      const admin =
-        typeof githubUsername === "string" &&
-        githubUsername.toLowerCase() ===
-          ADMIN_GITHUB_USERNAME.toLowerCase();
-
-      setIsAdmin(admin);
-    }
-
-    checkAdmin();
-
-    /*
-     * Update admin status whenever
-     * authentication changes.
-     */
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      const user = session?.user;
-
-      if (!user) {
-        setIsAdmin(false);
-        return;
-      }
-
-      const githubUsername =
-        user.user_metadata?.user_name ||
-        user.user_metadata?.login ||
-        user.user_metadata?.preferred_username ||
-        user.identities?.[0]?.identity_data?.user_name ||
-        user.identities?.[0]?.identity_data?.login;
-
-      const admin =
-        typeof githubUsername === "string" &&
-        githubUsername.toLowerCase() ===
-          ADMIN_GITHUB_USERNAME.toLowerCase();
-
-      setIsAdmin(admin);
-    });
-
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, []);
 
   /*
    * Hide Admin navigation from normal users.
