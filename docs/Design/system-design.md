@@ -2,6 +2,14 @@
 
 ## 1. Introduction
 
+### Ordered trail architecture
+
+The admin trail builder sends ordered event UUIDs to handwritten Express routes in `backend/routes/trails.ts`. `requireAuth` and `requireAdmin` protect authoring; parameterized PostgreSQL queries validate 2–20 distinct existing stops. The `public.trails` table stores draft content, review revisions, and a published snapshot. Run `backend/sql/trails.sql` after the base schema and content-publication migration before deploying this feature. RLS is enabled and direct client table access is revoked; Express uses the existing privileged database connection.
+
+The player Trails page calls `GET /api/trails`. Express expands the published event ID array with ordinality, joins `live_events` and `live_challenges`, and calculates progress from the authenticated player's challenge attempts. The first incomplete stop becomes the next destination. Completing all published questions at a stop counts as completion, even with an incorrect answer; card rewards still follow normal answer rules. Stops without questions are not complete.
+
+Trails provide guidance without enforcing sequential access. Author order takes precedence over distance sorting. Inactive stops remain visible; deleted events become unavailable placeholders. Event IDs are stored as an ordered array without cascading event foreign keys so deletion cannot silently remove or reorder published stops. Draft edits do not affect the player route until reviewed and published. Events themselves retain their independent publication lifecycle. See [the trail API contract](../handwritten-api.md#ordered-trails) for bodies, responses and errors.
+
 **API migration:** Application data now goes through handwritten Express routes and direct PostgreSQL SQL. Supabase is retained for Auth and database hosting only. See [the current API contract and deployment guide](../handwritten-api.md). The RLS policies and database tables described below record the earlier deployment; the checked-in SQL and new API guide document the migration requirements.
 
 Wits Quest is a location-based campus game designed for students at the University of the Witwatersrand. Players move around campus, discover active events, verify that they are physically within an event area, and complete challenges to earn collectible cards.

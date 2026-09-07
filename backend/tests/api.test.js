@@ -49,6 +49,7 @@ beforeAll(async () => {
   await mockPg.exec("CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY, raw_user_meta_data jsonb DEFAULT '{}');");
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/schema.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/content-publication.sql"), "utf8"));
+  await mockPg.exec(readFileSync(path.join(__dirname, "../sql/trails.sql"), "utf8"));
   await mockPg.query("INSERT INTO auth.users (id) VALUES ($1),($2),($3)", [adminId,oneId,twoId]);
   server = app.listen(0, "127.0.0.1");
   await new Promise(resolve => server.once("listening", resolve));
@@ -56,6 +57,7 @@ beforeAll(async () => {
 }, 60000);
 
 beforeEach(async () => {
+  await mockPg.exec("TRUNCATE public.trails;");
   require("../services/landmarkService").requireLandmark.mockResolvedValue({ name: "Great Hall", osmUrl: "https://www.openstreetmap.org/way/123" });
   await mockPg.exec("TRUNCATE public.events, public.cards, public.challenges, public.location_verifications, public.challenge_attempts, public.player_cards, public.card_games, public.game_rounds, public.notifications CASCADE;");
   event = (await request("/admin/events", "admin", "POST", { title: "Campus event", description: "Test", latitude: -26.1924, longitude: 28.0308, radius_meters: 50,
@@ -71,6 +73,68 @@ async function publish(kind, row) {
   expect((await request(`/admin/${kind}/${row.id}/review`, "admin", "POST", body)).status).toBe(200);
   expect((await request(`/admin/${kind}/${row.id}/publish`, "admin", "POST", body)).status).toBe(200);
 }
+
+test("admin dashboard lists challenges with an optional validated event filter", async () => {
+  expect((await request("/admin/challenges", "admin")).data.map(row => row.id)).toEqual([challenge.id]);
+  expect((await request(`/admin/challenges?eventId=${event.id}`, "admin")).data.map(row => row.id)).toEqual([challenge.id]);
+  expect((await request(`/admin/challenges?eventId=${oneId}`, "admin")).data).toEqual([]);
+  expect((await request("/admin/challenges?eventId=invalid", "admin")).status).toBe(400);
+  expect((await request("/admin/challenges", "one")).status).toBe(403);
+  expect((await request("/admin/challenges", "")).status).toBe(401);
+});
+
+test("trails validate stops and require admin review and published events", async () => {
+  expect((await request("/trails", "")).status).toBe(401);
+  expect((await request("/admin/trails", "one", "POST", {})).status).toBe(403);
+  for (const ids of [[event.id], [event.id, event.id], [event.id, oneId]]) {
+    expect((await request("/admin/trails", "admin", "POST", { title: "Trail", event_ids: ids })).status).toBe(400);
+  }
+  const second = (await request("/admin/events", "admin", "POST", { ...event, title: "Second" })).data;
+  const trail = (await request("/admin/trails", "admin", "POST", { title: "Trail", event_ids: [second.id, event.id] })).data;
+  expect((await request("/trails")).data).toEqual([]);
+  expect((await request(`/admin/trails/${trail.id}/publish`, "admin", "POST", { revision: 1 })).status).toBe(409);
+  await request(`/admin/trails/${trail.id}/review`, "admin", "POST", { revision: 1 });
+  expect((await request(`/admin/trails/${trail.id}/publish`, "admin", "POST", { revision: 1 })).status).toBe(409);
+  await publish("events", second);
+  await publish("trails", trail);
+  const result = (await request("/trails")).data[0];
+  expect(result.stops.map(stop => stop.event_id)).toEqual([second.id, event.id]);
+  expect(result.next_event_id).toBe(second.id);
+  expect(result.stops[0].completed).toBe(false);
+  await mockPg.exec(readFileSync(path.join(__dirname, "../sql/trails.sql"), "utf8"));
+  expect((await request("/trails")).data).toEqual([result]);
+});
+
+test("trail progress belongs to the player and missing stops retain their position", async () => {
+  const second = (await request("/admin/events", "admin", "POST", { ...event, title: "Second" })).data;
+  await publish("events", second);
+  const trail = (await request("/admin/trails", "admin", "POST", { title: "Trail", event_ids: [event.id, second.id] })).data;
+  await publish("trails", trail);
+  await request(`/events/${event.id}/verify-location`, "one", "POST", { latitude: event.latitude, longitude: event.longitude });
+  await request(`/events/${event.id}/submit-answer`, "one", "POST", { challengeId: challenge.id, answer: "No" });
+  expect((await request("/trails")).data[0]).toMatchObject({ completed_stops: 1, next_event_id: second.id });
+  expect((await request("/trails", "two")).data[0]).toMatchObject({ completed_stops: 0, next_event_id: event.id });
+  expect((await request(`/admin/events/${second.id}`, "admin", "DELETE")).status).toBe(200);
+  const result = (await request("/trails")).data[0];
+  expect(result.stops[1]).toMatchObject({ event_id: second.id, position: 2, available: false, completed: false, event_title: null });
+  expect(result.next_event_id).toBe(second.id);
+});
+
+test("trail draft reordering stays private and invalidates earlier reviews", async () => {
+  const second = (await request("/admin/events", "admin", "POST", { ...event, title: "Second" })).data;
+  await publish("events", second);
+  const trail = (await request("/admin/trails", "admin", "POST", { title: "Original", event_ids: [event.id, second.id] })).data;
+  await publish("trails", trail);
+  const edited = (await request(`/admin/trails/${trail.id}`, "admin", "PUT", { title: "New order", event_ids: [second.id, event.id] })).data;
+  expect((await request(`/admin/trails/${trail.id}/publish`, "admin", "POST", { revision: 1 })).status).toBe(409);
+  expect((await request("/trails")).data[0]).toMatchObject({ title: "Original", next_event_id: event.id });
+  expect((await request(`/admin/trails/${trail.id}/review`, "admin")).data.stops[0]).toContain("Second");
+  await publish("trails", edited);
+  expect((await request("/trails")).data[0]).toMatchObject({ title: "New order", next_event_id: second.id });
+  expect((await request(`/admin/trails/${trail.id}`, "admin", "DELETE")).status).toBe(200);
+  expect((await request("/trails")).data).toEqual([]);
+  expect((await request("/events")).data).toHaveLength(2);
+});
 
 test("draft events and questions stay private even when addressed directly", async () => {
   const draft = (await request("/admin/events", "admin", "POST", { ...event, title: "Private draft" })).data;

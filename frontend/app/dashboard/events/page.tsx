@@ -28,6 +28,16 @@ type EventWithDistance = Event & {
 
 export default function EventsPage() {
   const [events, setEvents] = useState<EventWithDistance[]>([]);
+  useEffect(() => {
+    function openLinkedQuest() {
+      if (!window.location.hash.startsWith("#quest-")) return;
+      const target = document.getElementById(window.location.hash.slice(1));
+      if (target instanceof HTMLDetailsElement) { target.open = true; target.scrollIntoView({ block: "start" }); }
+    }
+    openLinkedQuest();
+    window.addEventListener("hashchange", openLinkedQuest);
+    return () => window.removeEventListener("hashchange", openLinkedQuest);
+  }, [events]);
   const [loading, setLoading] = useState(true);
   const [summaries, setSummaries] = useState<QuestSummary[]>([]);
   const [summaryError, setSummaryError] = useState("");
@@ -154,6 +164,7 @@ export default function EventsPage() {
             return (
               <details
                 key={event.id}
+                id={`quest-${event.id}`}
                 name="campus-quests"
                 className={`overflow-hidden rounded-2xl border-t-4 bg-white shadow-[0_1px_16px_-4px_rgba(4,54,115,0.15)] ${completed ? "border-emerald-500" : active ? "border-[#C9A24B]" : "border-[#8CA8C8]"}`}
               >

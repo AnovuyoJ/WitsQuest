@@ -7,6 +7,7 @@ import gamesRouter from "./routes/games";
 import verifyLocationRouter from "./routes/events/verifyLocation";
 import submitAnswerRouter from "./routes/events/submitAnswer";
 import { HttpError } from "./services/validation";
+import { adminTrailsRouter, trailsRouter } from "./routes/trails";
 
 export const app = express();
 app.disable("x-powered-by");
@@ -18,6 +19,8 @@ app.use(cors({ origin: frontendOrigins }));
 app.use(express.json({ limit: "32kb" }));
 app.use((req, _res, next) => { req.body ??= {}; next(); });
 app.use("/api/admin", adminRouter);
+app.use("/api/admin/trails", adminTrailsRouter);
+app.use("/api/trails", trailsRouter);
 app.use("/api/games", gamesRouter);
 app.use("/api/events", verifyLocationRouter, submitAnswerRouter);
 app.use("/api", catalogRouter);

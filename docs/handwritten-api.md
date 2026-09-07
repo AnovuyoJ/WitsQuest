@@ -6,6 +6,8 @@ Supabase is retained only for Auth and PostgreSQL hosting, as agreed for this pr
 
 ## Local setup
 
+For ordered trails, run `backend/sql/trails.sql` after the base schema and `content-publication.sql`, before starting the updated backend. This migration is rerunnable and preserves saved trails.
+
 1. Install dependencies separately in `backend` and `frontend` using `npm ci`.
 2. Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`, preserving existing Auth configuration.
 3. Set backend `DATABASE_URL` to the PostgreSQL connection string from Supabase **Connect**. A direct or session-pooler connection works; an HTTP project URL, anon key, or service-role key is not a database connection string. Use verified TLS for hosted connections. Keep the connection string out of the frontend.
@@ -16,6 +18,48 @@ Supabase is retained only for Auth and PostgreSQL hosting, as agreed for this pr
 For both current Vercel aliases, set Render's `FRONTEND_URL` to `https://wits-quest-flax.vercel.app,https://wits-quest-anovuyojs-projects.vercel.app`. Redeploy the backend after changing it. CORS returns the matching allowed origin; other domains are not allowed. This list requires the backend version supporting comma-separated origins.
 
 ## Database setup and deployment
+
+### Ordered trails
+
+All trail requests require `Authorization: Bearer <Supabase access token>`. Admin paths also require a configured administrator. JSON bodies require `Content-Type: application/json`. No query parameters are used; `:id` is a trail UUID.
+
+| Method and path | Request body | Success |
+| --- | --- | --- |
+| `GET /api/trails` | None | `200`: published trails with the caller's progress |
+| `GET /api/admin/trails` | None | `200`: saved drafts, newest first |
+| `POST /api/admin/trails` | `{ "title": "History walk", "description": "Explore campus", "event_ids": ["<event UUID 1>", "<event UUID 2>"] }` | `201`: saved draft |
+| `PUT /api/admin/trails/:id` | Same complete body as creation | `200`: updated draft; revision incremented |
+| `GET /api/admin/trails/:id/review` | None | `200`: draft plus `stops`, numbered published event names and IDs in order |
+| `POST /api/admin/trails/:id/review` | `{ "revision": 1 }` | `200`: draft with reviewer recorded |
+| `POST /api/admin/trails/:id/publish` | `{ "revision": 1 }` | `200`: draft with published snapshot updated |
+| `DELETE /api/admin/trails/:id` | None | `200`: `{ "success": true }`; events are retained |
+
+Titles must be nonblank and at most 200 characters; descriptions are optional/nullable and at most 2,000 characters. `event_ids` must contain 2–20 distinct existing UUIDs in the desired order. Draft events can be selected, but all selected events must be published before publishing the trail. Review/publish requires a positive integer revision and the same administrator who reviewed that revision. Self-review is supported. Editing a published trail preserves its previous live snapshot until republished.
+
+Draft responses contain `id`, `title`, `description`, `event_ids`, `draft_revision`, `reviewed_revision`, `reviewed_by`, `published_revision`, `published_snapshot`, `published_at`, and `created_at`. IDs are UUID strings, revisions are integers, timestamps are ISO strings, and review/publication fields start as null. The snapshot stores the published draft's content and metadata. Review previews add `stops: ["1. Great Hall (<UUID>)", "2. Library (<UUID>)"]`; unpublished or deleted events are labelled unavailable.
+
+Example player response (UUIDs abbreviated):
+
+```json
+[{ "id": "<trail UUID>", "title": "History walk", "description": "Explore campus",
+   "completed_stops": 0, "next_event_id": "<event UUID 1>",
+   "stops": [
+     { "event_id": "<event UUID 1>", "position": 1, "event_title": "Great Hall",
+       "starts_at": "2026-09-01T08:00:00Z", "ends_at": "2026-09-30T16:00:00Z",
+       "available": true, "active": true, "total_questions": 2, "completed_questions": 0, "completed": false },
+     { "event_id": "<event UUID 2>", "position": 2, "event_title": null,
+       "starts_at": null, "ends_at": null, "available": false, "active": false,
+       "total_questions": 0, "completed_questions": 0, "completed": false }
+   ] }]
+```
+
+A stop completes when the caller has attempted all its published questions (at least one). Incorrect attempts count toward completion, but do not necessarily earn cards. `next_event_id` is the first incomplete stop, or null when all are complete. Inactive and deleted stops retain their positions rather than being skipped; deleted events have null names/timestamps. Newly published questions can change progress. Event details use each event's current published version.
+
+Players use `/dashboard/trails` for collapsible trails, progress and links opening the matching quest. **Refresh progress** updates a still-open view after playing. Admins use `/dashboard/admin/trails` to select, reorder, save, review and publish stops. Trails guide players without locking other quests; out-of-order attempts count.
+
+Errors use `{ "message": "..." }`: `400` invalid input or missing selected events; `401` unauthenticated; `403` non-admin; `404` missing trail on update/review-preview/delete; `409` stale/missing revision, missing review or unpublished selected events. Review-confirmation/publish on a deleted trail returns `409`. Unexpected errors return `500`.
+
+### Base schema
 
 For a **new** Supabase project, run `backend/sql/schema.sql`. It assumes Supabase has already created `auth.users`.
 
@@ -416,7 +460,7 @@ All endpoints in this section require both a valid token and membership in `ADMI
 | Method and path | Query parameters | Success response |
 | --- | --- | --- |
 | `GET /api/admin/cards` | Optional `eventId` UUID; omission lists all cards | Array of full **Card** objects, newest first |
-| `GET /api/admin/challenges` | **Required** `eventId` UUID | Array of admin **Challenge** objects, oldest first, including `correct_answer` and `created_at` |
+| `GET /api/admin/challenges` | Optional `eventId` UUID; omission lists all challenges | Array of admin **Challenge** objects, oldest first, including `correct_answer` and `created_at` |
 
 Missing/invalid required query UUIDs return 400; an event with no matching records returns `[]`.
 

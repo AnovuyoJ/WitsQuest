@@ -20,6 +20,7 @@ const navItems: NavItem[] = [
     href: "/dashboard/admin",
     icon: <HomeIcon />,
   },
+  { label: "Trails", href: "/dashboard/admin/trails", icon: <TrailIcon /> },
   {
     label: "Events",
     href: "/dashboard/admin/events",
@@ -273,6 +274,18 @@ function HomeIcon() {
     >
       <path d="M3 10.5 12 3l9 7.5" />
       <path d="M5 9.5V21h14V9.5" />
+    </svg>
+  );
+}
+
+function TrailIcon() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+      stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+      strokeLinejoin="round" aria-hidden="true">
+      <circle cx="6" cy="5" r="2" />
+      <path d="M8 5h8a4 4 0 0 1 0 8H8a3 3 0 0 0 0 6h8" />
+      <circle cx="18" cy="19" r="2" />
     </svg>
   );
 }

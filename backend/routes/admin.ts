@@ -112,7 +112,8 @@ router.get("/cards", async (req, res) => {
   res.json(rows);
 });
 router.get("/challenges", async (req, res) => {
-  const { rows } = await database.query("SELECT * FROM public.challenges WHERE event_id = $1 ORDER BY created_at", [id(req.query.eventId)]);
+  const eventId = req.query.eventId === undefined ? null : id(req.query.eventId);
+  const { rows } = await database.query("SELECT * FROM public.challenges WHERE ($1::uuid IS NULL OR event_id = $1) ORDER BY created_at", [eventId]);
   res.json(rows);
 });
 

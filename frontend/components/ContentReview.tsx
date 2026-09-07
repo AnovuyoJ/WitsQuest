@@ -5,14 +5,14 @@ import { apiRequest } from "@/lib/api";
 
 type Draft = Record<string, unknown> & { id: string; draft_revision: number; published_revision: number | null };
 const labels: Record<string, string> = {
-  title: "Event title", description: "Description", latitude: "Latitude", longitude: "Longitude",
+  title: "Title", description: "Description", stops: "Ordered stops (published event names)", latitude: "Latitude", longitude: "Longitude",
   radius_meters: "Radius (metres)", starts_at: "Starts at", ends_at: "Ends at",
   event_id: "Event ID", question_text: "Question", question_type: "Question type",
   options: "Answer options", correct_answer: "Correct answer", card_id: "Reward card ID",
 };
 
 export default function ContentReview({ kind, id, onPublished }: {
-  kind: "events" | "challenges"; id: string; onPublished: () => void;
+  kind: "events" | "challenges" | "trails"; id: string; onPublished: () => void;
 }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [reviewed, setReviewed] = useState(false);
