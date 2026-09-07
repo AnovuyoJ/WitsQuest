@@ -3,6 +3,7 @@
 import { apiRequest, type EventRecord } from "@/lib/api";
 import { useCallback, useEffect, useState } from "react";
 import QuestProgress, { type QuestSummary } from "@/components/QuestProgress";
+import QuestStages from "@/components/QuestStages";
 import EventLocationCheck from "@/components/EventLocationCheck";
 import ChallengeCard from "@/components/ChallengeCard";
 import { haversineDistanceMeters } from "@/lib/distance";
@@ -106,49 +107,66 @@ export default function EventsPage() {
     return now >= new Date(event.starts_at) && now <= new Date(event.ends_at);
   }
 
+  function questGroup(event: Event) {
+    const progress = summaries.find(item => item.event_id === event.id);
+    const completed = progress !== undefined && progress.total_questions > 0 && progress.completed_questions >= progress.total_questions;
+    if (completed) return 1;
+    return isEventActive(event) ? 0 : 2;
+  }
+
+  const orderedEvents = [...events].sort((a, b) => {
+    const groupDifference = questGroup(a) - questGroup(b);
+    if (groupDifference) return groupDifference;
+    return ((a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity)) || 0;
+  });
+
   return (
     <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
-      <ScreenHeader eyebrow="Challenge board" title="Events and locations" description="Campus quests are ordered by distance when your location is available." />
+      <ScreenHeader eyebrow="Quest board" title="Nearby quests" description={
+        <>
+        <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-2" aria-label="Quest order: active unfinished, completed, then inactive">
+          <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#C9A24B]" />Active quests</span>
+          <span aria-hidden="true" className="text-stone-400">→</span>
+          <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Completed</span>
+          <span aria-hidden="true" className="text-stone-400">→</span>
+          <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-slate-400" />Inactive</span>
+        </span>
+        <span className="mt-2 block">The nearest quests come first within each group when your location is available.</span>
+        </>
+      } />
 
       {loading && (
         <ScreenSkeleton cards={3} />
       )}
 
       {!loading && events.length === 0 && (
-        <StatePanel title="No events available" description="The challenge board is quiet right now. Check back later for a new campus quest." />
+        <StatePanel title="New quests await" description="The quest board is quiet right now. Check back soon for your next discovery." />
       )}
 
       {!loading && events.length > 0 && (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {events.map((event) => {
+        <div className="space-y-3">
+          {orderedEvents.map((event) => {
             const active = isEventActive(event);
             const verified = verifiedEventIds.has(event.id);
             const summary = summaries.find(item => item.event_id === event.id);
+            const completed = summary !== undefined && summary.total_questions > 0 && summary.completed_questions >= summary.total_questions;
 
             return (
-              <div
+              <details
                 key={event.id}
-                className={`overflow-hidden rounded-2xl border-t-4 bg-white shadow-[0_1px_16px_-4px_rgba(4,54,115,0.15)] ${active ? "border-[#C9A24B]" : "border-[#8CA8C8]"}`}
+                name="campus-quests"
+                className={`overflow-hidden rounded-2xl border-t-4 bg-white shadow-[0_1px_16px_-4px_rgba(4,54,115,0.15)] ${completed ? "border-emerald-500" : active ? "border-[#C9A24B]" : "border-[#8CA8C8]"}`}
               >
+                <summary className="cursor-pointer bg-[#FAF8F3] px-4 py-4 text-base font-bold tracking-tight text-slate-800 transition hover:bg-[#F4EEDf] focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-[#775718]">
+                  {event.title}
+                  {completed && <span className="ml-3 inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 px-2.5 py-1 align-middle text-[10px] font-bold uppercase tracking-wider text-emerald-800"><span aria-hidden="true">✓</span> Quest completed</span>}
+                </summary>
                 <div className="p-4">
-                  <div className="-mx-4 -mt-4 flex items-start justify-between gap-3 bg-[#FAF8F3] p-4">
-                    <div className="min-w-0">
-                      <h3 className="text-base font-bold tracking-tight text-slate-800">
-                        {event.title}
-                      </h3>
                       {event.description && (
                         <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">
                           {event.description}
                         </p>
                       )}
-                    </div>
-                    <div
-                      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg"
-                      style={{ background: "#C9A24B", color: WITS_BLUE }}
-                    >
-                      <MapPinIcon size={16} />
-                    </div>
-                  </div>
 
                   <div
                     className="mt-3 flex items-center gap-2 rounded-lg border border-[#E8D9B6] bg-[#FAF4E7] px-3 py-2 text-[#775718]"
@@ -164,7 +182,10 @@ export default function EventsPage() {
                     </div>
                   </div>
 
-                  {summary && <QuestProgress summary={summary} />}
+                  {summary && <>
+                    <QuestStages active={active} nearby={event.distanceMeters !== null && event.distanceMeters <= event.radius_meters} verified={verified} total={summary.total_questions} completed={summary.completed_questions} hasRewards={summary.rewards.length > 0} />
+                    <QuestProgress summary={summary} />
+                  </>}
                   {summaryError ? <p className="mt-3 text-xs text-amber-800" role="status">{summaryError} <button type="button" onClick={refreshProgress} className="underline">Retry</button></p> : !summary && <p className="mt-3 text-xs text-slate-500">Loading progress and rewards…</p>}
                   <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ${active ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
                     <span
@@ -195,10 +216,10 @@ export default function EventsPage() {
 
                 {!active && (
                   <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5">
-                    <p className="text-center text-xs text-gray-500">Not currently active.</p>
+                    <p className="text-center text-xs text-gray-500">This quest is resting for now.</p>
                   </div>
                 )}
-              </div>
+              </details>
             );
           })}
         </div>

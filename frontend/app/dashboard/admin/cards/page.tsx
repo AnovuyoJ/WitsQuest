@@ -72,6 +72,11 @@ export default function AdminCardsPage() {
 
   const [points, setPoints] = useState("20");
   const [tag, setTag] = useState("General");
+  const tagOptions = useMemo(() => Array.from(new Set([
+    "General", "History", "Wits", "Landmark",
+    ...cards.map(card => card.tag?.trim() || "General"),
+    tag.trim() || "General",
+  ])), [cards, tag]);
 
   const [editingId, setEditingId] =
     useState<string | null>(null);
@@ -267,7 +272,7 @@ export default function AdminCardsPage() {
     setRarity(card.rarity);
     setDescription(card.description ?? "");
     setPoints(String(card.points));
-    setTag(card.tag ?? "General");
+    setTag(card.tag?.trim() || "General");
 
     setMessage("");
     setError("");
@@ -551,14 +556,15 @@ export default function AdminCardsPage() {
                   Tag
                 </span>
 
-                <input
+                <select
                   value={tag}
                   onChange={(e) =>
                     setTag(e.target.value)
                   }
-                  placeholder="History"
                   className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
-                />
+                >
+                  {tagOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                </select>
               </label>
             </div>
 

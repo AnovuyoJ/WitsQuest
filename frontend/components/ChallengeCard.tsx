@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useChallenge } from "@/lib/useChallenge";
+import RewardReveal from "./RewardReveal";
 
 export default function ChallengeCard({ eventId, onAnswered }: { eventId: string; onAnswered?: () => void }) {
   const { state, submit, nextQuestion } = useChallenge(eventId);
@@ -20,8 +21,8 @@ export default function ChallengeCard({ eventId, onAnswered }: { eventId: string
       <section className={`overflow-hidden rounded-2xl border bg-white ${completed ? "border-slate-200" : correct ? "border-emerald-200" : "border-red-200"}`}>
         <div className={`h-2 ${completed ? "bg-slate-400" : correct ? "bg-emerald-500" : "bg-red-500"}`} />
         <div className="p-6 sm:p-8"><p className="text-[10px] font-bold uppercase tracking-[.25em] text-slate-500">Challenge result</p><h3 className={`mt-3 text-3xl font-black tracking-[-.04em] ${completed ? "text-slate-700" : correct ? "text-emerald-700" : "text-red-700"}`}>{completed ? "Already completed" : correct ? "Correct." : "Not this time."}</h3><p className="mt-3 text-sm leading-6 text-slate-600">{completed ? "You have already recorded a result for this challenge." : <>The answer was <strong className="text-slate-900">{result.correctAnswer}</strong>.</>}</p>
-          {result.cardAwarded && <div className="mt-5 border-l-4 border-[#C9A24B] bg-[#F5EDD8] px-4 py-3 text-sm font-bold text-[#043673]">New card added to your collection</div>}
-          <button type="button" onClick={() => { setSelectedOption(null); setTextAnswer(""); nextQuestion(); }} className="mt-6 w-full rounded-xl bg-[#043673] py-3.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[.99]">{completed ? "Try another question" : "Next question"}</button>
+          {result.cardAwarded && correct && !completed && <RewardReveal key={state.challenge.id} cardId={state.challenge.card_id} />}
+          <button type="button" onClick={() => { setSelectedOption(null); setTextAnswer(""); nextQuestion(); }} className="mt-6 w-full rounded-xl bg-[#043673] py-3.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[.99]">{completed ? "Explore the next question" : "Continue your quest"}</button>
         </div>
       </section>
     );
