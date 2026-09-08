@@ -13,13 +13,27 @@ router.get("/me", (req, res) => {
 
 router.get("/events", async (_req, res) => {
   const { rows } = await database.query(`SELECT id, title, description, latitude, longitude,
-    radius_meters, starts_at, ends_at, created_at FROM public.events ORDER BY starts_at`);
+    radius_meters, starts_at, ends_at, created_at FROM public.live_events ORDER BY starts_at`);
   res.json(rows);
 });
 
 router.get("/events/active", async (_req, res) => {
-  const { rows } = await database.query(`SELECT id, title, description, ends_at FROM public.events
+  const { rows } = await database.query(`SELECT id, title, description, ends_at FROM public.live_events
     WHERE starts_at <= now() AND ends_at >= now() ORDER BY ends_at LIMIT 3`);
+  res.json(rows);
+});
+
+router.get("/events/quest-summaries", async (req, res) => {
+  const { rows } = await database.query(`SELECT e.id AS event_id,
+    (SELECT count(*)::int FROM public.live_challenges c WHERE c.event_id=e.id) AS total_questions,
+    (SELECT count(*)::int FROM public.live_challenges c JOIN public.challenge_attempts a
+      ON a.challenge_id=c.id AND a.player_id=$1 WHERE c.event_id=e.id) AS completed_questions,
+    COALESCE((SELECT jsonb_agg(reward ORDER BY reward.title, reward.id) FROM (
+      SELECT DISTINCT card.id, card.title, card.rarity, card.points
+      FROM public.live_challenges c JOIN public.cards card ON card.id=c.card_id
+      WHERE c.event_id=e.id
+    ) reward), '[]'::jsonb) AS rewards
+    FROM public.live_events e ORDER BY e.starts_at`, [req.user!.id]);
   res.json(rows);
 });
 

@@ -33,7 +33,7 @@ router.post("/:eventId/verify-location", requireAuth, async (req, res) => {
   }
 
   const { rows } = await database.query(`SELECT latitude, longitude, radius_meters, starts_at, ends_at
-    FROM public.events WHERE id=$1`, [eventId]);
+    FROM public.live_events WHERE id=$1`, [eventId]);
   const event = rows[0];
 
   if (!event) {

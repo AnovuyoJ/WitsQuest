@@ -6,6 +6,8 @@ Supabase is retained only for Auth and PostgreSQL hosting, as agreed for this pr
 
 ## Local setup
 
+For ordered trails, run `backend/sql/trails.sql` after the base schema and `content-publication.sql`, before starting the updated backend. This migration is rerunnable and preserves saved trails.
+
 1. Install dependencies separately in `backend` and `frontend` using `npm ci`.
 2. Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`, preserving existing Auth configuration.
 3. Set backend `DATABASE_URL` to the PostgreSQL connection string from Supabase **Connect**. A direct or session-pooler connection works; an HTTP project URL, anon key, or service-role key is not a database connection string. Use verified TLS for hosted connections. Keep the connection string out of the frontend.
@@ -17,7 +19,51 @@ For both current Vercel aliases, set Render's `FRONTEND_URL` to `https://wits-qu
 
 ## Database setup and deployment
 
+### Ordered trails
+
+All trail requests require `Authorization: Bearer <Supabase access token>`. Admin paths also require a configured administrator. JSON bodies require `Content-Type: application/json`. No query parameters are used; `:id` is a trail UUID.
+
+| Method and path | Request body | Success |
+| --- | --- | --- |
+| `GET /api/trails` | None | `200`: published trails with the caller's progress |
+| `GET /api/admin/trails` | None | `200`: saved drafts, newest first |
+| `POST /api/admin/trails` | `{ "title": "History walk", "description": "Explore campus", "event_ids": ["<event UUID 1>", "<event UUID 2>"] }` | `201`: saved draft |
+| `PUT /api/admin/trails/:id` | Same complete body as creation | `200`: updated draft; revision incremented |
+| `GET /api/admin/trails/:id/review` | None | `200`: draft plus `stops`, numbered published event names and IDs in order |
+| `POST /api/admin/trails/:id/review` | `{ "revision": 1 }` | `200`: draft with reviewer recorded |
+| `POST /api/admin/trails/:id/publish` | `{ "revision": 1 }` | `200`: draft with published snapshot updated |
+| `DELETE /api/admin/trails/:id` | None | `200`: `{ "success": true }`; events are retained |
+
+Titles must be nonblank and at most 200 characters; descriptions are optional/nullable and at most 2,000 characters. `event_ids` must contain 2–20 distinct existing UUIDs in the desired order. Draft events can be selected, but all selected events must be published before publishing the trail. Review/publish requires a positive integer revision and the same administrator who reviewed that revision. Self-review is supported. Editing a published trail preserves its previous live snapshot until republished.
+
+Draft responses contain `id`, `title`, `description`, `event_ids`, `draft_revision`, `reviewed_revision`, `reviewed_by`, `published_revision`, `published_snapshot`, `published_at`, and `created_at`. IDs are UUID strings, revisions are integers, timestamps are ISO strings, and review/publication fields start as null. The snapshot stores the published draft's content and metadata. Review previews add `stops: ["1. Great Hall (<UUID>)", "2. Library (<UUID>)"]`; unpublished or deleted events are labelled unavailable.
+
+Example player response (UUIDs abbreviated):
+
+```json
+[{ "id": "<trail UUID>", "title": "History walk", "description": "Explore campus",
+   "completed_stops": 0, "next_event_id": "<event UUID 1>",
+   "stops": [
+     { "event_id": "<event UUID 1>", "position": 1, "event_title": "Great Hall",
+       "starts_at": "2026-09-01T08:00:00Z", "ends_at": "2026-09-30T16:00:00Z",
+       "available": true, "active": true, "total_questions": 2, "completed_questions": 0, "completed": false },
+     { "event_id": "<event UUID 2>", "position": 2, "event_title": null,
+       "starts_at": null, "ends_at": null, "available": false, "active": false,
+       "total_questions": 0, "completed_questions": 0, "completed": false }
+   ] }]
+```
+
+A stop completes when the caller has attempted all its published questions (at least one). Incorrect attempts count toward completion, but do not necessarily earn cards. `next_event_id` is the first incomplete stop, or null when all are complete. Inactive and deleted stops retain their positions rather than being skipped; deleted events have null names/timestamps. Newly published questions can change progress. Event details use each event's current published version.
+
+Players use `/dashboard/trails` for collapsible trails, progress and links opening the matching quest. **Refresh progress** updates a still-open view after playing. Admins use `/dashboard/admin/trails` to select, reorder, save, review and publish stops. Trails guide players without locking other quests; out-of-order attempts count.
+
+Errors use `{ "message": "..." }`: `400` invalid input or missing selected events; `401` unauthenticated; `403` non-admin; `404` missing trail on update/review-preview/delete; `409` stale/missing revision, missing review or unpublished selected events. Review-confirmation/publish on a deleted trail returns `409`. Unexpected errors return `500`.
+
+### Base schema
+
 For a **new** Supabase project, run `backend/sql/schema.sql`. It assumes Supabase has already created `auth.users`.
+
+**Required publication migration:** after the baseline (or after the existing-schema migration), run `backend/sql/content-publication.sql` before starting this backend version. It adds draft/review revisions, published snapshots and backend-only live-content views. On its first run it preserves all existing events and challenges as published content. New records created afterwards remain drafts. Rerunning it does not publish drafts. Use a database owner/migration role; if the backend uses a separate SQL role, grant that role SELECT on `public.live_events` and `public.live_challenges` as well as its existing table permissions. No remote migration is performed automatically.
 
 For an **existing** project, back up and inspect its schema, constraints, triggers, and scheduled jobs first, then review `backend/sql/migrate-existing.sql`. The repository previously had no schema migrations, and its design document omits `challenge_attempts.challenge_id` and notifications. The migration:
 
@@ -183,7 +229,17 @@ Status is `waiting`, `ready`, or `finished`. Card IDs, integer points, winner, a
 
 #### GET /api/events
 
-Any signed-in user. No parameters. Returns an array of **Event** objects, ordered by start time ascending. Includes inactive events.
+Any signed-in user. No parameters. Returns an array of published **Event** snapshots, ordered by start time ascending. Includes inactive published events; unpublished drafts and draft edits are hidden. Administrators use `GET /api/admin/events` to list saved drafts.
+
+#### GET /api/events/quest-summaries
+
+Signed-in user; no body or query parameters. Returns 200 with one summary per published event, ordered by event start time:
+
+```json
+[{"event_id":"11111111-1111-4111-8111-111111111111","total_questions":4,"completed_questions":2,"rewards":[{"id":"22222222-2222-4222-8222-222222222222","title":"Library Explorer","rarity":"Gold","points":60}]}]
+```
+
+Counts include only published questions. Completed questions count the authenticated player's recorded attempts, including incorrect answers; they do not mean rewards were earned. Reward cards are deduplicated and contain only ID, title, rarity and card points. No question text, options or answers are exposed. Draft events/questions are excluded. An event with no published questions returns zero counts and an empty reward array. Shared 401/500 errors apply. The player Events page uses these summaries for reward previews and progress bars, refreshing after answer submission.
 
 #### GET /api/events/active
 
@@ -338,6 +394,28 @@ Returns `{"success":true}`. Only owned notifications are updated; nonexistent or
 
 ### Administrator endpoints
 
+#### Draft, review and publication workflow
+
+Event and challenge POST/PUT operations now **save drafts**, retaining their existing validated request bodies and 201/200 responses. They do not publish content. New drafts have no published version. Updating a published item changes only its draft: players continue seeing the last published snapshot, including the old question and answer, until the new revision is reviewed and published. Card editing remains immediate and is outside this event/challenge workflow.
+
+Admin event/challenge records additionally contain `draft_revision` (integer starting at 1), `published_revision` (nullable integer), `reviewed_revision` (nullable integer), `reviewed_by` (nullable admin UUID), `published_at` (nullable timestamp), and `published_snapshot` (nullable object). Every draft update increments its revision. A null published revision means unpublished; different draft/published revisions mean unpublished changes. Player responses retain their existing explicit field shapes and never contain draft/review metadata or unpublished answers.
+
+| Method and path | Request | Success |
+| --- | --- | --- |
+| `GET /api/admin/events` | No body/query | 200 array of saved admin Event records, including unpublished drafts |
+| `GET /api/admin/events/:id/review` | Event UUID; no body | 200 current saved admin Event record for preview |
+| `GET /api/admin/challenges/:id/review` | Challenge UUID; no body | 200 current saved admin Challenge record, including answer and reward ID |
+| `POST /api/admin/events/:id/review` | `{"revision":1}` | 200 admin Event record with review recorded for this admin/revision |
+| `POST /api/admin/challenges/:id/review` | `{"revision":1}` | 200 admin Challenge record with review recorded for this admin/revision |
+| `POST /api/admin/events/:id/publish` | `{"revision":1}` | 200 admin Event record with the reviewed revision copied to its published snapshot |
+| `POST /api/admin/challenges/:id/publish` | `{"revision":1}` | 200 admin Challenge record with the reviewed revision copied to its published snapshot |
+
+All seven endpoints require administrator access (401/403 otherwise). Revision is a required positive integer. Preview/publish returns 404 for missing records. Review returns 409 if the draft changed or disappeared. Publish returns 409 `{"message":"Review the latest saved draft before publishing."}` unless the same admin has reviewed the current revision. Reload the preview and review again after a conflict. Event publication rechecks coordinates through Overpass (422/503 on failure); challenge publication revalidates question fields and the reward/event association (400 on failure). A challenge may be published before its event, but players cannot access it until the event is also published and active.
+
+In the admin UI, save the form, choose **Review saved draft**, inspect its contents, choose **I have reviewed this draft**, then **Publish reviewed content**. The preview uses server-saved content, not unsaved form edits. Self-review is supported; a second administrator is not required. These checks prevent stale or unreviewed revisions from being published but cannot judge the editorial correctness of content.
+
+Deleting content is still an immediate admin operation, subject to database dependencies; there is no scheduled publication, unpublish action, or historical version browser in this workflow.
+
 #### POST /api/admin/landmarks/lookup
 
 This external API integration validates event locations and supplies a suggested event title. Its place in the application is shown in [System Architecture](Design/system-design.md#2-system-architecture).
@@ -375,14 +453,14 @@ curl "http://localhost:5000/api/admin/landmarks/lookup" \
 
 An internet connection is required for uncached lookups; deployment and an Overpass API key are not required. Correcting coordinates starts a fresh form lookup. The **Retry lookup** button repeats the request, but an existing cached result can remain for up to five minutes.
 
-All endpoints in this section require both a valid token and membership in `ADMIN_USER_IDS`; otherwise 401/403. Use `GET /api/events` for the event list; there is no separate admin event-list endpoint.
+All endpoints in this section require both a valid token and membership in `ADMIN_USER_IDS`; otherwise 401/403. Use `GET /api/admin/events` for authoring; `GET /api/events` exposes only published content.
 
 #### Lists
 
 | Method and path | Query parameters | Success response |
 | --- | --- | --- |
 | `GET /api/admin/cards` | Optional `eventId` UUID; omission lists all cards | Array of full **Card** objects, newest first |
-| `GET /api/admin/challenges` | **Required** `eventId` UUID | Array of admin **Challenge** objects, oldest first, including `correct_answer` and `created_at` |
+| `GET /api/admin/challenges` | Optional `eventId` UUID; omission lists all challenges | Array of admin **Challenge** objects, oldest first, including `correct_answer` and `created_at` |
 
 Missing/invalid required query UUIDs return 400; an event with no matching records returns `[]`.
 

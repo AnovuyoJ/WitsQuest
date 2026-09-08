@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export function ScreenHeader({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: ReactNode }) {
+export function ScreenHeader({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: ReactNode; action?: ReactNode }) {
   return (
     <header className="mb-6 flex items-start justify-between gap-4 md:mb-8">
       <div className="max-w-2xl">

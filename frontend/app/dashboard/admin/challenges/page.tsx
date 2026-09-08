@@ -1,5 +1,6 @@
 "use client";
 
+import ContentReview from "@/components/ContentReview";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 
 import { apiRequest, type EventRecord, type CardRecord } from "@/lib/api";
@@ -19,6 +20,8 @@ type Event = {
 };
 
 type Challenge = {
+  draft_revision: number;
+  published_revision: number | null;
   id: string;
   event_id: string;
   question_text: string;
@@ -30,6 +33,7 @@ type Challenge = {
 };
 
 function AdminChallengesContent() {
+  const [publicationRefresh, setPublicationRefresh] = useState(0);
   const searchParams = useSearchParams();
 
   const eventFromUrl = searchParams.get("event");
@@ -88,7 +92,7 @@ function AdminChallengesContent() {
     if (!isAdmin) return;
 
     async function loadEvents() {
-      const { data, error } = await apiRequest<EventRecord[]>("/events");
+      const { data, error } = await apiRequest<EventRecord[]>("/admin/events");
 
       if (error) {
         setError(error.message);
@@ -152,7 +156,7 @@ function AdminChallengesContent() {
   }
 
   loadChallenges();
-}, [selectedEvent]);
+}, [selectedEvent, publicationRefresh]);
 
 useEffect(() => {
   if (!selectedEvent) {
@@ -329,7 +333,7 @@ useEffect(() => {
       );
 
       setMessage(
-        "Challenge updated successfully."
+        "Draft changes saved. Review and publish when ready."
       );
 
       resetForm();
@@ -355,7 +359,7 @@ useEffect(() => {
     ]);
 
     setMessage(
-      "Challenge added successfully."
+      "Draft saved. Review and publish when ready."
     );
 
     resetForm();
@@ -601,8 +605,8 @@ useEffect(() => {
             }}
           >
             {editingId
-              ? "Update challenge"
-              : "Add challenge"}
+              ? "Save draft changes"
+              : "Save draft"}
           </h2>
 
           {selectedEventTitle && (
@@ -828,8 +832,8 @@ useEffect(() => {
                 {saving
                   ? "Saving..."
                   : editingId
-                    ? "Update challenge"
-                    : "Add challenge"}
+                    ? "Save draft changes"
+                    : "Save draft"}
               </button>
 
               {editingId && (
@@ -949,6 +953,9 @@ useEffect(() => {
                         </button>
                       </div>
                     </div>
+
+                    <p className="mt-3 text-sm font-semibold">{challenge.published_revision === null ? "Draft — not published" : challenge.published_revision === challenge.draft_revision ? "Published" : "Draft changes — previous version is live"}</p>
+                    <ContentReview kind="challenges" id={challenge.id} onPublished={() => setPublicationRefresh(value => value + 1)} />
 
                     {/* OPTIONS */}
 

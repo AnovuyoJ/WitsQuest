@@ -48,7 +48,7 @@ export default function EventLocationCheck({
         <>
           {!compact && (
             <p className="mt-2 text-sm text-gray-500">
-              Get close to this event's location to unlock its challenge.
+              Head to this quest?s location to unlock your next challenge.
             </p>
           )}
           <button
@@ -58,7 +58,7 @@ export default function EventLocationCheck({
               compact ? "py-2.5" : "mt-5 py-3"
             }`}
           >
-            Check my location
+            Verify arrival
           </button>
         </>
       )}
@@ -81,7 +81,7 @@ export default function EventLocationCheck({
               compact ? "mt-2 py-2.5" : "mt-5 py-3"
             }`}
           >
-            Start challenge
+            Start quest
           </button>
         </>
       )}
@@ -104,7 +104,7 @@ export default function EventLocationCheck({
 
       {state.status === "event-inactive" && (
         <p className={`text-sm text-red-600 ${compact ? "" : "mt-2"}`}>
-          This event isn't active right now.
+          This quest isn't active right now.
         </p>
       )}
 

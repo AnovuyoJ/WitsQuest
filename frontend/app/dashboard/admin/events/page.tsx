@@ -1,5 +1,6 @@
 "use client";
 
+import ContentReview from "@/components/ContentReview";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 
 import { apiRequest, type EventRecord } from "@/lib/api";
@@ -10,6 +11,8 @@ const WITS_GOLD = "#C9A24B";
 
 
 type Event = {
+  draft_revision: number;
+  published_revision: number | null;
   id: string;
   title: string;
   description: string | null;
@@ -83,7 +86,7 @@ export default function AdminEventsPage() {
   async function loadEvents() {
     setLoading(true);
 
-    const { data, error } = await apiRequest<EventRecord[]>("/events");
+    const { data, error } = await apiRequest<EventRecord[]>("/admin/events");
 
     if (error) {
       setError(error.message);
@@ -228,17 +231,18 @@ export default function AdminEventsPage() {
         )
       );
 
-      setMessage("Event updated successfully.");
+      setMessage("Draft changes saved. Review and publish when ready.");
     } else {
       setEvents((current) => [
         ...current,
         result.data as Event,
       ]);
 
-      setMessage("Event created successfully.");
+      setMessage("Draft saved. Review and publish when ready.");
     }
 
     resetForm();
+    setMessage("Draft saved. Review the saved draft below, then publish when ready.");
   }
 
   /*
@@ -440,7 +444,7 @@ export default function AdminEventsPage() {
             style={{ color: WITS_BLUE }}
           >
             {editingId
-              ? "Update event"
+              ? "Save draft changes"
               : "Create a new event"}
           </h2>
         </div>
@@ -623,8 +627,8 @@ export default function AdminEventsPage() {
               {saving
                 ? "Saving..."
                 : editingId
-                  ? "Update event"
-                  : "Create event"}
+                  ? "Save draft changes"
+                  : "Save draft"}
             </button>
 
             {editingId && (
@@ -716,6 +720,9 @@ export default function AdminEventsPage() {
                         </span>
 
                       </div>
+
+                      <p className="mt-2 text-sm font-semibold">{event.published_revision === null ? "Draft — not published" : event.published_revision === event.draft_revision ? "Published" : "Draft changes — previous version is live"}</p>
+                      <ContentReview kind="events" id={event.id} onPublished={() => { void loadEvents(); }} />
 
                       {event.description && (
                         <p className="mt-2 text-sm leading-6 text-slate-600">
