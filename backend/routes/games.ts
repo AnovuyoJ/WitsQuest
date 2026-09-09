@@ -1,19 +1,30 @@
 import { Router } from "express";
 import { requireAuth } from "../middleware/requireAuth";
 import { database, transaction } from "../services/database";
-import { lockGame, matchmake, playCard, resolveRound, nextRound, latestRound } from "../services/gameService";
-import { id, text, HttpError } from "../services/validation";
+import { lockGame, playCard, resolveRound, nextRound, latestRound } from "../services/gameService";
+import { id, HttpError } from "../services/validation";
+import { startBattle, battleState, battleMove, advanceBattle } from "../services/battleService";
 import { notifyGamePlayers } from "../services/notifications";
 
 const router = Router();
 router.use(requireAuth);
 router.get("/", async (req, res) => {
-  const { rows } = await database.query(`SELECT id,player_one_id,player_two_id,category,status FROM public.card_games
+  const { rows } = await database.query(`SELECT id,player_one_id,player_two_id,category,status,rules_version,is_cpu FROM public.card_games
     WHERE (player_one_id=$1 OR player_two_id=$1) AND status IN ('waiting','active') ORDER BY created_at DESC`, [req.user!.id]);
   res.json(rows);
 });
 router.post("/matchmake", async (req, res) => {
-  res.json(await matchmake(req.user!.id,id(req.body.cardId),text(req.body.category,"Category",200)));
+  if (req.body.mode !== undefined && !["player","cpu"].includes(req.body.mode)) throw new HttpError(400,"Choose player or cpu mode.");
+  res.json(await startBattle(req.user!.id,req.body.cardIds,req.body.mode === "cpu"));
+});
+router.get("/:id/battle", async (req, res) => {
+  res.json(await battleState(req.user!.id,id(req.params.id)));
+});
+router.post("/:id/battle/card", async (req, res) => {
+  res.json(await battleMove(req.user!.id,id(req.params.id),id(req.body.roundId),id(req.body.cardId)));
+});
+router.post("/:id/battle/next", async (req, res) => {
+  res.json(await advanceBattle(req.user!.id,id(req.params.id),id(req.body.roundId)));
 });
 router.get("/:id", async (req, res) => {
   const { rows } = await database.query(`SELECT * FROM public.card_games
@@ -44,7 +55,7 @@ router.post("/:id/forfeit", async (req, res) => {
     const game = await lockGame(client,id(req.params.id),req.user!.id);
     if (game.status !== "active") throw new HttpError(409,"Game is not active.");
     const winner = game.player_one_id === req.user!.id ? game.player_two_id : game.player_one_id;
-    await client.query("UPDATE public.card_games SET status='finished',winner_id=$1,finished_at=now() WHERE id=$2", [winner,game.id]);
+    await client.query("UPDATE public.card_games SET status='finished',winner_id=$1,winner_side=$3,finished_at=now() WHERE id=$2", [winner,game.id,game.player_one_id === req.user!.id ? 2 : 1]);
     await notifyGamePlayers(client,game,"Match forfeited","A player quit this match. The opponent wins by forfeit.");
   });
   res.json({ success: true });

@@ -26,6 +26,7 @@ async function ownedCard(client: PoolClient, playerId: string, cardId: string, c
 export async function latestRound(playerId: string, gameId: string) {
   return transaction(async client => {
     const game = await lockGame(client,gameId,playerId);
+    if (game.rules_version === 2) throw new HttpError(409, "Use the five-card battle endpoint.");
     const round = (await client.query("SELECT * FROM public.game_rounds WHERE game_id=$1 ORDER BY round_number DESC LIMIT 1", [gameId])).rows[0];
     if (!round || round.status === "finished") return round ?? null;
     const oneValid = round.player_one_card_id && await findOwnedCard(client,game.player_one_id,round.player_one_card_id,game.category);
@@ -71,6 +72,7 @@ export async function matchmake(playerId: string, cardId: string, category: stri
 export async function playCard(playerId: string, gameId: string, roundId: string, cardId: string) {
   return transaction(async client => {
     const game = await lockGame(client,gameId,playerId);
+    if (game.rules_version === 2) throw new HttpError(409, "Use the five-card battle endpoint.");
     if (game.status !== "active") throw new HttpError(409, "Game is not active.");
     const round = (await client.query("SELECT * FROM public.game_rounds WHERE id=$1 AND game_id=$2 FOR UPDATE", [roundId,gameId])).rows[0];
     if (!round || round.status === "finished") throw new HttpError(409, "Round is not accepting cards.");
@@ -89,6 +91,7 @@ export async function playCard(playerId: string, gameId: string, roundId: string
 export async function resolveRound(playerId: string, gameId: string, roundId: string) {
   return transaction(async client => {
     const game = await lockGame(client,gameId,playerId);
+    if (game.rules_version === 2) throw new HttpError(409, "Use the five-card battle endpoint.");
     const round = (await client.query("SELECT * FROM public.game_rounds WHERE id=$1 AND game_id=$2 FOR UPDATE", [roundId,gameId])).rows[0];
     if (!round) throw new HttpError(404, "Round not found.");
     if (round.status === "finished") return round;
@@ -113,6 +116,7 @@ export async function resolveRound(playerId: string, gameId: string, roundId: st
 export async function nextRound(playerId: string, gameId: string, previousRoundId: string) {
   return transaction(async client => {
     const game = await lockGame(client,gameId,playerId);
+    if (game.rules_version === 2) throw new HttpError(409, "Use the five-card battle endpoint.");
     if (game.status !== "active") throw new HttpError(409, "Game is not active.");
     const previous = (await client.query("SELECT * FROM public.game_rounds WHERE id=$1 AND game_id=$2", [previousRoundId,gameId])).rows[0];
     if (!previous || previous.status !== "finished") throw new HttpError(409, "Finish the current round first.");
