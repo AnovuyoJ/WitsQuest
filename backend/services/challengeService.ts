@@ -2,11 +2,29 @@ import { PoolClient } from "pg";
 import { transaction } from "./database";
 import { HttpError } from "./validation";
 
-export async function requireVerifiedEvent(client: PoolClient, playerId: string, eventId: string) {
-  const event = await client.query(`SELECT id FROM public.live_events WHERE id=$1 AND starts_at <= now() AND ends_at >= now()`, [eventId]);
-  if (!event.rowCount) throw new HttpError(410, "This event is not currently active.");
-  const verification = await client.query(`SELECT id FROM public.location_verifications
-    WHERE player_id=$1 AND event_id=$2 AND verified_at >= now() - interval '15 minutes' LIMIT 1`, [playerId, eventId]);
+export async function requireVerifiedEvent(
+  client: PoolClient,
+  playerId: string,
+  eventId: string,
+  attemptedAt: Date = new Date()
+) {
+  const event = await client.query(
+    `SELECT id FROM public.live_events WHERE id=$1 AND starts_at <= $2 AND ends_at >= $2`,
+    [eventId, attemptedAt]
+  );
+  if (!event.rowCount) throw new HttpError(410, "This event was not active at the time of this attempt.");
+
+  // The player must have verified their location within 15 minutes
+  // BEFORE the attempt was made — not before now, since this may be
+  // a queued offline attempt being validated late.
+  const verification = await client.query(
+    `SELECT id FROM public.location_verifications
+     WHERE player_id=$1 AND event_id=$2
+       AND verified_at <= $3
+       AND verified_at >= $3::timestamptz - interval '15 minutes'
+     LIMIT 1`,
+    [playerId, eventId, attemptedAt]
+  );
   if (!verification.rowCount) throw new HttpError(403, "Verify your location at this event before answering.");
 }
 
@@ -21,9 +39,23 @@ export async function loadChallenge(playerId: string, eventId: string) {
   });
 }
 
-export async function submitAnswer(playerId: string, eventId: string, challengeId: string, answer: string) {
+export async function submitAnswer(
+  playerId: string,
+  eventId: string,
+  challengeId: string,
+  answer: string,
+  attemptedAt?: string // ISO timestamp from the client; falls back to now() if not provided
+) {
+  const effectiveAttemptedAt = attemptedAt ? new Date(attemptedAt) : new Date();
+
+  // Reject implausible timestamps rather than trusting the client blindly.
+  const now = new Date();
+  if (effectiveAttemptedAt > now) {
+    throw new HttpError(400, "Attempt timestamp cannot be in the future.");
+  }
+
   return transaction(async client => {
-    await requireVerifiedEvent(client, playerId, eventId);
+    await requireVerifiedEvent(client, playerId, eventId, effectiveAttemptedAt);
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [playerId]);
     const challenge = (await client.query(`SELECT id,correct_answer,card_id FROM public.live_challenges
       WHERE id=$1 AND event_id=$2 FOR SHARE`, [challengeId, eventId])).rows[0];
@@ -32,13 +64,13 @@ export async function submitAnswer(playerId: string, eventId: string, challengeI
       WHERE player_id=$1 AND challenge_id=$2`, [playerId, challengeId])).rows[0];
     if (attempt) return { correct: attempt.correct, correctAnswer: challenge.correct_answer, alreadyCompleted: true, cardAwarded: false };
     const correct = answer.trim().toLowerCase() === challenge.correct_answer.trim().toLowerCase();
-    await client.query(`INSERT INTO public.challenge_attempts (player_id,event_id,challenge_id,correct)
-      VALUES ($1,$2,$3,$4)`, [playerId,eventId,challengeId,correct]);
+    await client.query(`INSERT INTO public.challenge_attempts (player_id,event_id,challenge_id,correct,answered_at)
+      VALUES ($1,$2,$3,$4,$5)`, [playerId, eventId, challengeId, correct, effectiveAttemptedAt]);
     let cardAwarded = false;
     if (correct && challenge.card_id) {
       const award = await client.query(`INSERT INTO public.player_cards (player_id,event_id,card_id)
         SELECT $1,$2,$3 WHERE NOT EXISTS (SELECT 1 FROM public.player_cards WHERE player_id=$1 AND event_id=$2 AND card_id=$3)
-        ON CONFLICT DO NOTHING RETURNING id`, [playerId,eventId,challenge.card_id]);
+        ON CONFLICT DO NOTHING RETURNING id`, [playerId, eventId, challenge.card_id]);
       cardAwarded = Boolean(award.rowCount);
     }
     return { correct, correctAnswer: challenge.correct_answer, alreadyCompleted: false, cardAwarded };

@@ -10,4 +10,13 @@ router.get("/:eventId/challenge", requireAuth, async (req, res) => {
 router.post("/:eventId/submit-answer", requireAuth, async (req, res) => {
   res.json(await submitAnswer(req.user!.id, id(req.params.eventId), id(req.body.challengeId), text(req.body.answer, "Answer")));
 });
+router.post("/:eventId/submit-answer", requireAuth, async (req, res) => {
+  res.json(await submitAnswer(
+    req.user!.id,
+    id(req.params.eventId),
+    id(req.body.challengeId),
+    text(req.body.answer, "Answer"),
+    req.body.attemptedAt 
+  ));
+});
 export default router;
