@@ -36,6 +36,192 @@ let event;
 let card;
 let challenge;
 
+// Seed pre-upgrade matches through the old service to exercise their supported lifecycle.
+// The public matchmaking endpoint now exclusively accepts constrained five-card decks.
+async function legacyRequest(_route, token, _method, body) {
+  try {
+    return { status: 200, data: await require("../services/gameService").matchmake(
+      token === "one" ? oneId : twoId, body.cardId, body.category) };
+  } catch (error) { return { status: error.status || 500, data: { message: error.message } }; }
+}
+
+async function makeDeck(player = oneId, base = 0) {
+  const result = [];
+  for (const [index,rarity] of ["Gold","Black","Black","Blue","Blue"].entries()) {
+    const reward = (await request("/admin/cards","admin","POST",{ event_id:event.id,title:`${rarity} ${base} ${index}`,rarity,points:base+10+index,tag:index % 2 ? "History" : "General" })).data;
+    const task = (await request("/admin/challenges","admin","POST",{ event_id:event.id,question_text:`Reward ${reward.id}`,question_type:"text",correct_answer:"Yes",card_id:reward.id })).data;
+    await publish("challenges",task);
+    await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3)",[player,event.id,reward.id]);
+    result.push(reward);
+  }
+  return result;
+}
+
+test("five-card matchmaking rejects invalid mixes, duplicates, unowned cards and old clients", async () => {
+  const deck = await makeDeck();
+  const ids = deck.map(c => c.id);
+  for (const cardIds of [ids.slice(0,4),[ids[0],ids[0],...ids.slice(2)], [...ids.slice(0,4),card.id]]) {
+    expect((await request("/games/matchmake","one","POST",{cardIds})).status).toBe(400);
+  }
+  expect((await request("/games/matchmake","two","POST",{cardIds:ids})).status).toBe(400);
+  expect((await request("/games/matchmake","one","POST",{cardId:ids[0],category:"General"})).status).toBe(400);
+  expect((await request("/games/matchmake","","POST",{cardIds:ids})).status).toBe(401);
+  expect((await request("/games/matchmake","one","POST",{cardIds:ids,mode:"invalid"})).status).toBe(400);
+});
+
+test("player battles hide choices, freeze scores, reject reuse and finish after five rounds without transfers", async () => {
+  const one = await makeDeck(oneId,40), two = await makeDeck(twoId,0);
+  const start = await request("/games/matchmake","one","POST",{cardIds:one.map(c => c.id)});
+  expect(start.status).toBe(200);
+  const gameId = start.data.id;
+  const joined = await request("/games/matchmake","two","POST",{cardIds:two.map(c => c.id)});
+  expect(joined.data.id).toBe(gameId);
+  expect((await request(`/games/${gameId}/battle`,"admin")).status).toBe(404);
+  expect((await request("/games/matchmake","one","POST",{cardIds:one.map(c => c.id)})).status).toBe(409);
+  await mockPg.query("UPDATE public.cards SET points=0 WHERE id=$1",[one[0].id]);
+  for (let index=0;index<5;index++) {
+    const state = (await request(`/games/${gameId}/battle`)).data;
+    const round = state.rounds.at(-1);
+    if (index) expect((await request(`/games/${gameId}/battle/card`,"one","POST",{roundId:round.id,cardId:one[0].id})).status).toBe(409);
+    expect((await request(`/games/${gameId}/battle/card`,"one","POST",{roundId:round.id,cardId:two[index].id})).status).toBe(409);
+    expect((await request(`/games/${gameId}/battle/card`,"one","POST",{roundId:round.id,cardId:one[index].id})).status).toBe(200);
+    expect((await request(`/games/${gameId}/battle/card`,"one","POST",{roundId:round.id,cardId:one[index].id})).status).toBe(409);
+    const hidden = (await request(`/games/${gameId}/battle`,"two")).data;
+    expect(hidden.rounds.at(-1).player_one_submitted).toBe(true);
+    expect(hidden.rounds.at(-1).player_one_card).toBeNull();
+    expect(hidden.deck.map(c => c.id)).toEqual(expect.arrayContaining(two.map(c => c.id)));
+    expect((await request(`/games/${gameId}/round`)).status).toBe(409);
+    expect((await request(`/games/${gameId}/rounds/${round.id}/resolve`,"one","POST")).status).toBe(409);
+    expect((await request(`/games/${gameId}/rounds/${round.id}/card`,"one","POST",{cardId:one[index].id})).status).toBe(409);
+    expect((await request(`/games/${gameId}/battle/card`,"two","POST",{roundId:round.id,cardId:two[index].id})).status).toBe(200);
+    const revealed = (await request(`/games/${gameId}/battle`)).data;
+    expect(revealed.rounds.at(-1).winner_side).toBe(1);
+    expect(revealed.rounds.at(-1).player_one_card.points).toBe(one[index].points);
+    if (index<4) {
+      const next = await request(`/games/${gameId}/battle/next`,"one","POST",{roundId:round.id});
+      expect(next.status).toBe(200);
+      expect((await request(`/games/${gameId}/battle/next`,"two","POST",{roundId:round.id})).data.id).toBe(next.data.id);
+    } else {
+      expect(revealed.game).toMatchObject({status:"finished",winner_side:1});
+      expect(revealed.scores).toEqual({one:5,two:0});
+      expect((await request(`/games/${gameId}/battle/next`,"one","POST",{roundId:round.id})).status).toBe(409);
+    }
+  }
+  expect((await request("/me/cards")).data.map(c => c.card_id).sort()).toEqual(one.map(c => c.id).sort());
+  expect((await request("/me/cards","two")).data.map(c => c.card_id).sort()).toEqual(two.map(c => c.id).sort());
+});
+
+test("CPU commits before play, obeys the rarity mix and supports a complete drawn match", async () => {
+  const deck = await makeDeck();
+  const start = await request("/games/matchmake","one","POST",{cardIds:deck.map(c=>c.id),mode:"cpu"});
+  expect(start.status).toBe(200);
+  const gameId = start.data.id;
+  const cpuDeck = (await mockPg.query("SELECT * FROM public.battle_decks WHERE game_id=$1 AND side=2 ORDER BY position",[gameId])).rows;
+  expect(cpuDeck.filter(c=>c.snapshot.rarity==="Gold")).toHaveLength(1);
+  expect(cpuDeck.filter(c=>c.snapshot.rarity==="Black")).toHaveLength(2);
+  expect(cpuDeck.filter(c=>c.snapshot.rarity==="Blue")).toHaveLength(2);
+  for (let i=0;i<5;i++) {
+    const state = (await request(`/games/${gameId}/battle`)).data;
+    const round = state.rounds.at(-1);
+    expect(round.player_two_card).toBeNull();
+    expect(round.player_two_submitted).toBe(true);
+    // Inspect the private database only in this test; clients never receive the CPU order.
+    const committed = (await mockPg.query("SELECT player_two_card_id FROM public.game_rounds WHERE id=$1",[round.id])).rows[0].player_two_card_id;
+    expect(committed).toBe(cpuDeck[i].card_id);
+    expect((await request(`/games/${gameId}/battle/card`,"one","POST",{roundId:round.id,cardId:committed})).status).toBe(200);
+    if (i<4) await request(`/games/${gameId}/battle/next`,"one","POST",{roundId:round.id});
+  }
+  const result = (await request(`/games/${gameId}/battle`)).data;
+  expect(result.game).toMatchObject({status:"finished",winner_side:null,is_cpu:true});
+  expect(result.scores).toEqual({one:0,two:0});
+  expect((await request("/me/cards")).data).toHaveLength(5);
+});
+
+test("CPU availability, cancellation and CPU forfeits are explicit", async () => {
+  const deck = await makeDeck();
+  await mockPg.query("UPDATE public.challenges SET published_snapshot=NULL,published_revision=NULL WHERE card_id=$1",[deck[1].id]);
+  expect((await request("/games/matchmake","one","POST",{cardIds:deck.map(c=>c.id),mode:"cpu"})).status).toBe(409);
+  expect((await request("/games")).data).toHaveLength(0);
+  const waiting = (await request("/games/matchmake","one","POST",{cardIds:deck.map(c=>c.id)})).data;
+  expect((await request(`/games/${waiting.id}/cancel`,"two","POST")).status).toBe(409);
+  expect((await request(`/games/${waiting.id}/cancel`,"one","POST")).status).toBe(200);
+  const task = (await request("/admin/challenges","admin")).data.find(c=>c.card_id===deck[1].id);
+  await publish("challenges",task);
+  const cpu = (await request("/games/matchmake","one","POST",{cardIds:deck.map(c=>c.id),mode:"cpu"})).data;
+  expect((await request(`/games/${cpu.id}/forfeit`,"one","POST")).status).toBe(200);
+  expect((await request(`/games/${cpu.id}/battle`)).data.game).toMatchObject({status:"finished",winner_side:2,winner_id:null});
+});
+
+test("duplicates exchange within event and rarity, keep the original, reject replay and roll back failures", async () => {
+  const deck = await makeDeck();
+  // Original Gold reward from beforeEach is unowned and published in the same event.
+  const source = deck[0];
+  for (let i=0;i<3;i++) await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3)",[oneId,event.id,source.id]);
+  const original = (await mockPg.query("SELECT id FROM public.player_cards WHERE player_id=$1 AND card_id=$2 ORDER BY awarded_at,id",[oneId,source.id])).rows[0].id;
+  const options = (await request(`/me/cards/${source.id}/exchanges`)).data;
+  expect(options).toMatchObject({owned:4,extras:3});
+  expect(options.targets.map(c=>c.id)).toContain(card.id);
+  expect((await request(`/me/cards/${source.id}/exchanges`,"two")).status).toBe(404);
+  const post = targetCardId => request("/me/cards/exchange","one","POST",{sourceCardId:source.id,targetCardId});
+  expect((await post(deck[1].id)).status).toBe(409);
+  expect((await post(source.id)).status).toBe(409);
+  await mockPg.exec(`ALTER TABLE public.player_cards ADD CONSTRAINT reject_exchange_target CHECK (card_id <> '${card.id}')`);
+  try { expect((await post(card.id)).status).toBe(500); }
+  finally { await mockPg.exec("ALTER TABLE public.player_cards DROP CONSTRAINT reject_exchange_target"); }
+  expect((await request(`/me/cards/${source.id}/exchanges`)).data.owned).toBe(4);
+  expect((await post(card.id)).status).toBe(200);
+  const owned = (await request("/me/cards")).data;
+  expect(owned.filter(c=>c.card_id===source.id).map(c=>c.id)).toEqual([original]);
+  expect(owned.filter(c=>c.card_id===card.id)).toHaveLength(1);
+  expect((await post(card.id)).status).toBe(409);
+});
+
+test("different completed challenges can award extra copies but answer retries cannot", async () => {
+  await request(`/events/${event.id}/verify-location`,"one","POST",{latitude:event.latitude,longitude:event.longitude});
+  const second = (await request("/admin/challenges","admin","POST",{...challenge,question_text:"Second reward"})).data;
+  await publish("challenges",second);
+  for (const challengeId of [challenge.id,second.id,second.id]) await request(`/events/${event.id}/submit-answer`,"one","POST",{challengeId,answer:"Yes"});
+  expect((await request("/me/cards")).data.filter(c=>c.card_id===card.id)).toHaveLength(2);
+});
+
+test("exchange eligibility excludes other rarities, other events and unpublished cards", async () => {
+  for (let i=0;i<4;i++) await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3)",[oneId,event.id,card.id]);
+  const otherEvent = (await request("/admin/events","admin","POST",{...event,title:"Another event"})).data;
+  await publish("events",otherEvent);
+  const targets = [];
+  for (const [rarity,eventId,published] of [["Blue",event.id,true],["Gold",otherEvent.id,true],["Gold",event.id,false]]) {
+    const reward = (await request("/admin/cards","admin","POST",{...card,rarity,event_id:eventId})).data;
+    const task = (await request("/admin/challenges","admin","POST",{...challenge,event_id:eventId,card_id:reward.id})).data;
+    if (published) await publish("challenges",task);
+    targets.push(reward);
+  }
+  expect((await request(`/me/cards/${card.id}/exchanges`)).data.targets).toEqual([]);
+  for (const target of targets) {
+    expect((await request("/me/cards/exchange","one","POST",{sourceCardId:card.id,targetCardId:target.id})).status).toBe(409);
+  }
+  expect((await request("/me/cards")).data).toHaveLength(4);
+});
+
+test("battle migration removes historical copy uniqueness without deleting collection rows", async () => {
+  await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3)",[oneId,event.id,card.id]);
+  await mockPg.exec("ALTER TABLE public.player_cards ADD CONSTRAINT old_copy_unique UNIQUE(player_id,event_id,card_id)");
+  const migration = readFileSync(path.join(__dirname,"../sql/card-battles.sql"),"utf8");
+  await mockPg.exec(migration);
+  await mockPg.exec(migration);
+  await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3)",[oneId,event.id,card.id]);
+  expect((await request("/me/cards")).data).toHaveLength(2);
+});
+
+test("card points are whole numbers from zero to 100 and battle migration is repeatable", async () => {
+  for (const points of [-1,101,1.5]) expect((await request("/admin/cards","admin","POST",{...card,points})).status).toBe(400);
+  for (const points of [0,100]) expect((await request("/admin/cards","admin","POST",{...card,points})).status).toBe(201);
+  const deck = await makeDeck();
+  const game = (await request("/games/matchmake","one","POST",{cardIds:deck.map(c=>c.id),mode:"cpu"})).data;
+  await mockPg.exec(readFileSync(path.join(__dirname,"../sql/card-battles.sql"),"utf8"));
+  expect((await request(`/games/${game.id}/battle`)).data.deck).toHaveLength(5);
+  await expect(mockPg.query("UPDATE public.cards SET points=101 WHERE id=$1",[card.id])).rejects.toBeDefined();
+});
+
 async function request(route, token = "one", method = "GET", body) {
   const response = await fetch(origin + "/api" + route, {
     method, headers: { "Content-Type": "application/json", ...(token ? { Authorization: `Bearer ${token}` } : {}) },
@@ -50,6 +236,7 @@ beforeAll(async () => {
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/schema.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/content-publication.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/trails.sql"), "utf8"));
+  await mockPg.exec(readFileSync(path.join(__dirname, "../sql/card-battles.sql"), "utf8"));
   await mockPg.query("INSERT INTO auth.users (id) VALUES ($1),($2),($3)", [adminId,oneId,twoId]);
   server = app.listen(0, "127.0.0.1");
   await new Promise(resolve => server.once("listening", resolve));
@@ -296,11 +483,11 @@ test("notifications are visible and writable only by their recipient", async () 
 test("matchmaking, round ownership, score resolution and card transfer use server rules", async () => {
   const weaker = (await request("/admin/cards", "admin", "POST", { event_id: event.id, title: "Weaker", rarity: "Blue", points: 10, tag: "History" })).data;
   await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3),($4,$2,$5)", [oneId,event.id,card.id,twoId,weaker.id]);
-  expect((await request("/games/matchmake", "two", "POST", { cardId: card.id, category: "History" })).status).toBe(409);
-  const first = await request("/games/matchmake", "one", "POST", { cardId: card.id, category: "History" });
+  expect((await legacyRequest("/games/matchmake", "two", "POST", { cardId: card.id, category: "History" })).status).toBe(409);
+  const first = await legacyRequest("/games/matchmake", "one", "POST", { cardId: card.id, category: "History" });
   expect(first.status).toBe(200);
   const gameId=first.data.id;
-  const second=await request("/games/matchmake", "two", "POST", { cardId: weaker.id, category: "History" });
+  const second=await legacyRequest("/games/matchmake", "two", "POST", { cardId: weaker.id, category: "History" });
   expect(second.data.id).toBe(gameId);
   expect((await request(`/games/${gameId}`,"admin")).status).toBe(404);
   expect((await request(`/games/${gameId}/round`,"admin")).status).toBe(404);
@@ -329,9 +516,9 @@ test("wrong answers cannot claim a reward, and attempts apply per question", asy
 
 test("waiting lobbies, participant names, presence, next rounds and forfeits are handwritten operations", async () => {
   await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3),($4,$2,$3)", [oneId,event.id,card.id,twoId]);
-  const gameId=(await request("/games/matchmake","one","POST",{cardId:card.id,category:"History"})).data.id;
+  const gameId=(await legacyRequest("/games/matchmake","one","POST",{cardId:card.id,category:"History"})).data.id;
   expect((await request(`/games/${gameId}/cancel`,"two","POST")).status).toBe(409);
-  await request("/games/matchmake","two","POST",{cardId:card.id,category:"History"});
+  await legacyRequest("/games/matchmake","two","POST",{cardId:card.id,category:"History"});
   expect((await request(`/games/${gameId}/players`)).data.player_one_name).toBe("Player 1");
   expect((await request(`/games/${gameId}/presence`,"one","POST")).status).toBe(200);
   const firstPresence = (await request(`/games/${gameId}`)).data;
@@ -364,8 +551,8 @@ test("existing-schema migration is repeatable and removes legacy per-event uniqu
 
 test.each(["one", "two"])("%s can replace an unavailable selection without unlocking the opponent's valid card", async affected => {
   await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3),($4,$2,$3)", [oneId,event.id,card.id,twoId]);
-  const gameId=(await request("/games/matchmake","one","POST",{cardId:card.id,category:"History"})).data.id;
-  await request("/games/matchmake","two","POST",{cardId:card.id,category:"History"});
+  const gameId=(await legacyRequest("/games/matchmake","one","POST",{cardId:card.id,category:"History"})).data.id;
+  await legacyRequest("/games/matchmake","two","POST",{cardId:card.id,category:"History"});
   const round=(await request(`/games/${gameId}/round`)).data;
   const affectedId=affected === "one" ? oneId : twoId;
   const other=affected === "one" ? "two" : "one";
@@ -394,8 +581,8 @@ test("winning an already-owned card transfers a copy instead of destroying it", 
   const weaker=(await request("/admin/cards","admin","POST",{event_id:event.id,title:"Weaker",rarity:"Blue",points:10,tag:"History"})).data;
   await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3),($1,$2,$4),($5,$2,$4)",[oneId,event.id,card.id,weaker.id,twoId]);
   const original=(await mockPg.query("SELECT id FROM public.player_cards WHERE player_id=$1",[twoId])).rows[0].id;
-  const gameId=(await request("/games/matchmake","one","POST",{cardId:card.id,category:"History"})).data.id;
-  await request("/games/matchmake","two","POST",{cardId:weaker.id,category:"History"});
+  const gameId=(await legacyRequest("/games/matchmake","one","POST",{cardId:card.id,category:"History"})).data.id;
+  await legacyRequest("/games/matchmake","two","POST",{cardId:weaker.id,category:"History"});
   const round=(await request(`/games/${gameId}/round`)).data;
   expect((await request(`/games/${gameId}/rounds/${round.id}/resolve`,"one","POST")).status).toBe(200);
   const collection=(await request("/me/cards","one")).data;

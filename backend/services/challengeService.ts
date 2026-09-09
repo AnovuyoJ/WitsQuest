@@ -37,8 +37,7 @@ export async function submitAnswer(playerId: string, eventId: string, challengeI
     let cardAwarded = false;
     if (correct && challenge.card_id) {
       const award = await client.query(`INSERT INTO public.player_cards (player_id,event_id,card_id)
-        SELECT $1,$2,$3 WHERE NOT EXISTS (SELECT 1 FROM public.player_cards WHERE player_id=$1 AND event_id=$2 AND card_id=$3)
-        ON CONFLICT DO NOTHING RETURNING id`, [playerId,eventId,challenge.card_id]);
+        VALUES ($1,$2,$3) RETURNING id`, [playerId,eventId,challenge.card_id]);
       cardAwarded = Boolean(award.rowCount);
     }
     return { correct, correctAnswer: challenge.correct_answer, alreadyCompleted: false, cardAwarded };
