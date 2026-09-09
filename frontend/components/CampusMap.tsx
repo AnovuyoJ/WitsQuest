@@ -13,6 +13,7 @@ import {
 import { useEffect, useState } from "react";
 import L from "leaflet";
 import { getDistanceMeters } from "@/lib/geo";
+import { cacheEvents, getCachedEvents } from "@/lib/offlineDb";
 
 import "leaflet/dist/leaflet.css";
 
@@ -98,30 +99,67 @@ export default function CampusMap() {
     useState<string | null>(null);
   const [locating, setLocating] = useState(true);
 
+  // Whether we're currently showing cached (offline) event data
+  // instead of a fresh fetch from the server.
+  const [isOffline, setIsOffline] = useState(false);
+
   /*
-   * Load events from Supabase
+   * Load events: try the network first, fall back to the local
+   * cache if we're offline or the request fails. On a successful
+   * network fetch, refresh the cache for next time.
    */
   useEffect(() => {
     async function loadEvents() {
-      const { data, error } = await apiRequest<EventRecord[]>("/events");
-
-      if (error) {
-        console.error(
-          "Error loading map events:",
-          error
-        );
-
-        setError(
-          "Unable to load campus events."
-        );
-
+      if (!navigator.onLine) {
+        const cached = await getCachedEvents();
+        setEvents(cached);
+        setIsOffline(true);
         return;
       }
 
-      setEvents((data ?? []) as Event[]);
+      const { data, error } = await apiRequest<EventRecord[]>("/events");
+
+      if (error) {
+        console.error("Error loading map events:", error);
+
+        const cached = await getCachedEvents();
+        if (cached.length > 0) {
+          setEvents(cached);
+          setIsOffline(true);
+        } else {
+          setError("Unable to load campus events.");
+        }
+        return;
+      }
+
+      const fetchedEvents = (data ?? []) as Event[];
+      setEvents(fetchedEvents);
+      setIsOffline(false);
+      cacheEvents(fetchedEvents);
     }
 
     loadEvents();
+  }, []);
+
+  /*
+   * Track browser online/offline state so the UI updates the
+   * moment connectivity changes, not just on initial load.
+   */
+  useEffect(() => {
+    function handleOnline() {
+      setIsOffline(false);
+    }
+    function handleOffline() {
+      setIsOffline(true);
+    }
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
   }, []);
 
   /*
@@ -248,13 +286,32 @@ export default function CampusMap() {
     return `${(distance / 1000).toFixed(1)}km away`;
   }
 
+  // Only show one status banner at a time: offline takes priority
+  // over "locating", since knowing you're offline matters more than
+  // a GPS spinner, and showing both would stack awkwardly.
+  const showLocatingBanner = locating && !isOffline;
+  const showOfflineBanner = isOffline;
+
   return (
     <div className="relative h-full w-full">
-      {locating && (
+      {showLocatingBanner && (
         <div className="absolute inset-x-4 top-4 z-[1000] mx-auto max-w-sm rounded-2xl border border-[#043673]/15 bg-white/95 p-4 shadow-xl backdrop-blur" role="status">
           <div className="flex items-center gap-3"><span className="h-3 w-3 animate-pulse rounded-full bg-[#C9A24B]" /><div><p className="text-sm font-bold text-[#043673]">Finding your position</p><p className="mt-0.5 text-xs text-slate-500">Keep this screen open while GPS connects.</p></div></div>
         </div>
       )}
+
+      {showOfflineBanner && (
+        <div className="absolute inset-x-4 top-4 z-[1000] mx-auto max-w-sm rounded-2xl border border-amber-200 bg-white/95 p-4 shadow-xl backdrop-blur" role="status">
+          <div className="flex items-center gap-3">
+            <span className="h-3 w-3 rounded-full bg-amber-500" />
+            <div>
+              <p className="text-sm font-bold text-amber-700">You&apos;re offline</p>
+              <p className="mt-0.5 text-xs text-slate-500">Showing saved events. They&apos;ll refresh once you&apos;re back online.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ERROR MESSAGE */}
       {error && (
         <div className="absolute inset-x-4 top-4 z-[1000] max-w-sm rounded-2xl border border-red-200 bg-white p-4 shadow-xl">
