@@ -22,6 +22,7 @@ type Event = {
   starts_at: string;
   ends_at: string;
   created_at: string | null;
+  campaign_id: string | null;
 };
 
 export default function AdminEventsPage() {
@@ -70,6 +71,16 @@ export default function AdminEventsPage() {
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
+
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [campaignId, setCampaignId] = useState("");
+
+  useEffect(() => {
+    if (!admin) return;
+    apiRequest<{ id: string; name: string }[]>("/admin/campaigns").then((result) => {
+      if (result.data) setCampaigns(result.data);
+    });
+  }, [admin]);
 
   /*
    * ----------------------------------------------------
@@ -121,6 +132,7 @@ export default function AdminEventsPage() {
     setEditingId(null);
     setMessage("");
     setError("");
+    setCampaignId("");
   }
 
   /*
@@ -205,6 +217,7 @@ export default function AdminEventsPage() {
       radius_meters: Math.round(radiusNumber),
       starts_at: startDate.toISOString(),
       ends_at: endDate.toISOString(),
+      campaign_id: campaignId || null,
     };
 
     let result;
@@ -262,6 +275,8 @@ export default function AdminEventsPage() {
 
     setStartsAt(toDateTimeLocal(event.starts_at));
     setEndsAt(toDateTimeLocal(event.ends_at));
+
+    setCampaignId(event.campaign_id ?? "");
 
     setMessage("");
     setError("");
@@ -486,6 +501,22 @@ export default function AdminEventsPage() {
               placeholder="Find the location and complete the challenge..."
               className="mt-2 min-h-28 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
             />
+          </label>
+
+          {/* CAMPAIGN */}
+
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Campaign (optional)</span>
+            <select
+              value={campaignId}
+              onChange={(e) => setCampaignId(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+            >
+              <option value="">No campaign</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </label>
 
           {/* LOCATION */}
