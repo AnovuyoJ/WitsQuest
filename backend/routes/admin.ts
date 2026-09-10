@@ -67,15 +67,49 @@ router.post("/landmarks/lookup", async (req, res) => {
   res.json(await requireLandmark(req.body.latitude, req.body.longitude));
 });
 
+function campaignValues(body: Record<string, unknown>) {
+  const start = text(body.starts_at, "Start time");
+  const end = text(body.ends_at, "End time");
+  if (!Number.isFinite(Date.parse(start)) || !Number.isFinite(Date.parse(end)) || Date.parse(end) <= Date.parse(start)) {
+    throw new HttpError(400, "End time must be after start time.");
+  }
+  return [text(body.name, "Name", 200), start, end];
+}
+
+router.get("/campaigns", async (_req, res) => {
+  res.json((await database.query("SELECT * FROM public.campaigns ORDER BY starts_at")).rows);
+});
+router.post("/campaigns", async (req, res) => {
+  const { rows } = await database.query(
+    `INSERT INTO public.campaigns (name, starts_at, ends_at) VALUES ($1,$2,$3) RETURNING *`,
+    campaignValues(req.body)
+  );
+  res.status(201).json(rows[0]);
+});
+router.put("/campaigns/:id", async (req, res) => {
+  const { rows } = await database.query(
+    `UPDATE public.campaigns SET name=$1, starts_at=$2, ends_at=$3 WHERE id=$4 RETURNING *`,
+    [...campaignValues(req.body), id(req.params.id)]
+  );
+  if (!rows[0]) throw new HttpError(404, "Campaign not found.");
+  res.json(rows[0]);
+});
+router.delete("/campaigns/:id", async (req, res) => {
+  const result = await database.query("DELETE FROM public.campaigns WHERE id=$1", [id(req.params.id)]);
+  if (!result.rowCount) throw new HttpError(404, "Campaign not found.");
+  res.json({ success: true });
+});
+
 function eventValues(body: Record<string, unknown>) {
   const start = text(body.starts_at, "Start time");
   const end = text(body.ends_at, "End time");
   if (!Number.isFinite(Date.parse(start)) || !Number.isFinite(Date.parse(end)) || Date.parse(end) <= Date.parse(start)) {
     throw new HttpError(400, "End time must be after start time.");
   }
+  const campaignId = body.campaign_id ? id(body.campaign_id) : null; 
   return [text(body.title, "Title", 200), optionalText(body.description, "Description"),
     number(body.latitude, "Latitude", -90, 90), number(body.longitude, "Longitude", -180, 180),
-    number(body.radius_meters, "Radius", 1, 10000), start, end];
+    number(body.radius_meters, "Radius", 1, 10000), start, end, campaignId];
 }
 
 function cardValues(body: Record<string, unknown>) {
@@ -120,17 +154,24 @@ router.get("/challenges", async (req, res) => {
 router.post("/events", async (req, res) => {
   const values = eventValues(req.body);
   await requireLandmark(req.body.latitude, req.body.longitude);
-  const { rows } = await database.query(`INSERT INTO public.events (title, description, latitude, longitude, radius_meters, starts_at, ends_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, values);
+  const { rows } = await database.query(`INSERT INTO public.events (title, description, latitude, longitude, radius_meters, starts_at, ends_at, campaign_id)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, values);
   res.status(201).json(rows[0]);
 });
 router.put("/events/:id", async (req, res) => {
   const values = [...eventValues(req.body), id(req.params.id)];
   await requireLandmark(req.body.latitude, req.body.longitude);
   const { rows } = await database.query(`UPDATE public.events SET draft_revision=draft_revision+1, title=$1, description=$2, latitude=$3,
-    longitude=$4, radius_meters=$5, starts_at=$6, ends_at=$7 WHERE id=$8 RETURNING *`, values);
+    longitude=$4, radius_meters=$5, starts_at=$6, ends_at=$, campaign_id=$8 WHERE id=$9 RETURNING *`, values);
   if (!rows[0]) throw new HttpError(404, "Event not found.");
   res.json(rows[0]);
+});
+router.get("/events", async (req, res) => {
+  const campaignId = req.query.campaignId === undefined ? null : id(req.query.campaignId);
+  res.json((await database.query(
+    "SELECT * FROM public.events WHERE ($1::uuid IS NULL OR campaign_id = $1) ORDER BY starts_at",
+    [campaignId]
+  )).rows);
 });
 router.delete("/events/:id", async (req, res) => {
   const result = await database.query("DELETE FROM public.events WHERE id=$1", [id(req.params.id)]);
