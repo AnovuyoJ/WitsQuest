@@ -24,7 +24,9 @@ CREATE TABLE IF NOT EXISTS public.challenges (
 CREATE TABLE IF NOT EXISTS public.location_verifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), player_id uuid NOT NULL REFERENCES auth.users(id),
   event_id uuid NOT NULL REFERENCES public.events(id), distance_meters double precision NOT NULL,
-  verified_at timestamptz NOT NULL DEFAULT now()
+  verified_at timestamptz NOT NULL DEFAULT now(),
+  latitude double precision, longitude double precision,
+  flagged boolean NOT NULL DEFAULT false, flag_reason text
 );
 CREATE TABLE IF NOT EXISTS public.challenge_attempts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), player_id uuid NOT NULL REFERENCES auth.users(id),

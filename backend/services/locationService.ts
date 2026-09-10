@@ -59,3 +59,47 @@ export function verifyPlayerLocation(
 
   return { withinRange, distanceMeters, eventActive };
 }
+
+export type MovementCheckResult = {
+  plausible: boolean;
+  impliedSpeedMetersPerSecond: number | null;
+};
+
+const MAX_PLAUSIBLE_SPEED_MPS = 7; // faster than running
+
+/**
+ * Compares a new location claim against the player's previous verified
+ * location to detect implausibly fast movement (e.g. teleporting across
+ * campus). Returns plausible = true when there's no prior verification
+ * to compare against.
+ */
+export function checkMovementPlausibility(
+  previous: { latitude: number; longitude: number; verifiedAt: string | Date } | null,
+  current: { latitude: number; longitude: number; verifiedAt: Date }
+): MovementCheckResult {
+  if (!previous) return { plausible: true, impliedSpeedMetersPerSecond: null };
+
+  const distanceMeters = haversineDistanceMeters(
+    previous.latitude,
+    previous.longitude,
+    current.latitude,
+    current.longitude
+  );
+
+  const previousTime = new Date(previous.verifiedAt).getTime();
+  const currentTime = current.verifiedAt.getTime();
+  const secondsElapsed = (currentTime - previousTime) / 1000;
+
+  // Guard against zero/negative elapsed time (e.g. duplicate or
+  // out-of-order requests), which would otherwise divide toward Infinity.
+  if (secondsElapsed <= 0) {
+    return { plausible: false, impliedSpeedMetersPerSecond: Infinity };
+  }
+
+  const impliedSpeedMetersPerSecond = distanceMeters / secondsElapsed;
+
+  return {
+    plausible: impliedSpeedMetersPerSecond <= MAX_PLAUSIBLE_SPEED_MPS,
+    impliedSpeedMetersPerSecond,
+  };
+}
