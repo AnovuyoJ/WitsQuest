@@ -74,6 +74,7 @@ export default function AdminEventsPage() {
 
   const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
   const [campaignId, setCampaignId] = useState("");
+  const [filterCampaignId, setFilterCampaignId] = useState("");
 
   useEffect(() => {
     if (!admin) return;
@@ -388,6 +389,10 @@ export default function AdminEventsPage() {
     );
   }
 
+  const filteredEvents = filterCampaignId
+  ? events.filter((event) => event.campaign_id === filterCampaignId)
+  : events;
+
   /*
    * ----------------------------------------------------
    * Page
@@ -698,15 +703,31 @@ export default function AdminEventsPage() {
           </div>
 
           <span className="rounded-full bg-[#043673]/5 px-3 py-1 text-xs font-semibold text-[#043673]">
-            {events.length} events
+            {filteredEvents.length} events
           </span>
+        </div>
+
+        <div className="mb-4">
+          <label className="block max-w-xs">
+            <span className="text-sm font-semibold text-slate-700">Filter by campaign</span>
+            <select
+              value={filterCampaignId}
+              onChange={(e) => setFilterCampaignId(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+            >
+              <option value="">All events</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </label>
         </div>
 
         {loading ? (
           <div className="py-10 text-center text-sm text-slate-500">
             Loading events...
           </div>
-        ) : events.length === 0 ? (
+        ) : filteredEvents.length === 0 ? (
           <div className="rounded-2xl bg-slate-50 p-8 text-center">
             <p
               className="text-lg font-black tracking-tight"
@@ -722,7 +743,7 @@ export default function AdminEventsPage() {
         ) : (
           <div className="space-y-4">
 
-            {events.map((event) => {
+            {filteredEvents.map((event) => {
               const status = getEventStatus(event);
 
               return (
