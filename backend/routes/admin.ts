@@ -162,7 +162,7 @@ router.put("/events/:id", async (req, res) => {
   const values = [...eventValues(req.body), id(req.params.id)];
   await requireLandmark(req.body.latitude, req.body.longitude);
   const { rows } = await database.query(`UPDATE public.events SET draft_revision=draft_revision+1, title=$1, description=$2, latitude=$3,
-    longitude=$4, radius_meters=$5, starts_at=$6, ends_at=$, campaign_id=$8 WHERE id=$9 RETURNING *`, values);
+    longitude=$4, radius_meters=$5, starts_at=$6, ends_at=$7, campaign_id=$8 WHERE id=$9 RETURNING *`, values);
   if (!rows[0]) throw new HttpError(404, "Event not found.");
   res.json(rows[0]);
 });
