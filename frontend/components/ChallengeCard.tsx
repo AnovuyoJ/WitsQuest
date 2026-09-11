@@ -28,6 +28,28 @@ export default function ChallengeCard({ eventId, onAnswered }: { eventId: string
     );
   }
 
+  if (state.status === "queued") {
+    return (
+      <section className="overflow-hidden rounded-2xl border border-amber-200 bg-white">
+        <div className="h-2 bg-amber-500" />
+        <div className="p-6 sm:p-8">
+          <p className="text-[10px] font-bold uppercase tracking-[.25em] text-slate-500">Answer saved</p>
+          <h3 className="mt-3 text-3xl font-black tracking-[-.04em] text-amber-700">Saved offline</h3>
+          <p className="mt-3 text-sm leading-6 text-slate-600">
+            You&apos;re offline right now, so we&apos;ve saved your answer. It&apos;ll be checked automatically once you&apos;re back online.
+          </p>
+          <button
+            type="button"
+            onClick={() => { setSelectedOption(null); setTextAnswer(""); onAnswered?.(); }}
+            className="mt-6 w-full rounded-xl bg-[#043673] py-3.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[.99]"
+          >
+            Continue your quest
+          </button>
+        </div>
+      </section>
+    );
+  }
+
   const challenge = state.challenge;
   const submitting = state.status === "submitting";
   const options = challenge.question_type === "true_false" ? ["True", "False"] : challenge.options;
