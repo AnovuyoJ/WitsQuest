@@ -33,7 +33,7 @@ export async function syncOfflineAttempts(): Promise<SyncResult[]> {
   const results: SyncResult[] = [];
 
   for (const attempt of pending) {
-    const { data, error } = await apiRequest(
+    const { error } = await apiRequest(
       `/events/${encodeURIComponent(attempt.eventId)}/submit-answer`,
       "POST",
       {
