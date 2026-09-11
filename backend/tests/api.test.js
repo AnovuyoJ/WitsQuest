@@ -36,6 +36,18 @@ let event;
 let card;
 let challenge;
 
+// Silence the API's global error logger for tests that intentionally hit
+// database constraint failures on their negative path. Errors still propagate
+// to the caller; only the console noise is suppressed.
+async function withSilencedApiErrors(fn) {
+  const spy = jest.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    return await fn();
+  } finally {
+    spy.mockRestore();
+  }
+}
+
 // Seed pre-upgrade matches through the old service to exercise their supported lifecycle.
 // The public matchmaking endpoint now exclusively accepts constrained five-card decks.
 async function legacyRequest(_route, token, _method, body) {
@@ -153,27 +165,29 @@ test("CPU availability, cancellation and CPU forfeits are explicit", async () =>
 });
 
 test("duplicates exchange within event and rarity, keep the original, reject replay and roll back failures", async () => {
-  const deck = await makeDeck();
-  // Original Gold reward from beforeEach is unowned and published in the same event.
-  const source = deck[0];
-  for (let i=0;i<3;i++) await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3)",[oneId,event.id,source.id]);
-  const original = (await mockPg.query("SELECT id FROM public.player_cards WHERE player_id=$1 AND card_id=$2 ORDER BY awarded_at,id",[oneId,source.id])).rows[0].id;
-  const options = (await request(`/me/cards/${source.id}/exchanges`)).data;
-  expect(options).toMatchObject({owned:4,extras:3});
-  expect(options.targets.map(c=>c.id)).toContain(card.id);
-  expect((await request(`/me/cards/${source.id}/exchanges`,"two")).status).toBe(404);
-  const post = targetCardId => request("/me/cards/exchange","one","POST",{sourceCardId:source.id,targetCardId});
-  expect((await post(deck[1].id)).status).toBe(409);
-  expect((await post(source.id)).status).toBe(409);
-  await mockPg.exec(`ALTER TABLE public.player_cards ADD CONSTRAINT reject_exchange_target CHECK (card_id <> '${card.id}')`);
-  try { expect((await post(card.id)).status).toBe(500); }
-  finally { await mockPg.exec("ALTER TABLE public.player_cards DROP CONSTRAINT reject_exchange_target"); }
-  expect((await request(`/me/cards/${source.id}/exchanges`)).data.owned).toBe(4);
-  expect((await post(card.id)).status).toBe(200);
-  const owned = (await request("/me/cards")).data;
-  expect(owned.filter(c=>c.card_id===source.id).map(c=>c.id)).toEqual([original]);
-  expect(owned.filter(c=>c.card_id===card.id)).toHaveLength(1);
-  expect((await post(card.id)).status).toBe(409);
+  await withSilencedApiErrors(async () => {
+    const deck = await makeDeck();
+    // Original Gold reward from beforeEach is unowned and published in the same event.
+    const source = deck[0];
+    for (let i=0;i<3;i++) await mockPg.query("INSERT INTO public.player_cards (player_id,event_id,card_id) VALUES ($1,$2,$3)",[oneId,event.id,source.id]);
+    const original = (await mockPg.query("SELECT id FROM public.player_cards WHERE player_id=$1 AND card_id=$2 ORDER BY awarded_at,id",[oneId,source.id])).rows[0].id;
+    const options = (await request(`/me/cards/${source.id}/exchanges`)).data;
+    expect(options).toMatchObject({owned:4,extras:3});
+    expect(options.targets.map(c=>c.id)).toContain(card.id);
+    expect((await request(`/me/cards/${source.id}/exchanges`,"two")).status).toBe(404);
+    const post = targetCardId => request("/me/cards/exchange","one","POST",{sourceCardId:source.id,targetCardId});
+    expect((await post(deck[1].id)).status).toBe(409);
+    expect((await post(source.id)).status).toBe(409);
+    await mockPg.exec(`ALTER TABLE public.player_cards ADD CONSTRAINT reject_exchange_target CHECK (card_id <> '${card.id}')`);
+    try { expect((await post(card.id)).status).toBe(500); }
+    finally { await mockPg.exec("ALTER TABLE public.player_cards DROP CONSTRAINT reject_exchange_target"); }
+    expect((await request(`/me/cards/${source.id}/exchanges`)).data.owned).toBe(4);
+    expect((await post(card.id)).status).toBe(200);
+    const owned = (await request("/me/cards")).data;
+    expect(owned.filter(c=>c.card_id===source.id).map(c=>c.id)).toEqual([original]);
+    expect(owned.filter(c=>c.card_id===card.id)).toHaveLength(1);
+    expect((await post(card.id)).status).toBe(409);
+  });
 });
 
 test("different completed challenges can award extra copies but answer retries cannot", async () => {
@@ -463,12 +477,14 @@ test("the server decides correctness, scopes the player, and prevents duplicate 
 });
 
 test("a failed reward rolls back the attempt so the player can retry", async () => {
-  await request(`/events/${event.id}/verify-location`, "one", "POST", { latitude: event.latitude, longitude: event.longitude });
-  await mockPg.exec("ALTER TABLE public.player_cards ADD CONSTRAINT reject_test_award CHECK (false)");
-  try {
-    expect((await request(`/events/${event.id}/submit-answer`, "one", "POST", { challengeId: challenge.id, answer: "Yes" })).status).toBe(500);
-    expect((await mockPg.query("SELECT * FROM public.challenge_attempts")).rows).toHaveLength(0);
-  } finally { await mockPg.exec("ALTER TABLE public.player_cards DROP CONSTRAINT reject_test_award"); }
+  await withSilencedApiErrors(async () => {
+    await request(`/events/${event.id}/verify-location`, "one", "POST", { latitude: event.latitude, longitude: event.longitude });
+    await mockPg.exec("ALTER TABLE public.player_cards ADD CONSTRAINT reject_test_award CHECK (false)");
+    try {
+      expect((await request(`/events/${event.id}/submit-answer`, "one", "POST", { challengeId: challenge.id, answer: "Yes" })).status).toBe(500);
+      expect((await mockPg.query("SELECT * FROM public.challenge_attempts")).rows).toHaveLength(0);
+    } finally { await mockPg.exec("ALTER TABLE public.player_cards DROP CONSTRAINT reject_test_award"); }
+  });
 });
 
 test("notifications are visible and writable only by their recipient", async () => {
