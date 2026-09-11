@@ -22,12 +22,18 @@ body {
 
 button, a, input { -webkit-tap-highlight-color: transparent; }
 
-/* Opacity is confined to the SVG fill so page content stays fully opaque. */
-.question-mark-background {
-  background-color: #fff;
-  background-image: url("/question-mark-pattern.svg");
+/* Fade the artwork independently, keeping text and panels fully opaque. */
+.campus-background {
+  background-color: #f7f9fc;
+  background-image: linear-gradient(#f7f9fcc4, #f7f9fcc4), url("/art/campus-map.webp");
   background-repeat: repeat;
-  background-size: 192px 192px;
+  background-position: center top;
+  background-size: auto, 1050px auto;
+}
+
+.campus-background-dark {
+  background-color: #0b1220;
+  background-image: linear-gradient(#0b1220f4, #0b1220f4), url("/art/campus-map.webp");
 }
 
 :focus-visible { outline: 3px solid rgba(201, 162, 75, 0.7); outline-offset: 3px; }

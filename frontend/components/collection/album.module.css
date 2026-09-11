@@ -1,0 +1,88 @@
+.album {
+  --album-ink: #10233d;
+  --album-surface: #f7f9fc;
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  background: var(--album-surface);
+  color: var(--album-ink);
+}
+.album h1, .album h2, .album h3 { color: #043673; }
+.album .card h3 { color: inherit; }
+.album .cover { color: #10233d; }
+.album .muted { color: #475569; }
+.album::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background: url('/art/campus-map.webp') center top / 1050px auto repeat;
+  opacity: .23;
+}
+.art {
+  display: block;
+  width: 100%;
+  background-color: #234666;
+  background-size: cover;
+  background-repeat: no-repeat;
+  aspect-ratio: 1.5;
+}
+.cover { overflow: hidden; border-radius: 18px; background: #fdfefe; border: 1px solid #cdd9e5; box-shadow: 0 8px 24px -18px #12375966; }
+.cover .art { transition: transform .35s ease; }
+@media (hover: hover) { .cover:hover .art { transform: scale(1.035); } }
+.card {
+  --frame: #2976b4;
+  position: relative;
+  isolation: isolate;
+  width: 100%;
+  height: auto;
+  overflow: hidden;
+  padding: 7px;
+  border: 1px solid #80bbdf;
+  border-radius: 17px;
+  background: linear-gradient(145deg, #80bbdf, var(--frame) 35%, #173e65);
+  color: #f4f8fc;
+  box-shadow: 0 12px 26px -16px #123759a6, inset 0 0 0 2px #ffffff24;
+  text-align: left;
+  transition: transform .2s ease, box-shadow .2s ease;
+}
+.black { --frame: #343d4b; border-color: #8a96a8; background: linear-gradient(145deg, #8b98aa, #29313e 30%, #111d2b 70%, #616e81); }
+.gold { --frame: #9e7324; border-color: #e7c777; background: linear-gradient(130deg, #ffe8a3, #ae802d 28%, #f0d286 52%, #886020 78%, #edcf83); color: #ffecc0; }
+.cardInner { position: relative; height: 100%; overflow: hidden; border: 1px solid #ffffff42; border-radius: 11px; background: #123759; }
+.black .cardInner { background: #1c2634; }
+.gold .cardInner { background: #332816; }
+.emblem { position: relative; display: grid; place-items: center; aspect-ratio: 1.18; overflow: hidden; border-block: 1px solid #ffffff38; color: #bde5ff; background: radial-gradient(ellipse at 50% 40%, #4c9bc64d, transparent 68%), repeating-linear-gradient(45deg, transparent 0 17px, #ffffff05 17px 18px); }
+.black .emblem { color: #d6dfef; background-color: #121c29; }
+.gold .emblem { color: #ffe2a0; background-color: #392a13; }
+.emblemOrbit { position: absolute; width: 84%; aspect-ratio: 1; border: 1px solid currentColor; border-radius: 50%; opacity: .16; }
+.emblemOrbit::after { content: ""; position: absolute; inset: 12px; border: 1px dashed currentColor; border-radius: inherit; }
+.medallion { display: grid; place-items: center; width: 61%; aspect-ratio: 1; border: 1px solid currentColor; border-radius: 50%; background: linear-gradient(145deg, #ffffff1f, #00000026); box-shadow: 0 12px 24px #00000030, inset 0 0 0 5px #ffffff08, inset 0 0 0 6px #ffffff20; }
+.medallion svg { width: 65%; filter: drop-shadow(0 2px 1px #00000075); }
+.emblemLabel { position: absolute; bottom: 8%; font-size: 8px; font-weight: 700; letter-spacing: .2em; text-transform: uppercase; opacity: .7; }
+.cardTitle { font-size: 1.1rem; font-weight: 800; line-height: 1.3; overflow-wrap: anywhere; }
+.gold::after {
+  content: "";
+  position: absolute;
+  inset: -40% -90%;
+  pointer-events: none;
+  background: linear-gradient(110deg, transparent 44%, #fff5ca45 49%, #ffffff70 50%, transparent 55%);
+  transform: translateX(-70%);
+  animation: foil 9s ease-in-out infinite;
+}
+.interactive:hover:not(:disabled) { transform: translateY(-4px); box-shadow: 0 18px 30px -16px #123759a6; }
+.interactive:focus-visible, .cover:focus-visible { outline: 3px solid #2376b2; outline-offset: 5px; }
+.interactive:disabled { opacity: .45; }
+.selected { outline: 3px solid #c99d42; outline-offset: 4px; }
+.dialog { position: fixed; inset: 0; margin: auto; width: min(920px, calc(100% - 24px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid #bdcbd8; border-radius: 22px; padding: 0; background: #f4f7fb; color: #123759; box-shadow: 0 30px 90px #061c3c70; }
+.dialog::backdrop { background: #071b32b8; backdrop-filter: blur(5px); }
+.reveal { perspective: 1000px; }
+.reveal > * { animation: inspect .42s ease-out both; transform-origin: center; }
+@keyframes foil { 0%, 65% { transform: translateX(-70%); } 85%, 100% { transform: translateX(70%); } }
+@keyframes inspect { from { opacity: 0; transform: rotateY(-75deg) scale(.94); } to { opacity: 1; transform: rotateY(0) scale(1); } }
+@media (prefers-reduced-motion: reduce) {
+  .gold::after { animation: none; display: none; }
+  .reveal > * { animation: none; }
+  .card, .cover .art { transition: none; }
+  .interactive:hover:not(:disabled), .cover:hover .art { transform: none; }
+}
