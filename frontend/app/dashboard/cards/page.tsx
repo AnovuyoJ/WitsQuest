@@ -1,219 +1,100 @@
 "use client";
 
-import { apiRequest, type PlayerCardRecord } from "@/lib/api";
+import { apiRequest, type PlayerCardRecord, type EventRecord } from "@/lib/api";
 import { useEffect, useState } from "react";
-import { supabase } from "@/lib/supabaseClient";
-import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
+import Link from "next/link";
+import { ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
+import CampusArtwork from "@/components/collection/CampusArtwork";
+import CollectibleCard from "@/components/collection/CollectibleCard";
+import CardInspector from "@/components/collection/CardInspector";
+import styles from "@/components/collection/album.module.css";
 
-const WITS_BLUE = "#043673";
-
-type Card = {
-  id: string;
-  title: string;
-  rarity: "Blue" | "Black" | "Gold";
-  description: string | null;
-  accent: string | null;
-  badge: string | null;
-  strength: string | null;
-  points: number;
-  tag: string | null;
-};
-
-type PlayerCard = {
-  id: string;
-  player_id: string;
-  event_id: string;
-  card_id: string;
-  awarded_at: string | null;
-  cards: Card | null;
-};
+const rarities = ["Gold", "Black", "Blue"] as const;
 
 export default function CardsPage() {
-  const [cards, setCards] = useState<PlayerCard[]>([]);
+  const [cards, setCards] = useState<PlayerCardRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [revision, setRevision] = useState(0);
+  const [eventNames, setEventNames] = useState<Record<string, string>>({});
+  const [openCollection, setOpenCollection] = useState<string | null>(null);
+  const [inspectedId, setInspectedId] = useState<string | null>(null);
+  const [inspectTrigger, setInspectTrigger] = useState<HTMLElement | null>(null);
 
   useEffect(() => {
+    let active = true;
     async function loadCards() {
-      setLoading(true);
-      setError(null);
-
-      /*
-       * Get logged-in player
-       */
-      const {
-        data: { user },
-        error: userError,
-      } = await supabase.auth.getUser();
-
-      if (userError) {
-        console.error("USER ERROR:", userError);
-
-        setError("Could not load your account.");
-        setLoading(false);
-        return;
-      }
-
-      if (!user) {
-        setError("You must be signed in to view your cards.");
-        setLoading(false);
-        return;
-      }
-
-      /*
-       * Get cards actually owned by this player
-       */
-      const { data, error } = await apiRequest<PlayerCardRecord[]>("/me/cards");
-
-      if (error) {
-        console.error("CARD LOAD ERROR:", error);
-
-        setError(
-          `Could not load your cards: ${error.message}`
-        );
-
-        setLoading(false);
-        return;
-      }
-
-      console.log("PLAYER CARDS:", data);
-
-      setCards(
-        (data ?? []) as unknown as PlayerCard[]
-      );
-
+      const [collection, events] = await Promise.all([
+        apiRequest<PlayerCardRecord[]>("/me/cards"), apiRequest<EventRecord[]>("/events"),
+      ]);
+      if (!active) return;
+      if (collection.error) setError(collection.error.message);
+      else { setCards(collection.data ?? []); setError(""); }
+      if (events.data) setEventNames(Object.fromEntries(events.data.map(event => [event.id, event.title])));
       setLoading(false);
     }
+    void loadCards();
+    return () => { active = false; };
+  }, [revision]);
 
-    loadCards();
-  }, []);
+  // Keep the first (newest) copy from the API; duplicate copies share one display card.
+  const unique = new Map<string, PlayerCardRecord>();
+  const copies = new Map<string, number>();
+  for (const row of cards) {
+    if (!row.cards) continue;
+    if (!unique.has(row.card_id)) unique.set(row.card_id, row);
+    copies.set(row.card_id, (copies.get(row.card_id) ?? 0) + 1);
+  }
+  const grouped = Array.from(unique.values());
+  const eventGroups = Array.from(new Set(grouped.map(row => row.event_id))).map(eventId => ({
+    id: eventId, title: eventNames[eventId] || "Event collection",
+    cards: grouped.filter(row => row.event_id === eventId),
+  })).sort((a, b) => a.title.localeCompare(b.title));
+  const current = eventGroups.find(event => event.id === openCollection);
+  const inspected = inspectedId ? unique.get(inspectedId) : undefined;
+  const questName = (event: typeof eventGroups[number]) => eventNames[event.id] || `${event.title} ${eventGroups.indexOf(event) + 1}`;
 
-  return (
-    <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
-      {/* HEADER */}
-
-      <ScreenHeader eyebrow="Collection archive" title="My cards" description="Every card marks a challenge completed somewhere across Wits campus." />
-
-      {/* LOADING */}
-
-      {loading && (
-        <ScreenSkeleton cards={3} />
-      )}
-
-      {/* ERROR */}
-
-      {!loading && error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-700">
-          {error}
-        </div>
-      )}
-
-      {/* NO CARDS */}
-
-      {!loading && !error && cards.length === 0 && (
-        <StatePanel title="Your collection starts here" description="Reach an active campus challenge and answer correctly to earn your first card." />
-      )}
-
-      {/* CARDS */}
-
-      {!loading && !error && cards.length > 0 && (
-        <>
-          <div className="mb-5 flex items-center justify-between">
-            <h2
-              className="text-xl font-black tracking-tight"
-              style={{ color: WITS_BLUE }}
-            >
-              Your Collection
-            </h2>
-
-            <span className="rounded-full bg-white px-3 py-1.5 text-xs font-semibold text-[#043673] shadow-sm">
-              {cards.length}{" "}
-              {cards.length === 1 ? "card" : "cards"}
-            </span>
+  return <div className={`${styles.album} px-5 pb-7 pt-20 sm:px-8 md:pt-7 lg:px-10`}>
+    <div className="mx-auto max-w-6xl">
+      <header className="mb-8 flex flex-wrap items-start justify-between gap-5">
+        <div><p className={`text-xs font-bold uppercase tracking-[0.22em]  ${styles.muted}`}>Your campus, collected</p><h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">My cards</h1><p className={`mt-3 max-w-lg text-sm leading-6  ${styles.muted}`}>Every quest has a story. Open a collection and take a closer look at your discoveries.</p></div>
+        <Link href="/dashboard/settings/rulebook" className="rounded-full border border-current/30 px-4 py-2 text-sm font-semibold hover:bg-current/5 focus-visible:outline-2 focus-visible:outline-offset-4">Rulebook</Link>
+      </header>
+      {!loading && <div className="mb-8 flex flex-wrap gap-x-8 gap-y-3 border-y border-current/15 py-4 text-sm"><p><strong className="mr-2 text-xl">{eventGroups.length}</strong>Quest collections</p><p><strong className="mr-2 text-xl">{grouped.length}</strong>Unique cards</p><p><strong className="mr-2 text-xl">{cards.length - grouped.length}</strong>Extra copies</p></div>}
+      {loading && <ScreenSkeleton cards={3} />}
+      {error && <div role="alert" className="mb-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">{error}<button onClick={() => setRevision(value => value + 1)} className="ml-4 font-bold underline">Retry</button></div>}
+      {!loading && !error && !grouped.length && <StatePanel title="Your album starts here" description="Visit a campus quest and answer a challenge to earn your first collectible card."><Link href="/dashboard/events" className="font-bold text-[#043673] underline">Find a quest</Link></StatePanel>}
+      {!loading && !current && <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
+        {eventGroups.map(event => <button key={event.id} type="button" onClick={() => setOpenCollection(event.id)} className={`${styles.cover} group text-left`} aria-label={`Open ${questName(event)} collection`}>
+          <div className="overflow-hidden"><CampusArtwork title={event.title} /></div>
+          <div className="p-5">
+            <h2 className="break-words text-xl font-extrabold leading-7 tracking-tight">{questName(event)}</h2>
+            <p className={`mt-2 text-xs  ${styles.muted}`}>{event.cards.length} unique {event.cards.length === 1 ? "card" : "cards"} collected</p>
+            <div className="mt-4 flex flex-wrap gap-2">{rarities.map(rarity => {
+              const count = event.cards.filter(row => row.cards?.rarity === rarity).length;
+              return count > 0 && <span key={rarity} className={`rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${rarity === "Gold" ? "border-[#ddbc68] bg-[#f6e8c2] text-[#644613]" : rarity === "Black" ? "border-[#546378] bg-[#29364a] text-[#f0f3f7]" : "border-[#afcee5] bg-[#dcecf8] text-[#174e76]"}`}>{count} {rarity}</span>;
+            })}</div>
+            <span className="mt-5 flex items-center justify-between border-t border-current/15 pt-3 text-xs font-bold">Open collection<span aria-hidden="true">→</span></span>
           </div>
-
-          <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
-            {cards.map((playerCard) => {
-              const card = playerCard.cards;
-
-              if (!card) {
-                return null;
-              }
-
-              const accent =
-                card.accent ||
-                (card.rarity === "Gold"
-                  ? "#C9A24B"
-                  : card.rarity === "Black"
-                    ? "#111827"
-                    : "#2563eb");
-
-              return (
-                <div
-                  key={playerCard.id}
-                  className="relative min-h-72 overflow-hidden rounded-2xl border border-white/20 p-5 text-white shadow-[0_22px_48px_-32px_rgba(4,54,115,.85)] transition hover:-translate-y-1 active:scale-[.99]"
-                  style={{
-                    background: `linear-gradient(135deg, ${accent}, rgba(0,0,0,0.85))`,
-                  }}
-                >
-                  {/* RARITY */}
-
-                  <div className="absolute right-4 top-4 rounded-full border border-white/30 px-2 py-1 text-[10px] font-bold uppercase tracking-[0.2em] text-white/90">
-                    {card.badge || card.rarity}
-                  </div>
-
-                  <div className="mt-10">
-                    <div className="flex items-center justify-between gap-3">
-                      <p className="text-[10px] uppercase tracking-[0.32em] text-white/70">
-                        Wits Quest
-                      </p>
-
-                      <span className="rounded-full border border-white/30 bg-white/10 px-2 py-1 text-[9px] font-semibold uppercase tracking-[0.2em] text-white/90">
-                        {card.tag || "General"}
-                      </span>
-                    </div>
-
-                    <h2 className="mt-3 text-2xl font-black leading-tight tracking-tight">
-                      {card.title}
-                    </h2>
-
-                    {card.description && (
-                      <p className="mt-2 text-sm leading-6 text-white/80">
-                        {card.description}
-                      </p>
-                    )}
-                  </div>
-
-                  <div className="mt-6 flex items-end justify-between">
-                    <div>
-                      <p className="text-[9px] uppercase tracking-[0.2em] text-white/50">
-                        Points
-                      </p>
-
-                      <p className="mt-1 text-2xl font-black">
-                        {card.points}
-                      </p>
-                    </div>
-
-                    <span className="text-sm text-white/80">
-                      {card.strength || card.rarity}
-                    </span>
-                  </div>
-
-                  {playerCard.awarded_at && (
-                    <p className="mt-4 border-t border-white/15 pt-3 text-[10px] text-white/50">
-                      Earned{" "}
-                      {new Date(
-                        playerCard.awarded_at
-                      ).toLocaleDateString()}
-                    </p>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-        </>
-      )}
+        </button>)}
+      </div>}
+      {!loading && current && <section aria-labelledby="open-collection-title">
+        <button type="button" onClick={() => setOpenCollection(null)} className="mb-5 rounded-lg border border-current/25 px-4 py-2 text-sm font-semibold hover:bg-current/5 focus-visible:outline-2 focus-visible:outline-offset-4">← All collections</button>
+        <div className="mb-8 flex flex-wrap items-end justify-between gap-3"><div><h2 id="open-collection-title" className="text-3xl font-black tracking-tight">{questName(current)}</h2><p className={`mt-2 text-sm  ${styles.muted}`}>Tap a card to inspect it, see when you earned it, or exchange extra copies.</p></div><span className="text-sm font-semibold">{current.cards.length} unique cards</span></div>
+        <div className="space-y-9">{rarities.map(rarity => {
+          const rarityCards = current.cards.filter(row => row.cards?.rarity === rarity);
+          if (!rarityCards.length) return null;
+          return <section key={rarity} aria-label={`${rarity} cards`}>
+            <h3 className="mb-4 border-b border-current/15 pb-3 text-sm font-bold uppercase tracking-[0.15em]">{rarity} collection <span className={`ml-2  ${styles.muted}`}>{rarityCards.length}</span></h3>
+            <div className="grid grid-cols-1 gap-6 min-[420px]:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">{rarityCards.map(copy => <div key={copy.card_id}>
+              <CollectibleCard card={copy.cards!} questTitle={current.title} inspect onClick={event => { setInspectTrigger(event.currentTarget); setInspectedId(copy.card_id); }} />
+              <p className={`mt-3 text-center text-xs font-semibold  ${styles.muted}`}>{copies.get(copy.card_id)} owned{(copies.get(copy.card_id) ?? 0) > 1 ? ` · ${(copies.get(copy.card_id) ?? 1) - 1} extras` : ""}</p>
+            </div>)}</div>
+          </section>;
+        })}</div>
+      </section>}
+      {!loading && grouped.length > 0 && <p className={`mt-10 text-xs  ${styles.muted}`}>Wits campus photographs mark your albums. Open a collection to discover your quest emblems.</p>}
     </div>
-  );
+    {inspected && <CardInspector key={inspected.card_id} copy={inspected} owned={copies.get(inspected.card_id) ?? 1} questTitle={eventNames[inspected.event_id] || "Event collection"} returnFocus={inspectTrigger} onClose={() => setInspectedId(null)} onExchange={() => setRevision(value => value + 1)} />}
+  </div>;
 }

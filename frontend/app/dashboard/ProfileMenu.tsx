@@ -55,7 +55,7 @@ export default function ProfileMenu({ name, email }: ProfileMenuProps) {
 
           <nav className="flex flex-col py-1.5">
             <MenuLink href="/profile" icon={<UserIcon />} label="Profile" />
-            <MenuLink href="/settings" icon={<SettingsIcon />} label="Settings" />
+            <MenuLink href="/dashboard/settings" icon={<SettingsIcon />} label="Settings" />
           </nav>
 
           <div className="h-px bg-gray-100" />

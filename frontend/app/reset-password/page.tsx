@@ -47,7 +47,7 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <main className="flex min-h-screen w-full items-center justify-center bg-gray-50 p-4">
+    <main className="flex min-h-screen w-full items-center justify-center campus-background p-4">
       <div className="w-full max-w-lg overflow-hidden rounded-3xl bg-white shadow-[0_2px_40px_-8px_rgba(4,54,115,0.25)]">
         {/* Signature Wits Gold-to-Blue bar */}
         <div

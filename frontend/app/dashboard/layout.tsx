@@ -31,8 +31,8 @@ export default function DashboardLayout({
         )}
 
         <div
-          className={`min-w-0 flex-1 transition-colors duration-200 ${
-            darkMode ? "bg-[#0b1220] text-white" : "question-mark-background text-slate-900"
+          className={`campus-background min-w-0 flex-1 transition-colors duration-200 ${
+            darkMode ? "campus-background-dark text-white" : "text-slate-900"
           }`}
         >
           <main>{children}</main>

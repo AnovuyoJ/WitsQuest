@@ -4,22 +4,28 @@ Application data now follows **Next.js → Express → PostgreSQL**. Every appli
 
 Supabase is retained only for Auth and PostgreSQL hosting, as agreed for this project. The browser uses Supabase Auth to sign in and sends its access token to Express. Express verifies it with Supabase Auth; `req.user.id` controls ownership. The browser's client exposes only `auth`, so application code cannot call `.from()` or `.rpc()` on it.
 
-## Local setup
+## Five-card battles and duplicate exchanges
 
-For ordered trails, run `backend/sql/trails.sql` after the base schema and `content-publication.sql`, before starting the updated backend. This migration is rerunnable and preserves saved trails.
+New and edited cards require integer points from 0 through 100. Cards outside this range cannot enter new decks or exchange reward lists.
 
-1. Install dependencies separately in `backend` and `frontend` using `npm ci`.
-2. Copy `backend/.env.example` to `backend/.env` and `frontend/.env.example` to `frontend/.env.local`, preserving existing Auth configuration.
-3. Set backend `DATABASE_URL` to the PostgreSQL connection string from Supabase **Connect**. A direct or session-pooler connection works; an HTTP project URL, anon key, or service-role key is not a database connection string. Use verified TLS for hosted connections. Keep the connection string out of the frontend.
-4. Set backend `SUPABASE_URL` and `SUPABASE_ANON_KEY` for token validation. A service-role key is no longer needed.
-5. Set `ADMIN_USER_IDS` to the comma-separated UUIDs from Supabase Auth → Users for trusted administrators. An empty value denies all admin operations. Usernames, email prefixes, and editable user metadata do not confer privileges.
-6. Set `FRONTEND_URL` to the frontend origin (or a comma-separated list of trusted origins) and `NEXT_PUBLIC_API_URL` to the backend origin, without `/api`. Start `npm run dev` in each directory.
+New battles use five unique owned card identities: one Gold, two Black and two Blue, from any events/categories. All five rounds compare points; cards are single-use within the match. Most round wins determines the match winner; tied scores draw. Collections are never transferred by version-2 battles, including CPU matches. Deck snapshots keep admin edits from changing a running match. Snapshots and CPU play order are private database records with RLS and browser-role access revoked.
 
-For both current Vercel aliases, set Render's `FRONTEND_URL` to `https://wits-quest-flax.vercel.app,https://wits-quest-anovuyojs-projects.vercel.app`. Redeploy the backend after changing it. CORS returns the matching allowed origin; other domains are not allowed. This list requires the backend version supporting comma-separated origins.
+| Method and path | Body / result |
+| --- | --- |
+| `POST /api/games/matchmake` | `{ "cardIds": ["five distinct UUIDs"], "mode": "player" }`; `mode` can be `cpu`, defaults to `player`. Returns `{ "id": "game UUID" }`. Old single-card request bodies are rejected. |
+| `GET /api/games/:id/battle` | Participant-only state: `game`, own `side`, own `deck` with `used` flags, `scores`, `rounds`. Opponent choices stay null until resolution; submitted booleans contain no card identity. |
+| `POST /api/games/:id/battle/card` | `{ "roundId": "UUID", "cardId": "UUID" }`. Locks in one unused deck card. The second submission resolves the round transactionally and round five finishes the match. |
+| `POST /api/games/:id/battle/next` | `{ "roundId": "finished round UUID" }`. Starts the next round; safe to retry. |
+| `GET /api/me/cards/:id/exchanges` | Owned source card identity. Returns `owned`, `extras`, `event_title`, `targets` (unowned published rewards, same event and rarity). |
+| `POST /api/me/cards/exchange` | `{ "sourceCardId": "UUID", "targetCardId": "UUID" }`. Requires at least four source copies; removes three extras, keeps the oldest copy and awards the chosen unowned reward in one transaction. Returns `card`, `consumed: 3`, `remaining`. |
 
-## Database setup and deployment
+The CPU uses virtual published reward cards, chooses similar point values with the same rarity composition, and shuffles/commits its complete order before the player's first move. It never receives the human choice as an input to selection. At least one Gold, two Black and two Blue distinct published reward cards must exist; otherwise CPU start returns 409 and creates no game. CPU wins use `winner_side: 2` with `winner_id: null` because there is no fake auth user. CPU matches award no collectible rewards.
 
-### Ordered trails
+Distinct successful challenge attempts can award duplicate copies of a reward. Retrying an already answered challenge still awards nothing. Repeat-daily challenges and random drop probabilities are not introduced; admins control rarity via the cards they attach to published challenges.
+
+Existing matches have `rules_version: 1` and retain their legacy round endpoints and transfer rules. New match creation only uses version 2; old waiting lobbies can be cancelled. Legacy round endpoints reject version-2 games, preventing bypass of deck and privacy rules. The old game documentation below applies only to legacy matches where it conflicts with this section.
+
+## Ordered trails
 
 All trail requests require `Authorization: Bearer <Supabase access token>`. Admin paths also require a configured administrator. JSON bodies require `Content-Type: application/json`. No query parameters are used; `:id` is a trail UUID.
 
@@ -55,28 +61,7 @@ Example player response (UUIDs abbreviated):
 
 A stop completes when the caller has attempted all its published questions (at least one). Incorrect attempts count toward completion, but do not necessarily earn cards. `next_event_id` is the first incomplete stop, or null when all are complete. Inactive and deleted stops retain their positions rather than being skipped; deleted events have null names/timestamps. Newly published questions can change progress. Event details use each event's current published version.
 
-Players use `/dashboard/trails` for collapsible trails, progress and links opening the matching quest. **Refresh progress** updates a still-open view after playing. Admins use `/dashboard/admin/trails` to select, reorder, save, review and publish stops. Trails guide players without locking other quests; out-of-order attempts count.
-
 Errors use `{ "message": "..." }`: `400` invalid input or missing selected events; `401` unauthenticated; `403` non-admin; `404` missing trail on update/review-preview/delete; `409` stale/missing revision, missing review or unpublished selected events. Review-confirmation/publish on a deleted trail returns `409`. Unexpected errors return `500`.
-
-### Base schema
-
-For a **new** Supabase project, run `backend/sql/schema.sql`. It assumes Supabase has already created `auth.users`.
-
-**Required publication migration:** after the baseline (or after the existing-schema migration), run `backend/sql/content-publication.sql` before starting this backend version. It adds draft/review revisions, published snapshots and backend-only live-content views. On its first run it preserves all existing events and challenges as published content. New records created afterwards remain drafts. Rerunning it does not publish drafts. Use a database owner/migration role; if the backend uses a separate SQL role, grant that role SELECT on `public.live_events` and `public.live_challenges` as well as its existing table permissions. No remote migration is performed automatically.
-
-For an **existing** project, back up and inspect its schema, constraints, triggers, and scheduled jobs first, then review `backend/sql/migrate-existing.sql`. The repository previously had no schema migrations, and its design document omits `challenge_attempts.challenge_id` and notifications. The migration:
-
-- Adds a per-question attempt ID and maps old attempts only where exactly one question exists for the event. Ambiguous records abort the transaction instead of guessing or deleting history.
-- Replaces a legacy unique constraint on `(player_id, event_id)` with per-question uniqueness. Inspect separately created unique indexes on that pair as well; those are not removed automatically.
-- Uses the existing `card_games.player_one_last_seen_at` and `player_two_last_seen_at` columns for presence, and `notifications.user_id` for notification recipients.
-- Does not replace existing triggers or cron jobs. Review any old game-resolution, notification, and inactivity functions before cutover to avoid duplicate effects or two systems changing the same match.
-
-The SQL connection role must have access to application tables and permission to read `auth.users.id` and `auth.users.raw_user_meta_data` for game display names. Application authorization is implemented in Express; the database connection must be a backend-only role that can perform those operations under your existing RLS configuration.
-
-After verifying the deployed Express flows, disable the Supabase **Data API** and apply `backend/sql/disable-data-api-access.sql`. This revokes browser table access and execution of the four former game RPCs. Auth stays enabled. Disabling the Data API is supported for apps using direct PostgreSQL connections: [Supabase documentation](https://supabase.com/docs/guides/database/secure-data).
-
-No migration, remote configuration change, or deployment is run automatically by starting the server.
 
 ## Endpoint contract
 
@@ -102,7 +87,7 @@ curl "http://localhost:5000/api/me" \
   -H "Authorization: Bearer <access_token>"
 ```
 
-Responses are direct JSON objects, arrays, or `null`, not wrapped in `data`. Lists return `[]` when empty and have no pagination. UUID fields are strings in canonical UUID format; timestamps are ISO 8601 strings. Examples use fictional IDs and dates. Responses from handlers that return complete database rows may include additional columns on an existing deployment.
+Responses are direct JSON objects, arrays, or `null`, not wrapped in `data`. Lists return `[]` when empty and have no pagination. UUID fields are strings in canonical UUID format; timestamps are ISO 8601 strings. Examples use fictional IDs and dates. Responses from handlers that return complete database rows may include additional fields.
 
 ### Shared errors and validation
 
@@ -432,9 +417,7 @@ The admin form looks up coordinates after typing pauses, fills an empty event ti
 
 Map data: © [OpenStreetMap contributors](https://www.openstreetmap.org/copyright). Query reference: [Overpass QL](https://wiki.openstreetmap.org/wiki/Overpass_API/Overpass_QL).
 
-##### Local test: Great Hall
-
-Run the frontend and backend locally, set `NEXT_PUBLIC_API_URL=http://localhost:5000`, and include `http://localhost:3000` in the backend's `FRONTEND_URL`. Sign in with an account listed in `ADMIN_USER_IDS`, open **Admin → Events**, and enter latitude `-26.1924` and longitude `28.0308`. Leave the title empty to see the returned name filled automatically.
+##### Example request: Great Hall
 
 These coordinates returned the following response during integration testing (OpenStreetMap data may change):
 
@@ -451,7 +434,7 @@ curl "http://localhost:5000/api/admin/landmarks/lookup" \
   -d '{"latitude":-26.1924,"longitude":28.0308}'
 ```
 
-An internet connection is required for uncached lookups; deployment and an Overpass API key are not required. Correcting coordinates starts a fresh form lookup. The **Retry lookup** button repeats the request, but an existing cached result can remain for up to five minutes.
+Uncached lookups require access to the Overpass API. Results can remain cached for up to five minutes.
 
 All endpoints in this section require both a valid token and membership in `ADMIN_USER_IDS`; otherwise 401/403. Use `GET /api/admin/events` for authoring; `GET /api/events` exposes only published content.
 
@@ -676,12 +659,4 @@ Creates the next numbered round with no cards selected, or returns its ID if it 
 3. Read your collection, choose a card/category, and matchmake. Read the game/round, send presence while active, submit cards when needed, resolve when both players have selected, then request the next round.
 4. Administrators use the admin write bodies above. The server determines user identity, ownership, correctness, points, and winners; clients do not supply authoritative values for them.
 
-Game transfers preserve duplicate collection copies. Existing databases with unique constraints on collection ownership must review those constraints before using duplicate-card transfers.
-
-## Verification
-
-Run `npm test -- --runInBand` and `npm run typecheck` in `backend`. API integration tests use embedded PostgreSQL (PGlite) with a test-only Auth stub, exercising real SQL and HTTP handlers without touching the hosted database. This verifies the repository schema, not undocumented production triggers, cron jobs, policies, or existing data.
-
-In `frontend`, run `npm test -- --runInBand`, `npm run typecheck`, `npm run lint`, and `npm run build`.
-
-Before cutover, test real sign-in, admin CRUD, location verification, challenge rewards, two-player games, and notifications against a staging copy of the live schema. Confirm browser network traffic for application data goes only to the Express `/api` routes and that the old Data API cannot be used.
+Legacy game transfers preserve duplicate collection copies.

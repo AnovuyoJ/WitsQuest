@@ -114,7 +114,7 @@ function eventValues(body: Record<string, unknown>) {
 
 function cardValues(body: Record<string, unknown>) {
   if (!["Blue", "Black", "Gold"].includes(String(body.rarity))) throw new HttpError(400, "Invalid rarity.");
-  const points = number(body.points, "Points", 0, 100000);
+  const points = number(body.points, "Points", 0, 100);
   if (!Number.isInteger(points)) throw new HttpError(400, "Points must be an integer.");
   return [id(body.event_id), text(body.title, "Title", 200), body.rarity,
     optionalText(body.description, "Description"), optionalText(body.accent, "Accent"),

@@ -193,11 +193,11 @@ export default function AdminCardsPage() {
     }
 
     if (
-      Number.isNaN(pointValue) ||
-      pointValue < 0
+      !Number.isInteger(pointValue) ||
+      pointValue < 0 || pointValue > 100 || points.trim() === ""
     ) {
       setError(
-        "Points must be a valid number."
+        "Points must be a whole number from 0 to 100."
       );
       return;
     }
@@ -535,12 +535,15 @@ export default function AdminCardsPage() {
 
               <label className="block">
                 <span className="text-sm font-semibold text-slate-700">
-                  Points
+                  Battle points (0–100)
                 </span>
 
                 <input
                   type="number"
                   min="0"
+                  max="100"
+                  step="1"
+                  required
                   value={points}
                   onChange={(e) =>
                     setPoints(e.target.value)
