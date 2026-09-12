@@ -51,7 +51,7 @@ let dbPromise: Promise<IDBPDatabase<WitsQuestDB>> | null = null;
 function getDb() {
   if (!dbPromise) {
     dbPromise = openDB<WitsQuestDB>('witsquest-offline', 2, {
-      upgrade(db, oldVersion) {
+      upgrade(db) {
         if (!db.objectStoreNames.contains('events')) {
           db.createObjectStore('events', { keyPath: 'id' });
         }
