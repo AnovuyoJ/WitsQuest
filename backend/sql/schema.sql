@@ -1,5 +1,5 @@
 -- Baseline for a NEW database. Existing projects: follow docs/handwritten-api.md first.
--- After this file, run content-publication.sql before starting the application.
+-- After this file, run content-publication.sql, trails.sql and card-battles.sql before starting the application.
 -- Supabase supplies auth.users; this file does not manage authentication tables.
 BEGIN;
 CREATE TABLE IF NOT EXISTS public.events (

@@ -3,6 +3,7 @@ import { database } from "../services/database";
 import { requireAuth } from "../middleware/requireAuth";
 import { isAdministrator } from "../middleware/requireAdmin";
 import { id, HttpError } from "../services/validation";
+import { exchangeCards, exchangeOptions } from "../services/exchangeService";
 
 const router = Router();
 router.use(requireAuth);
@@ -42,6 +43,13 @@ router.get("/me/cards", async (req, res) => {
     pc.awarded_at, row_to_json(c) AS cards FROM public.player_cards pc
     JOIN public.cards c ON c.id = pc.card_id WHERE pc.player_id = $1 ORDER BY pc.awarded_at DESC`, [req.user!.id]);
   res.json(rows);
+});
+
+router.get("/me/cards/:id/exchanges", async (req, res) => {
+  res.json(await exchangeOptions(req.user!.id,id(req.params.id)));
+});
+router.post("/me/cards/exchange", async (req, res) => {
+  res.json(await exchangeCards(req.user!.id,id(req.body.sourceCardId),id(req.body.targetCardId)));
 });
 
 router.get("/cards", async (req, res) => {

@@ -19,7 +19,7 @@ export default function Home() {
   }, [router]);
   if (checkingSession) return <LandingSkeleton />;
   return (
-    <main className="min-h-[100dvh] bg-[#F4F6F9] text-[#10233D]">
+    <main className="min-h-[100dvh] campus-background text-[#10233D]">
       <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
         <Link href="/" className="flex items-center gap-3 font-bold tracking-tight text-[#043673]"><span className="grid h-10 w-10 place-items-center rounded-xl bg-[#043673] text-xs text-[#E2C66F]">WQ</span>WitsQuest</Link>
         <Link href="/Login" className="rounded-xl border border-[#043673]/20 px-4 py-2.5 text-sm font-bold text-[#043673] transition hover:bg-white active:scale-[.98]">Sign in</Link>
@@ -44,4 +44,4 @@ export default function Home() {
   );
 }
 
-function LandingSkeleton() { return <main className="min-h-[100dvh] bg-[#F4F6F9] p-5"><div className="mx-auto max-w-7xl animate-pulse"><div className="h-14 rounded-2xl bg-white" /><div className="mt-5 h-[70vh] rounded-2xl bg-[#043673]/10" /></div></main>; }
+function LandingSkeleton() { return <main className="min-h-[100dvh] campus-background p-5"><div className="mx-auto max-w-7xl animate-pulse"><div className="h-14 rounded-2xl bg-white" /><div className="mt-5 h-[70vh] rounded-2xl bg-[#043673]/10" /></div></main>; }
