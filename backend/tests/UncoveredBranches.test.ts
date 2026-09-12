@@ -87,7 +87,7 @@ describe("verifyLocation.ts branch coverage", () => {
       .post(`/api/events/${VALID_UUID}/verify-location`)
       .send({ latitude: -26.2, longitude: 28.0, accuracy: 10 });
 
-    console.log("RESPONSE BODY:" , res.body); // temp, for debugging
+    //console.log("RESPONSE BODY:" , res.body); // temp, for debugging
 
     expect(res.status).toBe(200);
     expect(res.body.withinRange).toBe(true);

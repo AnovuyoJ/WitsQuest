@@ -148,6 +148,66 @@ test("GET /events returns rows ordered by starts_at", async () => {
   );
 });
 
+// POST /events/:id/retire
+test("POST /events/:id/retire hides an active event from players", async () => {
+  const retired = { ...draft, retired_at: "2026-09-12T10:00:00.000Z" };
+  query.mockResolvedValueOnce({ rows: [retired] });
+
+  const { res } = await callRoute(
+    "POST",
+    "/events/:id/retire",
+    makeReq({ params: { id: EVENT_ID } }),
+  );
+
+  expect(res.json).toHaveBeenCalledWith(retired);
+  expect(query).toHaveBeenCalledWith(
+    expect.stringContaining("SET retired_at = now()"),
+    [EVENT_ID],
+  );
+});
+
+test("POST /events/:id/retire rejects when the event is missing or already retired (404)", async () => {
+  query.mockResolvedValueOnce({ rows: [] });
+
+  const { error } = await callRoute(
+    "POST",
+    "/events/:id/retire",
+    makeReq({ params: { id: EVENT_ID } }),
+  );
+
+  expect(error).toMatchObject({ status: 404 });
+});
+
+// POST /events/:id/unretire
+test("POST /events/:id/unretire makes a retired event visible again", async () => {
+  const unretired = { ...draft, retired_at: null };
+  query.mockResolvedValueOnce({ rows: [unretired] });
+
+  const { res } = await callRoute(
+    "POST",
+    "/events/:id/unretire",
+    makeReq({ params: { id: EVENT_ID } }),
+  );
+
+  expect(res.json).toHaveBeenCalledWith(unretired);
+  expect(query).toHaveBeenCalledWith(
+    expect.stringContaining("SET retired_at = NULL"),
+    [EVENT_ID],
+  );
+});
+
+test("POST /events/:id/unretire rejects when the event is missing or not retired (404)", async () => {
+  query.mockResolvedValueOnce({ rows: [] });
+
+  const { error } = await callRoute(
+    "POST",
+    "/events/:id/unretire",
+    makeReq({ params: { id: EVENT_ID } }),
+  );
+
+  expect(error).toMatchObject({ status: 404 });
+});
+
 // POST /events/:id/review
 test("POST /events/:id/review marks the current draft reviewed", async () => {
   const reviewed = { ...draft, reviewed_revision: 2, reviewed_by: "admin-1" };

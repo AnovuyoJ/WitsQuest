@@ -178,6 +178,22 @@ router.delete("/events/:id", async (req, res) => {
   if (!result.rowCount) throw new HttpError(404, "Event not found.");
   res.json({ success: true });
 });
+router.post("/events/:id/retire", async (req, res) => {
+  const { rows } = await database.query(
+    `UPDATE public.events SET retired_at = now() WHERE id=$1 AND retired_at IS NULL RETURNING *`,
+    [id(req.params.id)]
+  );
+  if (!rows[0]) throw new HttpError(404, "Event not found or already retired.");
+  res.json(rows[0]);
+});
+router.post("/events/:id/unretire", async (req, res) => {
+  const { rows } = await database.query(
+    `UPDATE public.events SET retired_at = NULL WHERE id=$1 AND retired_at IS NOT NULL RETURNING *`,
+    [id(req.params.id)]
+  );
+  if (!rows[0]) throw new HttpError(404, "Event not found or not retired.");
+  res.json(rows[0]);
+});
 
 router.post("/cards", async (req, res) => {
   const { rows } = await database.query(`INSERT INTO public.cards (event_id,title,rarity,description,accent,badge,strength,points,tag)
