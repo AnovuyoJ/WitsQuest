@@ -430,3 +430,50 @@ test("POST /challenges rejects a multiple-choice answer that is not an option", 
   expect(error).toMatchObject({ status: 400 });
   expect(query).not.toHaveBeenCalled();
 });
+
+// GET /challenges/stats
+test("GET /challenges/stats returns wrong-answer rates per question", async () => {
+  const stats = [
+    {
+      id: "ch-1",
+      question_text: "Hard question",
+      event_id: EVENT_ID,
+      total_attempts: 10,
+      wrong_attempts: 7,
+      wrong_percentage: 70,
+    },
+    {
+      id: "ch-2",
+      question_text: "Easy question",
+      event_id: EVENT_ID,
+      total_attempts: 10,
+      wrong_attempts: 1,
+      wrong_percentage: 10,
+    },
+  ];
+  query.mockResolvedValueOnce({ rows: stats });
+
+  const { res } = await callRoute("GET", "/challenges/stats", makeReq());
+
+  expect(res.json).toHaveBeenCalledWith(stats);
+  expect(query).toHaveBeenCalledWith(
+    expect.stringContaining("LEFT JOIN public.challenge_attempts"),
+    [null],
+  );
+});
+
+test("GET /challenges/stats filters by eventId when provided", async () => {
+  query.mockResolvedValueOnce({ rows: [] });
+
+  const { res } = await callRoute(
+    "GET",
+    "/challenges/stats",
+    makeReq({ query: { eventId: EVENT_ID } }),
+  );
+
+  expect(res.json).toHaveBeenCalledWith([]);
+  expect(query).toHaveBeenCalledWith(
+    expect.stringContaining("LEFT JOIN public.challenge_attempts"),
+    [EVENT_ID],
+  );
+});

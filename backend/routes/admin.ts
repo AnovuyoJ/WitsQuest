@@ -150,6 +150,32 @@ router.get("/challenges", async (req, res) => {
   const { rows } = await database.query("SELECT * FROM public.challenges WHERE ($1::uuid IS NULL OR event_id = $1) ORDER BY created_at", [eventId]);
   res.json(rows);
 });
+router.get("/challenges", async (req, res) => {
+  const eventId = req.query.eventId === undefined ? null : id(req.query.eventId);
+  const { rows } = await database.query("SELECT * FROM public.challenges WHERE ($1::uuid IS NULL OR event_id = $1) ORDER BY created_at", [eventId]);
+  res.json(rows);
+});
+router.get("/challenges/stats", async (req, res) => {
+  const eventId = req.query.eventId === undefined ? null : id(req.query.eventId);
+  const { rows } = await database.query(`
+    SELECT
+      c.id,
+      c.question_text,
+      c.event_id,
+      COUNT(a.id)::int AS total_attempts,
+      COUNT(a.id) FILTER (WHERE a.correct = false)::int AS wrong_attempts,
+      CASE WHEN COUNT(a.id) > 0
+        THEN ROUND(COUNT(a.id) FILTER (WHERE a.correct = false)::numeric / COUNT(a.id) * 100, 1)
+        ELSE 0
+      END AS wrong_percentage
+    FROM public.challenges c
+    LEFT JOIN public.challenge_attempts a ON a.challenge_id = c.id
+    WHERE ($1::uuid IS NULL OR c.event_id = $1)
+    GROUP BY c.id, c.question_text, c.event_id
+    ORDER BY wrong_percentage DESC, total_attempts DESC
+  `, [eventId]);
+  res.json(rows);
+});
 
 router.post("/events", async (req, res) => {
   const values = eventValues(req.body);
