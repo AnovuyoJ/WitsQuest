@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS public.events (
   radius_meters integer NOT NULL CHECK (radius_meters > 0),
   starts_at timestamptz NOT NULL, ends_at timestamptz NOT NULL,
   campaign_id uuid REFERENCES public.campaigns(id),
+  retired_at timestamptz,
   created_at timestamptz DEFAULT now(), CHECK (ends_at > starts_at)
 );
 CREATE TABLE IF NOT EXISTS public.cards (

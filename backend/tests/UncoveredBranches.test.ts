@@ -19,13 +19,16 @@ jest.mock("../middleware/requireAuth", () => ({
 
 jest.mock("../services/locationService", () => ({
   verifyPlayerLocation: jest.fn(),
+  checkMovementPlausibility: jest.fn().mockReturnValue({ plausible: true, impliedSpeedMetersPerSecond: null }),
 }));
 
 import { database } from "../services/database";
-import { verifyPlayerLocation } from "../services/locationService";
+import { verifyPlayerLocation, checkMovementPlausibility } from "../services/locationService";
 import verifyLocationRouter from "../routes/events/verifyLocation";
 import gamesRouter from "../routes/games";
 import { exchangeCards } from "../services/exchangeService";
+
+const mockCheckMovementPlausibility = checkMovementPlausibility as jest.MockedFunction<typeof checkMovementPlausibility>;
 
 const db = database as any;
 const mockVerifyLocation = verifyPlayerLocation as jest.MockedFunction<typeof verifyPlayerLocation>;
@@ -71,7 +74,8 @@ describe("verifyLocation.ts branch coverage", () => {
   it("line 46: inserts verification and returns 200 when location check succeeds", async () => {
     db.query
       .mockResolvedValueOnce({ rows: [{ latitude: -26.2, longitude: 28.0, radius_meters: 50 }] })
-      .mockResolvedValueOnce({ rows: [] });
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: []});
 
     mockVerifyLocation.mockReturnValueOnce({
       eventActive: true,
@@ -82,6 +86,8 @@ describe("verifyLocation.ts branch coverage", () => {
     const res = await request(app)
       .post(`/api/events/${VALID_UUID}/verify-location`)
       .send({ latitude: -26.2, longitude: 28.0, accuracy: 10 });
+
+    console.log("RESPONSE BODY:" , res.body); // temp, for debugging
 
     expect(res.status).toBe(200);
     expect(res.body.withinRange).toBe(true);

@@ -143,7 +143,8 @@ test("GET /events returns rows ordered by starts_at", async () => {
 
   expect(res.json).toHaveBeenCalledWith([draft]);
   expect(query).toHaveBeenCalledWith(
-    "SELECT * FROM public.events ORDER BY starts_at",
+    "SELECT * FROM public.events WHERE ($1::uuid IS NULL OR campaign_id = $1) ORDER BY starts_at",
+    [null]
   );
 });
 
