@@ -21,6 +21,7 @@ type Event = {
   radius_meters: number;
   starts_at: string;
   ends_at: string;
+  retired_at: string;
   created_at: string | null;
   campaign_id: string | null;
 };
@@ -320,6 +321,30 @@ export default function AdminEventsPage() {
     if (editingId === id) {
       resetForm();
     }
+  }
+
+  /*
+   * ----------------------------------------------------
+   * Retire old event
+   * ----------------------------------------------------
+   */
+
+  async function toggleRetire(event: Event) {
+    const action = event.retired_at ? "unretire" : "retire";
+    setError("");
+    setMessage("");
+  
+    const { data, error } = await apiRequest<Event>(`/admin/events/${event.id}/${action}`, "POST");
+  
+    if (error) {
+      setError(error.message);
+      return;
+    }
+  
+    setEvents((current) =>
+      current.map((e) => (e.id === event.id ? (data as Event) : e))
+    );
+    setMessage(event.retired_at ? "Event unretired — visible to players again." : "Event retired — hidden from players.");
   }
 
   /*
@@ -771,6 +796,12 @@ export default function AdminEventsPage() {
                           {status.label}
                         </span>
 
+                        {event.retired_at && (
+                          <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                            Retired
+                          </span>
+                        )}
+
                       </div>
 
                       <p className="mt-2 text-sm font-semibold">{event.published_revision === null ? "Draft — not published" : event.published_revision === event.draft_revision ? "Published" : "Draft changes — previous version is live"}</p>
@@ -794,6 +825,14 @@ export default function AdminEventsPage() {
                         className="rounded-lg border border-[#043673]/15 bg-white px-3 py-2 text-xs font-semibold text-[#043673] transition hover:bg-[#043673]/5"
                       >
                         Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleRetire(event)}
+                        className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
+                      >
+                        {event.retired_at ? "Unretire" : "Retire"}
                       </button>
 
                       <button
