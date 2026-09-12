@@ -70,7 +70,7 @@ router.post("/:eventId/verify-location", requireAuth, async (req, res) => {
   }
 
   // Reject wildly inaccurate GPS reports (e.g. IP-based fallback locations)
-  if (typeof accuracy === "number" && accuracy > 100) {
+  if (typeof accuracy === "number" && accuracy > 100) { 
     return res.status(422).json({
       message: "Location accuracy too low. Move to an area with better GPS signal, or scan this event's QR code instead.",
       canUseEventCode: true,
