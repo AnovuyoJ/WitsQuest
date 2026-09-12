@@ -75,7 +75,8 @@ function eventValues(body: Record<string, unknown>) {
   }
   return [text(body.title, "Title", 200), optionalText(body.description, "Description"),
     number(body.latitude, "Latitude", -90, 90), number(body.longitude, "Longitude", -180, 180),
-    number(body.radius_meters, "Radius", 1, 10000), start, end];
+    number(body.radius_meters, "Radius", 1, 10000), start, end,
+    optionalText(body.access_code, "Access code")];
 }
 
 function cardValues(body: Record<string, unknown>) {
@@ -120,15 +121,15 @@ router.get("/challenges", async (req, res) => {
 router.post("/events", async (req, res) => {
   const values = eventValues(req.body);
   await requireLandmark(req.body.latitude, req.body.longitude);
-  const { rows } = await database.query(`INSERT INTO public.events (title, description, latitude, longitude, radius_meters, starts_at, ends_at)
-    VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`, values);
+  const { rows } = await database.query(`INSERT INTO public.events (title, description, latitude, longitude, radius_meters, starts_at, ends_at, access_code)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`, values);
   res.status(201).json(rows[0]);
 });
 router.put("/events/:id", async (req, res) => {
   const values = [...eventValues(req.body), id(req.params.id)];
   await requireLandmark(req.body.latitude, req.body.longitude);
   const { rows } = await database.query(`UPDATE public.events SET draft_revision=draft_revision+1, title=$1, description=$2, latitude=$3,
-    longitude=$4, radius_meters=$5, starts_at=$6, ends_at=$7 WHERE id=$8 RETURNING *`, values);
+    longitude=$4, radius_meters=$5, starts_at=$6, ends_at=$7, access_code=$8 WHERE id=$9 RETURNING *`, values);
   if (!rows[0]) throw new HttpError(404, "Event not found.");
   res.json(rows[0]);
 });

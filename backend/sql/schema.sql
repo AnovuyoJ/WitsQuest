@@ -7,6 +7,7 @@ CREATE TABLE IF NOT EXISTS public.events (
   latitude double precision NOT NULL CHECK (latitude BETWEEN -90 AND 90),
   longitude double precision NOT NULL CHECK (longitude BETWEEN -180 AND 180),
   radius_meters integer NOT NULL CHECK (radius_meters > 0),
+  access_code text,
   starts_at timestamptz NOT NULL, ends_at timestamptz NOT NULL,
   created_at timestamptz DEFAULT now(), CHECK (ends_at > starts_at)
 );
@@ -24,7 +25,9 @@ CREATE TABLE IF NOT EXISTS public.challenges (
 CREATE TABLE IF NOT EXISTS public.location_verifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), player_id uuid NOT NULL REFERENCES auth.users(id),
   event_id uuid NOT NULL REFERENCES public.events(id), distance_meters double precision NOT NULL,
-  verified_at timestamptz NOT NULL DEFAULT now()
+  verified_at timestamptz NOT NULL DEFAULT now(),
+  latitude double precision, longitude double precision,
+  flagged boolean NOT NULL DEFAULT false, flag_reason text
 );
 CREATE TABLE IF NOT EXISTS public.challenge_attempts (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), player_id uuid NOT NULL REFERENCES auth.users(id),
