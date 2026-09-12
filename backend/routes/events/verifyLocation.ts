@@ -8,7 +8,9 @@ const router = Router();
 
 /**
  * POST /api/events/:eventId/verify-location
- * Body: { latitude: number, longitude: number, accuracy?: number }
+ * Body EITHER: { latitude: number, longitude: number, accuracy?: number }
+ *          OR: { eventCode: string }  (from scanning the event's QR code,
+ *              used when GPS accuracy is too low to trust)
  *
  * Checks the player's reported coordinates against the event's stored
  * location and radius, and against their own recent movement history
@@ -19,8 +21,46 @@ const router = Router();
 router.post("/:eventId/verify-location", requireAuth, async (req, res) => {
   const eventId = id(req.params.eventId);
   const playerId = req.user!.id;
-  const { latitude, longitude, accuracy } = req.body;
+  const { latitude, longitude, accuracy, eventCode } = req.body;
 
+  const { rows } = await database.query(`SELECT latitude, longitude, radius_meters, starts_at, ends_at
+    FROM public.live_events WHERE id=$1`, [eventId]);
+  const event = rows[0];
+
+  if (!event) {
+    return res.status(404).json({ message: "Event not found." });
+  }
+
+  // ---- Path A: alternative proof of presence (QR / event code) ----
+  // access_code lives on the base events table, not the live_events
+  // snapshot view, since it's not editorial content that needs review.
+  if (typeof eventCode === "string" && eventCode.trim() !== "") {
+    const now = new Date();
+    const eventActive = now >= new Date(event.starts_at) && now <= new Date(event.ends_at);
+
+    if (!eventActive) {
+      return res.status(410).json({ message: "This event is not currently active." });
+    }
+
+    const codeRow = (await database.query(
+      `SELECT access_code FROM public.events WHERE id=$1`, [eventId]
+    )).rows[0];
+
+    if (!codeRow?.access_code || eventCode.trim().toLowerCase() !== codeRow.access_code.trim().toLowerCase()) {
+      return res.status(403).json({ message: "That code doesn't match this event. Double check and try again." });
+    }
+
+    await database.query(`INSERT INTO public.location_verifications (player_id,event_id,distance_meters,verified_at)
+      VALUES ($1,$2,$3,now())`, [playerId, eventId, 0]);
+
+    return res.status(200).json({
+      withinRange: true,
+      distanceMeters: 0,
+      message: "Location verified using event code. You can attempt this event's challenge.",
+    });
+  }
+
+  // ---- Path B: GPS-based verification ----
   number(latitude, "Latitude", -90, 90);
   number(longitude, "Longitude", -180, 180);
   if (accuracy !== undefined) number(accuracy, "Accuracy", 0, 100000);
@@ -32,16 +72,9 @@ router.post("/:eventId/verify-location", requireAuth, async (req, res) => {
   // Reject wildly inaccurate GPS reports (e.g. IP-based fallback locations)
   if (typeof accuracy === "number" && accuracy > 100) {
     return res.status(422).json({
-      message: "Location accuracy too low. Move to an area with better GPS signal.",
+      message: "Location accuracy too low. Move to an area with better GPS signal, or scan this event's QR code instead.",
+      canUseEventCode: true,
     });
-  }
-
-  const { rows } = await database.query(`SELECT latitude, longitude, radius_meters, starts_at, ends_at
-    FROM public.live_events WHERE id=$1`, [eventId]);
-  const event = rows[0];
-
-  if (!event) {
-    return res.status(404).json({ message: "Event not found." });
   }
 
   const result = verifyPlayerLocation(latitude, longitude, event);
