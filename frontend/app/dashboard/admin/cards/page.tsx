@@ -1,6 +1,7 @@
 "use client";
 
 import { useAdminAccess } from "@/lib/useAdminAccess";
+import AlbumCoverEditor from "@/components/AlbumCoverEditor";
 
 import { apiRequest, type EventRecord, type CardRecord } from "@/lib/api";
 import { FormEvent, useEffect, useMemo, useState } from "react";
@@ -384,6 +385,7 @@ export default function AdminCardsPage() {
       </header>
 
       {/* MESSAGES */}
+      <AlbumCoverEditor events={events} />
 
       {message && (
         <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">

@@ -26,7 +26,7 @@ export default function DeleteAccountPage() {
     }
   }
 
-  return <main className="mx-auto flex min-h-screen w-full max-w-xl items-center px-5 py-12 text-[#10233d]">
+  return <div className="mx-auto flex min-h-screen w-full max-w-xl items-center px-5 py-12 text-[#10233d]">
     <section className="w-full rounded-2xl border border-slate-200 bg-white p-6 shadow-sm sm:p-8">
       <h1 className="text-3xl font-bold text-[#043673]">Delete account</h1>
       {deleted ? <p role="status" className="mt-5">Your account has been deleted. Returning to sign in…</p> : <>
@@ -42,5 +42,5 @@ export default function DeleteAccountPage() {
         </form>
       </>}
     </section>
-  </main>;
+  </div>;
 }

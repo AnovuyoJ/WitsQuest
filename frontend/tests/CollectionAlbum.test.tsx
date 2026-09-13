@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom/jest-globals";
 import { afterEach, beforeEach, expect, jest, test } from "@jest/globals";
 import CardsPage from "../app/dashboard/cards/page";
 import { supabase } from "../lib/supabaseClient";
@@ -16,6 +17,7 @@ beforeEach(() => {
   HTMLDialogElement.prototype.showModal = function () { this.setAttribute("open", ""); };
   HTMLDialogElement.prototype.close = function () { this.removeAttribute("open"); this.dispatchEvent(new Event("close")); };
   request.mockImplementation(async url => {
+    if (String(url).endsWith("/album-covers")) return response([{ event_id: "quest", image: "/wits%20pictures/wits%20library.jpg" }]);
     if (String(url).endsWith("/events")) return response([{ id:"quest", title:"Great Hall Quest" }]);
     if (String(url).endsWith("/exchanges")) return response({ owned:4, extras:3, event_title:"Great Hall Quest", targets:[] });
     return response(collection);
@@ -26,6 +28,7 @@ afterEach(() => { cleanup(); globalThis.fetch = originalFetch; jest.restoreAllMo
 test("collections hide cards until opened and inspector shows details and exchange controls", async () => {
   render(<StrictMode><CardsPage /></StrictMode>);
   const quest = await screen.findByRole("button", { name:"Open Great Hall Quest collection" });
+  expect(quest.querySelector('[aria-hidden="true"]')).toHaveStyle({ backgroundImage: 'url("/wits%20pictures/wits%20library.jpg")' });
   expect(screen.queryByRole("button", { name:"Inspect Hall Guardian" })).toBeNull();
   fireEvent.click(quest);
   const inspect = screen.getByRole("button", { name:"Inspect Hall Guardian" });

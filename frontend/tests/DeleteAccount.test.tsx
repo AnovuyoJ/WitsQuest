@@ -1,4 +1,5 @@
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import "@testing-library/jest-dom/jest-globals";
 import { afterEach, expect, jest, test } from "@jest/globals";
 import DeleteAccountPage from "../app/account/delete/page";
 import { supabase } from "../lib/supabaseClient";

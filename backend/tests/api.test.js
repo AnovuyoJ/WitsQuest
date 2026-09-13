@@ -237,6 +237,7 @@ beforeAll(async () => {
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/content-publication.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/trails.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/card-battles.sql"), "utf8"));
+  await mockPg.exec(readFileSync(path.join(__dirname, "../sql/profile-images.sql"), "utf8"));
   await mockPg.query("INSERT INTO auth.users (id) VALUES ($1),($2),($3)", [adminId,oneId,twoId]);
   server = app.listen(0, "127.0.0.1");
   await new Promise(resolve => server.once("listening", resolve));
@@ -244,6 +245,7 @@ beforeAll(async () => {
 }, 60000);
 
 beforeEach(async () => {
+  await mockPg.exec("TRUNCATE public.player_profiles");
   await mockPg.query("INSERT INTO auth.users (id) VALUES ($1),($2),($3) ON CONFLICT DO NOTHING", [adminId,oneId,twoId]);
   await mockPg.exec("TRUNCATE public.trails;");
   require("../services/landmarkService").requireLandmark.mockResolvedValue({ name: "Great Hall", osmUrl: "https://www.openstreetmap.org/way/123" });
@@ -260,6 +262,34 @@ test("account deletion requires authentication and explicit confirmation", async
   expect((await request("/me", "", "DELETE", { confirmation: "DELETE" })).status).toBe(401);
   expect((await request("/me", "one", "DELETE", {})).status).toBe(400);
   expect((await mockPg.query("SELECT id FROM auth.users WHERE id=$1", [oneId])).rows).toHaveLength(1);
+});
+
+test("profile photos persist for the authenticated player only and are removed with the account", async () => {
+  const avatar = "data:image/jpeg;base64," + Buffer.from([255,216,255,224,255,217]).toString("base64");
+  expect((await request("/me/profile", "", "PUT", { avatar })).status).toBe(401);
+  expect((await request("/me/profile", "one", "PUT", { avatar, userId: twoId })).status).toBe(200);
+  expect((await request("/me/profile", "one")).data.avatar).toBe(avatar);
+  expect((await request("/me/profile", "two")).data.avatar).toBeNull();
+  for (const bad of ["https://example.com/image.jpg", "data:image/svg+xml,<svg/>", "data:image/jpeg;base64,AAAA", "a".repeat(180001)]) {
+    expect((await request("/me/profile", "one", "PUT", { avatar: bad })).status).toBe(400);
+  }
+  expect((await request("/me/profile", "one", "PUT", { avatar: null })).status).toBe(200);
+  expect((await request("/me/profile", "one")).data.avatar).toBeNull();
+  await request("/me/profile", "one", "PUT", { avatar });
+  expect((await request("/me", "one", "DELETE", { confirmation: "DELETE" })).status).toBe(200);
+  expect((await mockPg.query("SELECT * FROM public.player_profiles")).rows).toHaveLength(0);
+});
+
+test("only admins can save album covers and reset them to automatic", async () => {
+  const route = `/admin/events/${event.id}/album-cover`;
+  const image = "/wits%20pictures/wits%20library.jpg";
+  expect((await request(route, "one", "PUT", { image })).status).toBe(403);
+  expect((await request(route, "admin", "PUT", { image: "/wits%20pictures/../secret" })).status).toBe(400);
+  expect((await request(route, "admin", "PUT", { image })).status).toBe(200);
+  expect((await request(route, "admin")).data.image).toBe(image);
+  expect((await request("/album-covers", "one")).data).toEqual([{ event_id: event.id, image }]);
+  await request(route, "admin", "PUT", { image: null });
+  expect((await request("/album-covers", "one")).data).toEqual([]);
 });
 
 test("account deletion removes only the caller and their dependent data including matches", async () => {
