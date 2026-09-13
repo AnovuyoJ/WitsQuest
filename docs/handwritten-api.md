@@ -660,3 +660,14 @@ Creates the next numbered round with no cards selected, or returns its ID if it 
 4. Administrators use the admin write bodies above. The server determines user identity, ownership, correctness, points, and winners; clients do not supply authoritative values for them.
 
 Legacy game transfers preserve duplicate collection copies.
+
+### Delete the signed-in account
+
+`DELETE /api/me` requires a bearer token and the JSON body `{ "confirmation": "DELETE" }`.
+The user ID comes exclusively from the authenticated session; clients cannot select another account.
+Returns `{ "success": true }` after removing the account, owned cards, challenge attempts,
+location verifications, notifications, and matches involving that player (including rounds and deck snapshots).
+Other players retain their accounts and cards. Deletion is transactional: a failed dependency check rolls back all changes.
+Responses: `400` for missing confirmation, `401` for missing/invalid authentication or an absent account,
+`409` for blocking record dependencies, and `500` for other server failures.
+The client clears its local session after success. No deletion occurs on a GET request.

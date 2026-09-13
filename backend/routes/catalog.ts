@@ -4,6 +4,7 @@ import { requireAuth } from "../middleware/requireAuth";
 import { isAdministrator } from "../middleware/requireAdmin";
 import { id, HttpError } from "../services/validation";
 import { exchangeCards, exchangeOptions } from "../services/exchangeService";
+import { deleteAccount } from "../services/accountService";
 
 const router = Router();
 router.use(requireAuth);
@@ -22,6 +23,12 @@ router.get("/events/active", async (_req, res) => {
   const { rows } = await database.query(`SELECT id, title, description, ends_at FROM public.live_events
     WHERE starts_at <= now() AND ends_at >= now() ORDER BY ends_at LIMIT 3`);
   res.json(rows);
+});
+
+router.delete("/me", async (req, res) => {
+  if (req.body.confirmation !== "DELETE") throw new HttpError(400, "Type DELETE to confirm account deletion.");
+  await deleteAccount(req.user!.id);
+  res.json({ success: true });
 });
 
 router.get("/events/quest-summaries", async (req, res) => {
