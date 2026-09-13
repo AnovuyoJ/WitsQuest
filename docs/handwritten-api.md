@@ -681,3 +681,13 @@ The client clears its local session after success. No deletion occurs on a GET r
 - `PUT /api/admin/events/:id/album-cover`: accepts `{ image: string | null }`; an admin can save a cover or restore automatic selection. This changes presentation immediately without changing published quest content.
 
 Uploads are resized in the browser to JPEG data URLs (320px maximum edge for avatars, 800px for covers), with a maximum encoded length of 180,000 characters. Cover values may also use an allowlisted local Wits photo path. Arbitrary remote URLs and SVG uploads are rejected. Image endpoints allow JSON bodies up to 192 KB; other endpoints retain their existing limit. Invalid images return `400`, missing authentication `401`, non-admin cover writes `403`, and writes to absent quests `404`. Profile photos are removed when their account is deleted.
+
+### Optional Card Duel stakes
+
+`POST /api/games/matchmake` accepts an optional `stakeCardId` for player mode. It must be one of the five selected owned card identities. Omitting it creates a friendly match; CPU mode rejects stakes. Duel matchmaking is separate from friendly matchmaking. Different rarities are permitted.
+
+`GET /api/games/:id/battle` includes `game.stakes_enabled` and `stakes` with side, card snapshot, accepted and settled flags. Copy IDs are not exposed.
+
+`POST /api/games/:id/battle/accept` accepts the immutable displayed stakes for the authenticated participant. Both participants must accept before moves are allowed. Either can use `POST /api/games/:id/cancel` before mutual acceptance without losing cards. After acceptance, forfeiting transfers the losing stake.
+
+Settlement moves exactly one existing copy from loser to winner in the match-finishing transaction. Draws transfer nothing. Repeated finish/forfeit requests cannot repeat a transfer. Exchanges involving a staked card are blocked until the duel is cancelled or finished. Account deletion requires pending duels to be resolved first. Existing matches remain friendly unless originally created with stakes.

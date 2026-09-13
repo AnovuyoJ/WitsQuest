@@ -138,18 +138,7 @@ export default function EventsPage() {
   const visibleEvents = orderedEvents.filter(event => (filter === "All" || (filter === "Completed" ? questGroup(event) === 1 : eventStatus(event) === filter)) && `${event.title} ${event.description || ""}`.toLowerCase().includes(search.trim().toLowerCase()));
   return (
     <div className="min-h-full px-5 pb-8 pt-20 md:px-10 md:py-8">
-      <ScreenHeader eyebrow="Quest board" title="Nearby quests" description={
-        <>
-        <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-2" aria-label="Quest order: active unfinished, completed, then inactive">
-          <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#C9A24B]" />Active quests</span>
-          <span aria-hidden="true" className="text-stone-400">→</span>
-          <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Completed</span>
-          <span aria-hidden="true" className="text-stone-400">→</span>
-          <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-slate-400" />Inactive</span>
-        </span>
-        <span className="mt-2 block">The nearest quests come first within each group when your location is available.</span>
-        </>
-      } />
+      <ScreenHeader eyebrow="Quest board" title="Nearby quests" description="Open an event to view its details and challenges." />
 
       {loading && (
         <ScreenSkeleton cards={3} />

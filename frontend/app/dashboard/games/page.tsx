@@ -8,12 +8,13 @@ import { deckCounts, validDeck } from "@/lib/battle";
 import BattleCard from "@/components/BattleCard";
 import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 
-type PendingGame = { id: string; status: string; is_cpu: boolean; rules_version: number };
+type PendingGame = { id: string; status: string; is_cpu: boolean; rules_version: number; stakes_enabled?: boolean };
 const rarityOrder = { Blue: 0, Black: 1, Gold: 2 };
 export default function GamesPage() {
   const router = useRouter();
   const [cards,setCards] = useState<CardRecord[]>([]);
   const [selected,setSelected] = useState<string[]>([]);
+  const [stake,setStake] = useState("");
   const [games,setGames] = useState<PendingGame[]>([]);
   const [loading,setLoading] = useState(true);
   const [busy,setBusy] = useState(false);
@@ -39,15 +40,16 @@ export default function GamesPage() {
     if (counts[card.rarity] >= limit) { setError(`Your deck already has ${limit} ${card.rarity} card${limit > 1 ? "s" : ""}. Remove one to swap it.`); return; }
     setSelected([...selected,card.id]);
   }
-  async function start(mode: "cpu" | "player") {
+  async function start(mode: "cpu" | "player" | "duel") {
     if (!ready || busy) return;
+    if (mode === "duel" && !selected.includes(stake)) { setError("Choose a card from your deck to stake."); return; }
     setBusy(true); setError("");
-    const result = await apiRequest<{ id: string }>("/games/matchmake","POST",{ cardIds: selected,mode });
+    const result = await apiRequest<{ id: string }>("/games/matchmake","POST",{ cardIds: selected,mode: mode === "duel" ? "player" : mode, ...(mode === "duel" ? { stakeCardId: stake } : {}) });
     if (result.error || !result.data) { setError(result.error?.message || "Could not start battle."); setBusy(false); }
     else router.push(`/dashboard/games/${result.data.id}`);
   }
   async function end(game: PendingGame) {
-    if (game.status === "active" && !window.confirm("Forfeit this match? Your opponent wins.")) return;
+    if (game.status === "active" && !window.confirm(game.stakes_enabled ? "Leave this duel? If both players accepted, you lose your staked card. Otherwise the duel is cancelled without loss." : "Forfeit this match? Your opponent wins.")) return;
     setBusy(true); setError("");
     const result = await apiRequest(`/games/${game.id}/${game.status === "waiting" ? "cancel" : "forfeit"}`,"POST");
     if (result.error) setError(result.error.message);
@@ -71,6 +73,9 @@ export default function GamesPage() {
           <p aria-live="polite" className="mt-2 text-sm text-slate-600">Gold {counts.Gold}/1 · Black {counts.Black}/2 · Blue {counts.Blue}/2</p>
           <p className="mt-2 text-sm text-slate-600">Select a card to add it. Select it again to remove it. Extra copies appear only once here.</p>
           <div className="mt-4 flex flex-wrap gap-3">
+            <label className="w-full text-sm font-semibold">Card Duel stake<select aria-label="Card Duel stake" value={selected.includes(stake) ? stake : ""} onChange={event => setStake(event.target.value)} disabled={busy} className="ml-3 rounded-lg border p-2"><option value="">Choose one deck card</option>{chosen.map(card => <option key={card.id} value={card.id}>{card.title} · {card.rarity} · {card.points} points</option>)}</select></label>
+            <p className="w-full text-sm text-slate-600">Card Duel: risk one copy of your chosen card. Stakes can be different rarities. Review and accept both stakes after matching. The winner takes the loser’s stake; a draw returns both. Friendly and CPU battles have no stakes.</p>
+            <button disabled={!ready || busy || games.length > 0 || !selected.includes(stake)} onClick={() => start("duel")} className="rounded-xl bg-red-800 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">Find a Card Duel</button>
             <button disabled={!ready || busy || games.length > 0} onClick={() => start("player")} className="rounded-xl bg-[#043673] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy ? "Please wait…" : "Find a player"}</button>
             <button disabled={!ready || busy || games.length > 0} onClick={() => start("cpu")} className="rounded-xl bg-[#C9A24B] px-5 py-3 text-sm font-semibold text-[#082C58] disabled:opacity-40">Play against CPU</button>
           </div>

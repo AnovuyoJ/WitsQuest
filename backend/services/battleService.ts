@@ -3,6 +3,7 @@ import { PoolClient } from "pg";
 import { transaction } from "./database";
 import { id, HttpError } from "./validation";
 import { lockGame } from "./gameService";
+import { reserveStake, stakesReady, settleStakes } from "./stakeService";
 
 type BattleCard = { id: string; rarity: string; points: number; [key: string]: unknown };
 const composition: Record<string, number> = { Blue: 2, Black: 2, Gold: 1 };
@@ -33,9 +34,10 @@ async function saveDeck(client: PoolClient, gameId: string, side: number, cards:
   }
 }
 
-export async function startBattle(playerId: string, input: unknown, cpu: boolean) {
+export async function startBattle(playerId: string, input: unknown, cpu: boolean, stakeId?: string) {
   if (!Array.isArray(input) || input.length !== 5) throw new HttpError(400, "Choose five different cards: 1 Gold, 2 Black and 2 Blue.");
   const ids = input.map(id);
+  if (stakeId && (cpu || !ids.includes(stakeId))) throw new HttpError(400,"Choose a stake from your deck for a player duel only.");
   if (new Set(ids).size !== 5) throw new HttpError(400, "A card can only appear once in your deck.");
   return transaction(async client => {
     await client.query("SELECT pg_advisory_xact_lock(74192001)");
@@ -48,9 +50,10 @@ export async function startBattle(playerId: string, input: unknown, cpu: boolean
     if (pending) throw new HttpError(409, "Finish or cancel your existing battle before starting another.");
     if (!cpu) {
       const waiting = (await client.query(`SELECT id FROM public.card_games WHERE rules_version=2 AND NOT is_cpu
-        AND status='waiting' AND player_one_id<>$1 ORDER BY created_at LIMIT 1 FOR UPDATE`, [playerId])).rows[0];
+        AND stakes_enabled=$2 AND status='waiting' AND player_one_id<>$1 ORDER BY created_at LIMIT 1 FOR UPDATE`, [playerId,Boolean(stakeId)])).rows[0];
       if (waiting) {
         await saveDeck(client,waiting.id,2,cards);
+        if (stakeId) await reserveStake(client,waiting.id,2,playerId,stakeId);
         await client.query("UPDATE public.card_games SET player_two_id=$1,status='active',started_at=now() WHERE id=$2", [playerId,waiting.id]);
         return waiting;
       }
@@ -58,6 +61,10 @@ export async function startBattle(playerId: string, input: unknown, cpu: boolean
     const game = (await client.query(`INSERT INTO public.card_games (player_one_id,category,status,rules_version,is_cpu,started_at)
       VALUES ($1,'Mixed', $2,2,$3,CASE WHEN $3 THEN now() ELSE NULL END) RETURNING id`, [playerId,cpu ? "active" : "waiting",cpu])).rows[0];
     await saveDeck(client,game.id,1,cards);
+    if (stakeId) {
+      await client.query("UPDATE public.card_games SET stakes_enabled=true WHERE id=$1", [game.id]);
+      await reserveStake(client,game.id,1,playerId,stakeId);
+    }
     if (cpu) {
       // Use published rewards only. Choose similarly strong cards, then commit to a random
       // order BEFORE the human submits a move. CPU cards are virtual, never collectible rewards.
@@ -100,8 +107,9 @@ export async function battleState(playerId: string, gameId: string) {
         player_one_submitted: Boolean(round.player_one_card_id), player_two_submitted: Boolean(round.player_two_card_id),
         player_one_card: card(1), player_two_card: card(2) };
     });
+    const stakes = (await client.query("SELECT side,snapshot,accepted,settled FROM public.battle_stakes WHERE game_id=$1 ORDER BY side", [gameId])).rows;
     const used = new Set(rounds.filter(r => r.status === "finished").map(r => side === 1 ? r.player_one_card_id : r.player_two_card_id));
-    return { game, side, rounds: publicRounds, deck: decks.filter(d => d.side === side).map(d => ({ ...d.snapshot, used: used.has(d.card_id) })),
+    return { game, side, stakes, rounds: publicRounds, deck: decks.filter(d => d.side === side).map(d => ({ ...d.snapshot, used: used.has(d.card_id) })),
       scores: { one: rounds.filter(r => r.winner_side === 1).length, two: rounds.filter(r => r.winner_side === 2).length } };
   });
 }
@@ -110,6 +118,7 @@ export async function battleMove(playerId: string, gameId: string, roundId: stri
   return transaction(async client => {
     const game = await lockGame(client,gameId,playerId);
     if (game.rules_version !== 2 || game.status !== "active") throw new HttpError(409, "Battle is not active.");
+    if (game.stakes_enabled && !await stakesReady(client,gameId)) throw new HttpError(409,"Both players must accept the stakes first.");
     const round = (await client.query("SELECT * FROM public.game_rounds WHERE game_id=$1 ORDER BY round_number DESC LIMIT 1 FOR UPDATE", [gameId])).rows[0];
     if (round.id !== roundId || round.status === "finished") throw new HttpError(409, "This round is no longer accepting cards.");
     const side = game.player_one_id === playerId ? 1 : 2;
@@ -132,6 +141,7 @@ export async function battleMove(playerId: string, gameId: string, roundId: stri
         const scores = (await client.query(`SELECT count(*) FILTER (WHERE winner_side=1)::int AS one,
           count(*) FILTER (WHERE winner_side=2)::int AS two FROM public.game_rounds WHERE game_id=$1`, [gameId])).rows[0];
         const matchWinner = scores.one === scores.two ? null : scores.one > scores.two ? 1 : 2;
+        await settleStakes(client,game,matchWinner);
         await client.query(`UPDATE public.card_games SET status='finished',finished_at=now(),winner_side=$1,winner_id=$2 WHERE id=$3`,
           [matchWinner,matchWinner === 1 ? game.player_one_id : matchWinner === 2 ? game.player_two_id : null,gameId]);
       }
