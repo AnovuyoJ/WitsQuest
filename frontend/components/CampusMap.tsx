@@ -293,7 +293,7 @@ export default function CampusMap() {
   const showOfflineBanner = isOffline;
 
   return (
-    <div className="relative h-full w-full">
+    <div className="relative isolate z-0 h-full w-full">
       {showLocatingBanner && (
         <div className="absolute inset-x-4 top-4 z-[1000] mx-auto max-w-sm rounded-2xl border border-[#043673]/15 bg-white/95 p-4 shadow-xl backdrop-blur" role="status">
           <div className="flex items-center gap-3"><span className="h-3 w-3 animate-pulse rounded-full bg-[#C9A24B]" /><div><p className="text-sm font-bold text-[#043673]">Finding your position</p><p className="mt-0.5 text-xs text-slate-500">Keep this screen open while GPS connects.</p></div></div>
