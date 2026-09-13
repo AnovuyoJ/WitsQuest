@@ -1,5 +1,13 @@
 import { afterEach, describe, expect, it, jest } from "@jest/globals";
-import { signIn, signUp } from "../lib/authService";
+import {
+  sendPasswordReset,
+  signIn,
+  signInWithGithub,
+  signInWithGoogle,
+  signOut,
+  signUp,
+  updatePassword,
+} from "../lib/authService";
 import { supabase } from "../lib/supabaseClient";
 
 describe("authentication service", () => {
@@ -85,5 +93,88 @@ describe("authentication service", () => {
     });
     expect(result.error).toBe(invalidCredentialsError);
     expect(result.error?.message).toBe("Invalid login credentials");
+  });
+
+  it("initiates Google OAuth sign-in with correct redirect URL", async () => {
+    const supabaseResponse = {
+      data: { provider: "google", url: "https://accounts.google.com" },
+      error: null,
+    };
+    const googleSpy = jest
+      .spyOn(supabase.auth, "signInWithOAuth")
+      .mockResolvedValue(supabaseResponse as never);
+
+    const result = await signInWithGoogle();
+
+    expect(googleSpy).toHaveBeenCalledWith({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    expect(result).toEqual(supabaseResponse);
+  });
+
+  it("initiates GitHub OAuth sign-in with correct redirect URL", async () => {
+    const supabaseResponse = {
+      data: { provider: "github", url: "https://github.com/login" },
+      error: null,
+    };
+    const githubSpy = jest
+      .spyOn(supabase.auth, "signInWithOAuth")
+      .mockResolvedValue(supabaseResponse as never);
+
+    const result = await signInWithGithub();
+
+    expect(githubSpy).toHaveBeenCalledWith({
+      provider: "github",
+      options: {
+        redirectTo: window.location.origin,
+      },
+    });
+    expect(result).toEqual(supabaseResponse);
+  });
+
+  it("sends a password reset email with the correct reset route", async () => {
+    const supabaseResponse = { data: {}, error: null };
+    const resetSpy = jest
+      .spyOn(supabase.auth, "resetPasswordForEmail")
+      .mockResolvedValue(supabaseResponse as never);
+
+    const result = await sendPasswordReset("student@wits.ac.za");
+
+    expect(resetSpy).toHaveBeenCalledWith("student@wits.ac.za", {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    expect(result).toEqual(supabaseResponse);
+  });
+
+  it("updates the authenticated user password", async () => {
+    const supabaseResponse = {
+      data: { user: { id: "user-123" } },
+      error: null,
+    };
+    const updateSpy = jest
+      .spyOn(supabase.auth, "updateUser")
+      .mockResolvedValue(supabaseResponse as never);
+
+    const result = await updatePassword("new-secure-password");
+
+    expect(updateSpy).toHaveBeenCalledWith({
+      password: "new-secure-password",
+    });
+    expect(result).toEqual(supabaseResponse);
+  });
+
+  it("signs out the active user session", async () => {
+    const supabaseResponse = { error: null };
+    const signOutSpy = jest
+      .spyOn(supabase.auth, "signOut")
+      .mockResolvedValue(supabaseResponse as never);
+
+    const result = await signOut();
+
+    expect(signOutSpy).toHaveBeenCalled();
+    expect(result).toBe(supabaseResponse);
   });
 });

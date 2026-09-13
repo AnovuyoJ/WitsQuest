@@ -1,6 +1,7 @@
 "use client";
 
 import ContentReview from "@/components/ContentReview";
+import EventQrCode from "@/components/EventQrCode";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 
 import { apiRequest, type EventRecord } from "@/lib/api";
@@ -22,6 +23,7 @@ type Event = {
   starts_at: string;
   ends_at: string;
   created_at: string | null;
+  access_code: string | null;
 };
 
 export default function AdminEventsPage() {
@@ -39,6 +41,7 @@ export default function AdminEventsPage() {
   const [lookupError, setLookupError] = useState("");
   const [lookingUp, setLookingUp] = useState(false);
   const [lookupRetry, setLookupRetry] = useState(0);
+  const [accessCode, setAccessCode] = useState("");
 
   useEffect(() => {
     setLandmark(null);
@@ -121,6 +124,7 @@ export default function AdminEventsPage() {
     setEditingId(null);
     setMessage("");
     setError("");
+    setAccessCode("");
   }
 
   /*
@@ -205,6 +209,7 @@ export default function AdminEventsPage() {
       radius_meters: Math.round(radiusNumber),
       starts_at: startDate.toISOString(),
       ends_at: endDate.toISOString(),
+      access_code: accessCode.trim() || null,
     };
 
     let result;
@@ -262,6 +267,8 @@ export default function AdminEventsPage() {
 
     setStartsAt(toDateTimeLocal(event.starts_at));
     setEndsAt(toDateTimeLocal(event.ends_at));
+
+    setAccessCode(event.access_code ?? "");
 
     setMessage("");
     setError("");
@@ -322,6 +329,17 @@ export default function AdminEventsPage() {
     );
 
     return localDate.toISOString().slice(0, 16);
+  }
+
+  /*
+   * ----------------------------------------------------
+   * Generate QR code
+   * ----------------------------------------------------
+   */
+
+  function generateAccessCode() {
+    const code = Math.random().toString(36).slice(2, 8).toUpperCase();
+    setAccessCode(code);
   }
 
   /*
@@ -569,6 +587,38 @@ export default function AdminEventsPage() {
             </div>
           </div>
 
+          {/* BACKUP ACCESS CODE*/}
+
+          <div>
+            <h3 className="mb-3 text-lg font-black tracking-tight" style={{ color: WITS_BLUE }}>
+              Backup access code
+            </h3>
+            <p className="mb-3 text-xs text-slate-400">
+              Used as a fallback when a player's GPS signal is too weak to verify their location. Print or post the QR code at the physical event location.
+            </p>
+            <div className="flex items-center gap-3">
+              <input
+                value={accessCode}
+                onChange={(e) => setAccessCode(e.target.value.toUpperCase())}
+                placeholder="e.g. GH7F2K"
+                className="w-full max-w-[200px] rounded-xl border border-slate-200 px-4 py-3 text-sm font-mono outline-none focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+              />
+              <button
+                type="button"
+                onClick={generateAccessCode}
+                className="rounded-xl border border-slate-200 px-4 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+              >
+                Generate
+              </button>
+            </div>
+            {accessCode && (
+              <div className="mt-3">
+                <EventQrCode code={accessCode} />
+              </div>
+            )}
+          </div>
+
+
           {/* DATES */}
 
           <div>
@@ -728,6 +778,12 @@ export default function AdminEventsPage() {
                         <p className="mt-2 text-sm leading-6 text-slate-600">
                           {event.description}
                         </p>
+                      )}
+
+                      {event.access_code && (
+                        <div className="mt-3">
+                          <EventQrCode code={event.access_code} />
+                        </div>
                       )}
 
                     </div>
