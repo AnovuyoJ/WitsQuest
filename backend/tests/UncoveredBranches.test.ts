@@ -103,6 +103,7 @@ describe("exchangeService.ts branch coverage", () => {
 
   it("throws 404 when source card is not found", async () => {
     (mockClient.query as any)
+      .mockResolvedValueOnce({ rows: [] }) // Player lock; next result is the stake reservation check.
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] });
 
@@ -111,6 +112,7 @@ describe("exchangeService.ts branch coverage", () => {
 
   it("throws 409 when user has fewer than 4 copies (1 original + 3 extras)", async () => {
     (mockClient.query as any)
+      .mockResolvedValueOnce({ rows: [] }) // Player lock; next result is the stake reservation check.
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, rarity: "Rare", event_id: "e1" }] })
       .mockResolvedValueOnce({ rows: [{ id: "c1" }, { id: "c2" }] });
@@ -122,6 +124,7 @@ describe("exchangeService.ts branch coverage", () => {
 
   it("throws 409 when target card is unavailable or invalid", async () => {
     (mockClient.query as any)
+      .mockResolvedValueOnce({ rows: [] }) // Player lock; next result is the stake reservation check.
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, rarity: "Rare", event_id: "e1" }] })
       .mockResolvedValueOnce({ rows: [{ id: "c1" }, { id: "c2" }, { id: "c3" }, { id: "c4" }] })
@@ -135,6 +138,7 @@ describe("exchangeService.ts branch coverage", () => {
   it("executes exchange transaction successfully", async () => {
     const targetCard = { id: "target-id", title: "Target Card" };
     (mockClient.query as any)
+      .mockResolvedValueOnce({ rows: [] }) // Player lock; next result is the stake reservation check.
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [{ id: VALID_UUID, rarity: "Rare", event_id: "e1" }] })
       .mockResolvedValueOnce({ rows: [{ id: "c1" }, { id: "c2" }, { id: "c3" }, { id: "c4" }] })
@@ -168,10 +172,16 @@ describe("games.ts branch coverage", () => {
   });
 
   it("line 66: POST /api/games/:id/cancel throws 409 when game cannot be cancelled", async () => {
-    db.query.mockResolvedValueOnce({ rowCount: 0, rows: [] });
+    mockClient.query.mockResolvedValueOnce({ rows: [{
+      id: VALID_UUID,
+      player_one_id: "00000000-0000-0000-0000-000000000000",
+      status: "finished",
+      stakes_enabled: false,
+    }] });
 
     const res = await request(app).post(`/api/games/${VALID_UUID}/cancel`);
     expect(res.status).toBe(409);
-    expect(res.body.message).toBe("This waiting game cannot be cancelled.");
+    expect(res.body.message).toBe("This match cannot be cancelled. Forfeit to leave an accepted duel.");
+    expect(mockClient.query).toHaveBeenCalledTimes(1);
   });
 });
