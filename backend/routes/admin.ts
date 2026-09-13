@@ -4,6 +4,7 @@ import { database } from "../services/database";
 import { requireAuth } from "../middleware/requireAuth";
 import { requireAdmin } from "../middleware/requireAdmin";
 import { id, text, number, optionalText, HttpError } from "../services/validation";
+import { imageValue } from "../services/imageValidation";
 
 function revision(value: unknown) {
   const result = number(value, "Revision", 1, 2147483647);
@@ -13,6 +14,19 @@ function revision(value: unknown) {
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
+
+router.get("/events/:id/album-cover", async (req, res) => {
+  const row = (await database.query("SELECT image FROM public.album_covers WHERE event_id=$1", [id(req.params.id)])).rows[0];
+  res.json({ image: row?.image ?? null });
+});
+router.put("/events/:id/album-cover", async (req, res) => {
+  const eventId = id(req.params.id), image = imageValue(req.body.image, true);
+  if (!(await database.query("SELECT id FROM public.events WHERE id=$1", [eventId])).rows.length) throw new HttpError(404, "Quest not found.");
+  if (image === null) await database.query("DELETE FROM public.album_covers WHERE event_id=$1", [eventId]);
+  else await database.query(`INSERT INTO public.album_covers (event_id,image) VALUES ($1,$2)
+    ON CONFLICT (event_id) DO UPDATE SET image=EXCLUDED.image`, [eventId, image]);
+  res.json({ image });
+});
 
 router.get("/events", async (_req, res) => {
   res.json((await database.query("SELECT * FROM public.events ORDER BY starts_at")).rows);

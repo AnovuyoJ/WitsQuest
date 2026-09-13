@@ -9,9 +9,10 @@ const WITS_GOLD = "#C9A24B";
 type ProfileMenuProps = {
   name: string;
   email: string;
+  avatar?: string | null;
 };
 
-export default function ProfileMenu({ name, email }: ProfileMenuProps) {
+export default function ProfileMenu({ name, email, avatar }: ProfileMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -36,7 +37,8 @@ export default function ProfileMenu({ name, email }: ProfileMenuProps) {
         className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105"
         style={{ background: `linear-gradient(155deg, ${WITS_BLUE} 0%, #0A1F3D 100%)` }}
       >
-        {initial}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        {avatar ? <img src={avatar} alt="" className="h-full w-full rounded-full object-cover" /> : initial}
       </button>
 
       {open && (

@@ -17,6 +17,7 @@ export default function CardsPage() {
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const [eventNames, setEventNames] = useState<Record<string, string>>({});
+  const [covers, setCovers] = useState<Record<string, string>>({});
   const [openCollection, setOpenCollection] = useState<string | null>(null);
   const [inspectedId, setInspectedId] = useState<string | null>(null);
   const [inspectTrigger, setInspectTrigger] = useState<HTMLElement | null>(null);
@@ -24,13 +25,15 @@ export default function CardsPage() {
   useEffect(() => {
     let active = true;
     async function loadCards() {
-      const [collection, events] = await Promise.all([
+      const [collection, events, albumCovers] = await Promise.all([
         apiRequest<PlayerCardRecord[]>("/me/cards"), apiRequest<EventRecord[]>("/events"),
+        apiRequest<{ event_id: string; image: string }[]>("/album-covers"),
       ]);
       if (!active) return;
       if (collection.error) setError(collection.error.message);
       else { setCards(collection.data ?? []); setError(""); }
       if (events.data) setEventNames(Object.fromEntries(events.data.map(event => [event.id, event.title])));
+      if (albumCovers.data) setCovers(Object.fromEntries(albumCovers.data.map(cover => [cover.event_id, cover.image])));
       setLoading(false);
     }
     void loadCards();
@@ -66,7 +69,7 @@ export default function CardsPage() {
       {!loading && !error && !grouped.length && <StatePanel title="Your album starts here" description="Visit a campus quest and answer a challenge to earn your first collectible card."><Link href="/dashboard/events" className="font-bold text-[#043673] underline">Find a quest</Link></StatePanel>}
       {!loading && !current && <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {eventGroups.map(event => <button key={event.id} type="button" onClick={() => setOpenCollection(event.id)} className={`${styles.cover} group text-left`} aria-label={`Open ${questName(event)} collection`}>
-          <div className="overflow-hidden"><CampusArtwork title={event.title} /></div>
+          <div className="overflow-hidden"><CampusArtwork title={event.title} image={covers[event.id]} /></div>
           <div className="p-5">
             <h2 className="break-words text-xl font-extrabold leading-7 tracking-tight">{questName(event)}</h2>
             <p className={`mt-2 text-xs  ${styles.muted}`}>{event.cards.length} unique {event.cards.length === 1 ? "card" : "cards"} collected</p>

@@ -4,9 +4,26 @@ import { requireAuth } from "../middleware/requireAuth";
 import { isAdministrator } from "../middleware/requireAdmin";
 import { id, HttpError } from "../services/validation";
 import { exchangeCards, exchangeOptions } from "../services/exchangeService";
+import { deleteAccount } from "../services/accountService";
+import { imageValue } from "../services/imageValidation";
 
 const router = Router();
 router.use(requireAuth);
+
+router.get("/me/profile", async (req, res) => {
+  const row = (await database.query("SELECT avatar FROM public.player_profiles WHERE user_id=$1", [req.user!.id])).rows[0];
+  res.json({ avatar: row?.avatar ?? null });
+});
+router.put("/me/profile", async (req, res) => {
+  const avatar = imageValue(req.body.avatar);
+  if (avatar === null) await database.query("DELETE FROM public.player_profiles WHERE user_id=$1", [req.user!.id]);
+  else await database.query(`INSERT INTO public.player_profiles (user_id,avatar) VALUES ($1,$2)
+    ON CONFLICT (user_id) DO UPDATE SET avatar=EXCLUDED.avatar`, [req.user!.id, avatar]);
+  res.json({ avatar });
+});
+router.get("/album-covers", async (_req, res) => {
+  res.json((await database.query("SELECT c.event_id,c.image FROM public.album_covers c JOIN public.live_events e ON e.id=c.event_id")).rows);
+});
 
 router.get("/me", (req, res) => {
   res.json({ id: req.user!.id, isAdmin: isAdministrator(req.user!.id) });
@@ -22,6 +39,12 @@ router.get("/events/active", async (_req, res) => {
   const { rows } = await database.query(`SELECT id, title, description, ends_at FROM public.live_events
     WHERE starts_at <= now() AND ends_at >= now() ORDER BY ends_at LIMIT 3`);
   res.json(rows);
+});
+
+router.delete("/me", async (req, res) => {
+  if (req.body.confirmation !== "DELETE") throw new HttpError(400, "Type DELETE to confirm account deletion.");
+  await deleteAccount(req.user!.id);
+  res.json({ success: true });
 });
 
 router.get("/events/quest-summaries", async (req, res) => {

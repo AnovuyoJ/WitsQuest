@@ -15,7 +15,8 @@ export function campusScene(title: string) {
   return scenes[hash % scenes.length];
 }
 
-export default function CampusArtwork({ title, className = "" }: { title: string; className?: string }) {
+export default function CampusArtwork({ title, className = "", image }: { title: string; className?: string; image?: string }) {
   const photo = campusScene(title);
-  return <span aria-hidden="true" className={`${styles.art} ${className}`} style={{ backgroundImage: `url("/wits%20pictures/${encodeURIComponent(photo)}")`, backgroundPosition: photo === "Wits university (1).jpg" ? "center 65%" : "center" }} />;
+  const source = image || `/wits%20pictures/${encodeURIComponent(photo)}`;
+  return <span aria-hidden="true" className={`${styles.art} ${className}`} style={{ backgroundImage: `url("${source}")`, backgroundPosition: !image && photo === "Wits university (1).jpg" ? "center 65%" : "center" }} />;
 }
