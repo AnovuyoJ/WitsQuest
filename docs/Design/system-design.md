@@ -230,6 +230,132 @@ The application supports three sign-in methods, implemented in `lib/authService.
 
 Protected application functionality checks whether a valid authenticated user exists before allowing access.
 
+### Authentication and authorisation flow
+
+The following sequence diagram shows the full authentication lifecycle: sign-up, sign-in (email/password and OAuth), password reset, token validation on protected API requests, administrator access checks, and sign-out.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor User
+    participant Browser as Browser (Next.js)
+    participant AuthSvc as lib/authService.ts
+    participant SupaClient as lib/supabaseClient.ts
+    participant SupaAuth as Supabase Auth
+    participant API as lib/api.ts
+    participant Express as Express API
+    participant RequireAuth as requireAuth
+    participant RequireAdmin as requireAdmin
+    participant DB as PostgreSQL
+
+    Note over User,DB: 1. Email / Password Sign Up
+    User->>Browser: Fill sign-up form
+    Browser->>AuthSvc: signUp(email, password, fullName)
+    AuthSvc->>SupaClient: supabase.auth.signUp()
+    SupaClient->>SupaAuth: POST /auth/v1/signup
+    SupaAuth->>SupaAuth: Create auth.users row<br/>hash password<br/>store user_metadata.full_name
+    SupaAuth-->>SupaClient: session + access_token (JWT)
+    SupaClient-->>AuthSvc: { data, error }
+    AuthSvc-->>Browser: Session stored in localStorage
+    Browser-->>User: Redirect to /dashboard
+
+    Note over User,DB: 2. Email / Password Sign In
+    User->>Browser: Fill sign-in form
+    Browser->>AuthSvc: signIn(email, password)
+    AuthSvc->>SupaClient: supabase.auth.signInWithPassword()
+    SupaClient->>SupaAuth: POST /auth/v1/token?grant_type=password
+    SupaAuth->>SupaAuth: Verify credentials
+    SupaAuth-->>SupaClient: session + access_token (JWT)
+    SupaClient-->>AuthSvc: { data, error }
+    AuthSvc-->>Browser: Session stored
+    Browser-->>User: Redirect to /dashboard
+
+    Note over User,DB: 3. OAuth Sign In (Google or GitHub)
+    User->>Browser: Click "Sign in with Google/GitHub"
+    Browser->>AuthSvc: signInWithGoogle() / signInWithGithub()
+    AuthSvc->>SupaClient: supabase.auth.signInWithOAuth({provider, redirectTo})
+    SupaClient->>SupaAuth: Get provider redirect URL
+    SupaAuth-->>Browser: Redirect to provider consent screen
+    User->>Browser: Approve consent on provider
+    Browser->>SupaAuth: Callback with authorization code
+    SupaAuth->>SupaAuth: Exchange code for session
+    SupaAuth-->>Browser: Redirect to window.location.origin with session
+    Browser-->>User: Signed in, redirected to /dashboard
+
+    Note over User,DB: 4. Password Reset
+    User->>Browser: Forgot password → enter email
+    Browser->>AuthSvc: sendPasswordReset(email)
+    AuthSvc->>SupaClient: supabase.auth.resetPasswordForEmail()
+    SupaClient->>SupaAuth: Send reset email
+    SupaAuth-->>User: Email with reset link
+    User->>Browser: Click reset link → /reset-password
+    Browser->>AuthSvc: updatePassword(newPassword)
+    AuthSvc->>SupaClient: supabase.auth.updateUser({password})
+    SupaClient->>SupaAuth: PUT /auth/v1/user
+    SupaAuth-->>SupaClient: Password updated
+    SupaClient-->>Browser: Confirmation
+    Browser-->>User: Redirect to sign in
+
+    Note over User,DB: 5. Authenticated Player API Request
+    User->>Browser: Interact with app (e.g., load events)
+    Browser->>SupaClient: supabase.auth.getSession()
+    SupaClient-->>Browser: access_token
+    Browser->>API: apiRequest(path, method, body)
+    API->>Express: fetch with Authorization: Bearer <token>
+    Express->>RequireAuth: Validate token
+    RequireAuth->>SupaAuth: supabaseAdmin.auth.getUser(token)
+    SupaAuth-->>RequireAuth: user { id, email } or error
+    alt Token invalid or expired
+        RequireAuth-->>API: 401 Unauthorized
+        API-->>Browser: Error returned
+        Browser->>SupaClient: Attempt token refresh
+        SupaClient->>SupaAuth: POST /auth/v1/token?grant_type=refresh_token
+        SupaAuth-->>SupaClient: New access_token
+        SupaClient-->>Browser: Retry request
+    else Token valid
+        RequireAuth->>RequireAuth: Attach req.user = { id, email }
+        RequireAuth->>Express: next()
+        Express->>DB: Parameterized SQL
+        DB-->>Express: Result
+        Express-->>API: JSON response
+        API-->>Browser: Data returned
+        Browser-->>User: Render updated UI
+    end
+
+    Note over User,DB: 6. Admin Access Check
+    User->>Browser: Navigate to admin page
+    Browser->>API: getAdminAccess()
+    API->>Express: GET /api/admin/access (with Bearer token)
+    Express->>RequireAuth: Validate token
+    RequireAuth->>RequireAdmin: Check isAdministrator(req.user.id)
+    RequireAdmin->>RequireAdmin: Split ADMIN_USER_IDS env var<br/>check membership
+    alt User is admin
+        RequireAdmin-->>Express: next()
+        Express-->>API: { isAdmin: true }
+        API-->>Browser: Access granted
+        Browser-->>User: Render admin page
+    else Not admin
+        RequireAdmin-->>API: 403 Forbidden
+        API-->>Browser: { isAdmin: false }
+        Browser-->>User: Redirect to /dashboard
+    end
+
+    Note over User,DB: 7. Sign Out
+    User->>Browser: Click Logout
+    Browser->>AuthSvc: signOut()
+    AuthSvc->>SupaClient: supabase.auth.signOut()
+    SupaClient->>SupaAuth: POST /auth/v1/logout
+    SupaAuth-->>SupaClient: Session cleared
+    SupaClient-->>Browser: Redirect to /login
+```
+
+**Design notes:**
+
+- **Admin access is environment-driven.** `requireAdmin` checks the `ADMIN_USER_IDS` environment variable (comma-separated `auth.users.id` UUIDs) rather than a database role table. An empty value denies all administrator access.
+- **Token validation is authoritative on the backend.** The frontend holds the session, but Express calls `supabaseAdmin.auth.getUser(token)` on every protected request, so a client cannot claim an identity it does not have.
+- **The admin access hook defers its re-check.** `useAdminAccess` schedules its refresh via `setTimeout(..., 0)` inside `onAuthStateChange`, avoiding a race with Supabase's internal auth lock during session refresh.
+- **CORS is restricted** to the origins listed in the backend's `FRONTEND_URL` environment variable.
+
 ---
 
 ## 7. Administrator Access
@@ -403,6 +529,269 @@ The profile menu displays information about the authenticated user and provides 
 ### Campus Map
 
 The `CampusMap` component displays game events geographically using React Leaflet. It retrieves event information and displays event markers on the campus map.
+
+## Component diagram
+
+The following diagram shows the frontend and backend components, and how they depend on each other. It complements the deployment view (which services run where) and the database schema (which tables exist) by showing the **module structure** of the codebase.
+
+```mermaid
+graph TB
+    subgraph FE["Frontend — Next.js App Router"]
+        subgraph PAGES_PLAYER["Player pages"]
+            P_DASH["dashboard/page.tsx"]
+            P_EVENTS["dashboard/events/page.tsx"]
+            P_MAP["dashboard/map/page.tsx"]
+            P_CARDS["dashboard/cards/page.tsx"]
+            P_GAMES["dashboard/games/page.tsx"]
+            P_GAME["dashboard/games/[gameId]/page.tsx"]
+            P_TRAILS["dashboard/trails/page.tsx"]
+            P_NOTIF["dashboard/notifications/page.tsx"]
+            P_SETTINGS["dashboard/settings/page.tsx"]
+            P_RULEBOOK["dashboard/settings/rulebook/page.tsx"]
+            P_TRIVIA["dashboard/triviaquestions/page.tsx"]
+        end
+
+        subgraph PAGES_ADMIN["Admin pages"]
+            A_HOME["dashboard/admin/page.tsx"]
+            A_EVENTS["dashboard/admin/events/page.tsx"]
+            A_CHAL["dashboard/admin/challenges/page.tsx"]
+            A_CARDS["dashboard/admin/cards/page.tsx"]
+            A_CAMP["dashboard/admin/campaigns/page.tsx"]
+            A_TRAILS["dashboard/admin/trails/page.tsx"]
+            A_STATS["dashboard/admin/stats/page.tsx"]
+        end
+
+        subgraph LAYOUT["Layout & navigation"]
+            L_DASH["dashboard/layout.tsx"]
+            C_SIDEBAR["Sidebar"]
+            C_ASIDEBAR["AdminSidebar"]
+            C_PMENU["ProfileMenu / Container"]
+            C_LOGOUT["LogoutButton"]
+        end
+
+        subgraph COMP_PLAYER["Player components"]
+            C_MAP["CampusMap"]
+            C_EVLOC["EventLocationCheck"]
+            C_QR["EventQrCode"]
+            C_CHAL["ChallengeCard"]
+            C_QUESTP["QuestProgress"]
+            C_QUESTS["QuestStages"]
+            C_TRIVIA["TriviaDeck"]
+            C_REWARD["RewardReveal"]
+            C_WITS["WitsScreen"]
+        end
+
+        subgraph COMP_BATTLE["Battle & cards"]
+            C_BCARD["BattleCard"]
+            C_BREVEAL["BattleReveal"]
+            C_DUP["DuplicateExchange"]
+            C_LEGACY["LegacyGameRoom"]
+            C_COLL["CollectibleCard"]
+            C_EMB["CardEmblem"]
+            C_INSP["CardInspector"]
+            C_ART["CampusArtwork"]
+        end
+
+        subgraph COMP_ADMIN["Admin components"]
+            C_CREV["ContentReview"]
+            C_PHOTO["PhotoEditor"]
+            C_ALBUM["AlbumCoverEditor"]
+        end
+
+        subgraph COMP_OFFLINE["Offline support"]
+            C_OFF["OfflineSyncProvider"]
+        end
+
+        subgraph AUTH["Auth components"]
+            F_SIGNIN["SignInForm"]
+            F_SIGNUP["SignUpForm"]
+        end
+
+        subgraph LIB["lib services"]
+            L_API["api.ts"]
+            L_AUTH["authService.ts"]
+            L_SUPA["supabaseClient.ts"]
+            L_ADMIN["useAdminAccess.ts"]
+            L_OFFSYNC["offlineSync.ts"]
+            L_OFFDB["offlineDb.ts"]
+            L_USEOFF["useOfflineSync.ts"]
+            L_LOCVER["useLocationVerification.ts"]
+            L_CHAL["useChallenge.ts"]
+            L_EVENT["eventsService.ts"]
+            L_GEO["geo.ts"]
+            L_DIST["distance.ts"]
+            L_TRAIL["trails.ts"]
+            L_TRIVIA["trivia.ts"]
+            L_BATTLE["battle.ts"]
+            L_PHOTO["photo.ts"]
+            L_ADMCHAL["adminChallenges.ts"]
+        end
+    end
+
+    subgraph BE["Backend — Express"]
+        subgraph ROUTES["Routes"]
+            R_ADMIN["routes/admin.ts"]
+            R_CATALOG["routes/catalog.ts"]
+            R_GAMES["routes/games.ts"]
+            R_TRAILS["routes/trails.ts"]
+            R_VERIFY["routes/events/verifyLocation.ts"]
+            R_ANSWER["routes/events/submitAnswer.ts"]
+        end
+        subgraph MW["Middleware"]
+            M_AUTH["requireAuth.ts"]
+            M_ADMIN["requireAdmin.ts"]
+        end
+        subgraph SVC["Services"]
+            S_DB["database.ts"]
+            S_AUTHCLIENT["authClient.ts"]
+            S_LOC["locationService.ts"]
+            S_LAND["landmarkService.ts"]
+            S_CHAL["challengeService.ts"]
+            S_GAME["gameService.ts"]
+            S_BATTLE["battleService.ts"]
+            S_EXCH["exchangeService.ts"]
+            S_STAKE["stakeService.ts"]
+            S_NOTIF["notifications.ts"]
+            S_VAL["validation.ts"]
+            S_IMG["imageValidation.ts"]
+            S_ACCT["accountService.ts"]
+        end
+    end
+
+    subgraph DATA["Supabase PostgreSQL"]
+        DB["15 tables + 2 views"]
+        V_LIVE["live_events / live_challenges"]
+    end
+
+    subgraph EXT["External APIs"]
+        OSMP["OpenStreetMap Overpass API"]
+        TILES["OpenStreetMap Tiles"]
+        AUTH_SUP["Supabase Auth"]
+    end
+
+    L_DASH --> C_SIDEBAR
+    L_DASH --> C_PMENU
+    C_PMENU --> C_LOGOUT
+    C_ASIDEBAR --> A_HOME
+
+    P_DASH --> C_SIDEBAR
+    P_EVENTS --> C_MAP
+    P_EVENTS --> C_EVLOC
+    P_EVENTS --> C_CHAL
+    P_MAP --> C_MAP
+    P_GAMES --> C_BCARD
+    P_GAMES --> C_DUP
+    P_GAME --> C_BREVEAL
+    P_GAME --> C_LEGACY
+    P_CARDS --> C_COLL
+    P_TRAILS --> C_QUESTP
+    P_TRAILS --> C_QUESTS
+    P_TRIVIA --> C_TRIVIA
+    P_DASH --> C_WITS
+    C_EVLOC --> C_QR
+    C_CHAL --> C_REWARD
+
+    A_EVENTS --> C_CREV
+    A_EVENTS --> C_QR
+    A_CHAL --> C_CREV
+    A_CARDS --> C_CREV
+    A_TRAILS --> C_CREV
+    A_HOME --> C_ASIDEBAR
+
+    C_COLL --> C_EMB
+    C_COLL --> C_INSP
+    C_ART --> C_COLL
+
+    C_PHOTO --> L_PHOTO
+    C_ALBUM --> L_PHOTO
+
+    C_OFF --> L_USEOFF
+    L_USEOFF --> L_OFFSYNC
+    L_OFFSYNC --> L_OFFDB
+
+    F_SIGNIN --> L_AUTH
+    F_SIGNUP --> L_AUTH
+    L_AUTH --> L_SUPA
+    L_ADMIN --> L_SUPA
+
+    P_EVENTS --> L_EVENT
+    P_MAP --> L_GEO
+    P_MAP --> L_DIST
+    P_TRAILS --> L_TRAIL
+    P_TRIVIA --> L_TRIVIA
+    P_GAMES --> L_BATTLE
+    A_CHAL --> L_ADMCHAL
+
+    L_LOCVER --> L_API
+    L_CHAL --> L_API
+    L_ADMIN --> L_API
+    L_USEOFF --> L_API
+
+    C_MAP --> L_API
+    C_EVLOC --> L_LOCVER
+    C_CHAL --> L_CHAL
+    C_DUP --> L_API
+    C_CREV --> L_API
+    C_QR --> L_API
+    C_BCARD --> L_API
+    C_BREVEAL --> L_API
+
+    L_API --> R_ADMIN
+    L_API --> R_CATALOG
+    L_API --> R_GAMES
+    L_API --> R_TRAILS
+    L_API --> R_VERIFY
+    L_API --> R_ANSWER
+    L_SUPA --> AUTH_SUP
+
+    R_ADMIN --> M_AUTH
+    R_ADMIN --> M_ADMIN
+    R_CATALOG --> M_AUTH
+    R_GAMES --> M_AUTH
+    R_TRAILS --> M_AUTH
+    R_VERIFY --> M_AUTH
+    R_ANSWER --> M_AUTH
+
+    M_AUTH --> S_AUTHCLIENT
+
+    R_ADMIN --> S_DB
+    R_ADMIN --> S_VAL
+    R_ADMIN --> S_IMG
+    R_ADMIN --> S_LAND
+    R_CATALOG --> S_DB
+    R_GAMES --> S_GAME
+    R_GAMES --> S_BATTLE
+    R_GAMES --> S_STAKE
+    R_TRAILS --> S_DB
+    R_VERIFY --> S_LOC
+    R_VERIFY --> S_DB
+    R_ANSWER --> S_CHAL
+    R_ANSWER --> S_DB
+
+    S_CHAL --> S_DB
+    S_GAME --> S_BATTLE
+    S_BATTLE --> S_DB
+    S_EXCH --> S_DB
+    S_STAKE --> S_DB
+    S_NOTIF --> S_DB
+    S_ACCT --> S_DB
+    S_LOC --> S_DB
+    S_LAND --> OSMP
+
+    S_DB --> DB
+    S_DB --> V_LIVE
+
+    C_MAP --> TILES
+```
+
+**Notes:**
+
+- **Layered by concern.** Frontend split into pages, components, and `lib/` services; backend split into routes, middleware, and services.
+- **Player and admin flows share `lib/api.ts`** and both go through `requireAuth` on the backend.
+- **Offline support is isolated in its own module** (`OfflineSyncProvider` → `useOfflineSync` → `offlineSync` → `offlineDb`). It replays queued attempts through the same `api.ts` path when reconnected.
+- **Landmark lookup is admin-only.** The Overpass API is called by `landmarkService.ts` during event save (POST/PUT), not from the browser.
+- **`live_events` and `live_challenges`** are the read-only views for player-facing queries; admin routes read draft columns directly.
+- **All database access flows through `services/database.ts`**, which owns the `pg` connection pool.
 
 ---
 
