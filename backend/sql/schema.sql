@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS public.events (
   latitude double precision NOT NULL CHECK (latitude BETWEEN -90 AND 90),
   longitude double precision NOT NULL CHECK (longitude BETWEEN -180 AND 180),
   radius_meters integer NOT NULL CHECK (radius_meters > 0),
+  access_code text,
   starts_at timestamptz NOT NULL, ends_at timestamptz NOT NULL,
   campaign_id uuid REFERENCES public.campaigns(id),
   retired_at timestamptz,

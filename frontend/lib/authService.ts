@@ -6,14 +6,14 @@ export async function signUp(
   fullName: string,
 ) {
   return supabase.auth.signUp({
-    email,
+    email: email.trim(),
     password,
     options: { data: { full_name: fullName } },
   });
 }
 
 export async function signIn(email: string, password: string) {
-  return supabase.auth.signInWithPassword({ email, password });
+  return supabase.auth.signInWithPassword({ email: email.trim(), password });
 }
 
 // Fires off Google OAuth
@@ -40,7 +40,7 @@ export async function signInWithGithub() {
 
 // Sends a link to the user's email so they can reset a lost password
 export async function sendPasswordReset(email: string) {
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email.trim(), {
     redirectTo: `${window.location.origin}/reset-password`,
   });
   return { data, error };

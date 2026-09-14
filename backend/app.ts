@@ -16,7 +16,10 @@ const frontendOrigins = (process.env.FRONTEND_URL || "http://localhost:3000")
   .map(origin => origin.trim().replace(/\/+$/, ""))
   .filter(Boolean);
 app.use(cors({ origin: frontendOrigins }));
-app.use(express.json({ limit: "32kb" }));
+app.use((req, res, next) => {
+  const imageRoute = req.path === "/api/me/profile" || /^\/api\/admin\/events\/[^/]+\/album-cover$/.test(req.path);
+  express.json({ limit: imageRoute ? "192kb" : "32kb" })(req, res, next);
+});
 app.use((req, _res, next) => { req.body ??= {}; next(); });
 app.use("/api/admin", adminRouter);
 app.use("/api/admin/trails", adminTrailsRouter);

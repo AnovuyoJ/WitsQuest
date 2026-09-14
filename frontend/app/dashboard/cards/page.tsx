@@ -17,6 +17,7 @@ export default function CardsPage() {
   const [error, setError] = useState("");
   const [revision, setRevision] = useState(0);
   const [eventNames, setEventNames] = useState<Record<string, string>>({});
+  const [covers, setCovers] = useState<Record<string, string>>({});
   const [openCollection, setOpenCollection] = useState<string | null>(null);
   const [inspectedId, setInspectedId] = useState<string | null>(null);
   const [inspectTrigger, setInspectTrigger] = useState<HTMLElement | null>(null);
@@ -24,13 +25,15 @@ export default function CardsPage() {
   useEffect(() => {
     let active = true;
     async function loadCards() {
-      const [collection, events] = await Promise.all([
+      const [collection, events, albumCovers] = await Promise.all([
         apiRequest<PlayerCardRecord[]>("/me/cards"), apiRequest<EventRecord[]>("/events"),
+        apiRequest<{ event_id: string; image: string }[]>("/album-covers"),
       ]);
       if (!active) return;
       if (collection.error) setError(collection.error.message);
       else { setCards(collection.data ?? []); setError(""); }
       if (events.data) setEventNames(Object.fromEntries(events.data.map(event => [event.id, event.title])));
+      if (albumCovers.data) setCovers(Object.fromEntries(albumCovers.data.map(cover => [cover.event_id, cover.image])));
       setLoading(false);
     }
     void loadCards();
@@ -57,16 +60,16 @@ export default function CardsPage() {
   return <div className={`${styles.album} px-5 pb-7 pt-20 sm:px-8 md:pt-7 lg:px-10`}>
     <div className="mx-auto max-w-6xl">
       <header className="mb-8 flex flex-wrap items-start justify-between gap-5">
-        <div><p className={`text-xs font-bold uppercase tracking-[0.22em]  ${styles.muted}`}>Your campus, collected</p><h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">My cards</h1><p className={`mt-3 max-w-lg text-sm leading-6  ${styles.muted}`}>Every quest has a story. Open a collection and take a closer look at your discoveries.</p></div>
+        <div><p className="text-xs font-bold uppercase tracking-[0.22em] text-[#C9A24B]">Your campus, collected</p><h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">My cards</h1><p className={`mt-3 max-w-lg text-sm leading-6  ${styles.muted}`}>Every quest has a story. Open a collection and take a closer look at your discoveries.</p></div>
         <Link href="/dashboard/settings/rulebook" className="rounded-full border border-current/30 px-4 py-2 text-sm font-semibold hover:bg-current/5 focus-visible:outline-2 focus-visible:outline-offset-4">Rulebook</Link>
       </header>
-      {!loading && <div className="mb-8 flex flex-wrap gap-x-8 gap-y-3 border-y border-current/15 py-4 text-sm"><p><strong className="mr-2 text-xl">{eventGroups.length}</strong>Quest collections</p><p><strong className="mr-2 text-xl">{grouped.length}</strong>Unique cards</p><p><strong className="mr-2 text-xl">{cards.length - grouped.length}</strong>Extra copies</p></div>}
+      {!loading && <div className="mb-8 flex flex-wrap gap-x-8 gap-y-3 border-y border-[#C9A24B]/25 py-4 text-sm text-[#C9A24B]"><p><strong className="mr-2 text-xl">{eventGroups.length}</strong>Quest collections</p><p><strong className="mr-2 text-xl">{grouped.length}</strong>Unique cards</p><p><strong className="mr-2 text-xl">{cards.length - grouped.length}</strong>Extra copies</p></div>}
       {loading && <ScreenSkeleton cards={3} />}
       {error && <div role="alert" className="mb-6 rounded-xl border border-red-300 bg-red-50 p-4 text-sm text-red-800">{error}<button onClick={() => setRevision(value => value + 1)} className="ml-4 font-bold underline">Retry</button></div>}
       {!loading && !error && !grouped.length && <StatePanel title="Your album starts here" description="Visit a campus quest and answer a challenge to earn your first collectible card."><Link href="/dashboard/events" className="font-bold text-[#043673] underline">Find a quest</Link></StatePanel>}
       {!loading && !current && <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-3">
         {eventGroups.map(event => <button key={event.id} type="button" onClick={() => setOpenCollection(event.id)} className={`${styles.cover} group text-left`} aria-label={`Open ${questName(event)} collection`}>
-          <div className="overflow-hidden"><CampusArtwork title={event.title} /></div>
+          <div className="overflow-hidden"><CampusArtwork title={event.title} image={covers[event.id]} /></div>
           <div className="p-5">
             <h2 className="break-words text-xl font-extrabold leading-7 tracking-tight">{questName(event)}</h2>
             <p className={`mt-2 text-xs  ${styles.muted}`}>{event.cards.length} unique {event.cards.length === 1 ? "card" : "cards"} collected</p>

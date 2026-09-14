@@ -24,6 +24,11 @@ This site contains the technical and process documentation for the Wits Quest So
 
 ## Quick Links
 
+- [Testing: policy, automated procedures and user feedback](Testing/index.md)
+
 - [Dev Plan](Planning/dev-plan.md)
 - [System Design](Design/system-design.md)
 - [Decisions](Planning/decisions.md)
+
+- [Database schema and design rationale](Design/database-schema.md)
+- [Deployment and database setup](Design/deployment.md)

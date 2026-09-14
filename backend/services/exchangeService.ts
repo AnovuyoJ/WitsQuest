@@ -22,6 +22,9 @@ export async function exchangeCards(playerId: string, sourceId: string, targetId
     // Same player lock as challenge awards: concurrent exchanges cannot spend copies twice
     // or grant a target which a simultaneous challenge award has already given the player.
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [playerId]);
+    const stake = await client.query(`SELECT s.game_id FROM public.battle_stakes s JOIN public.card_games g ON g.id=s.game_id
+      JOIN public.player_cards pc ON pc.id=s.copy_id WHERE pc.player_id=$1 AND pc.card_id=$2 AND g.status IN ('waiting','active')`, [playerId,sourceId]);
+    if (stake.rows.length) throw new HttpError(409,"This card is staked in a duel. Finish or cancel that duel before exchanging it.");
     const source = (await client.query("SELECT * FROM public.cards WHERE id=$1 FOR SHARE", [sourceId])).rows[0];
     if (!source) throw new HttpError(404, "Owned card not found.");
     const copies = (await client.query(`SELECT id FROM public.player_cards WHERE player_id=$1 AND card_id=$2

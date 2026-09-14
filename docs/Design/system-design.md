@@ -4,13 +4,13 @@
 
 ### Ordered trail architecture
 
-The admin trail builder sends ordered event UUIDs to handwritten Express routes in `backend/routes/trails.ts`. `requireAuth` and `requireAdmin` protect authoring; parameterized PostgreSQL queries validate 2–20 distinct existing stops. The `public.trails` table stores draft content, review revisions, and a published snapshot. Run `backend/sql/trails.sql` after the base schema and content-publication migration before deploying this feature. RLS is enabled and direct client table access is revoked; Express uses the existing privileged database connection.
+The admin trail builder sends ordered event UUIDs to handwritten Express routes in `backend/routes/trails.ts`. `requireAuth` and `requireAdmin` protect authoring; parameterized PostgreSQL queries validate 2–20 distinct existing stops. The `public.trails` table stores draft content, review revisions, and a published snapshot. The trail migration follows the baseline and content-publication migrations, as described in [deployment order](deployment.md#database-installation-and-migration-order). RLS is enabled and direct client table access is revoked; Express uses the existing privileged database connection.
 
 The player Trails page calls `GET /api/trails`. Express expands the published event ID array with ordinality, joins `live_events` and `live_challenges`, and calculates progress from the authenticated player's challenge attempts. The first incomplete stop becomes the next destination. Completing all published questions at a stop counts as completion, even with an incorrect answer; card rewards still follow normal answer rules. Stops without questions are not complete.
 
 Trails provide guidance without enforcing sequential access. Author order takes precedence over distance sorting. Inactive stops remain visible; deleted events become unavailable placeholders. Event IDs are stored as an ordered array without cascading event foreign keys so deletion cannot silently remove or reorder published stops. Draft edits do not affect the player route until reviewed and published. Events themselves retain their independent publication lifecycle. See [the trail API contract](../handwritten-api.md#ordered-trails) for bodies, responses and errors.
 
-**API migration:** Application data now goes through handwritten Express routes and direct PostgreSQL SQL. Supabase is retained for Auth and database hosting only. See [the current API contract and deployment guide](../handwritten-api.md). The RLS policies and database tables described below record the earlier deployment; the checked-in SQL and new API guide document the migration requirements.
+**API migration:** Application data now goes through handwritten Express routes and direct PostgreSQL SQL. Supabase is retained for Auth and database hosting only. See the [API contract](../handwritten-api.md), [current database schema](database-schema.md) and [deployment reference](deployment.md).
 
 Wits Quest is a location-based campus game designed for students at the University of the Witwatersrand. Players move around campus, discover active events, verify that they are physically within an event area, and complete challenges to earn collectible cards.
 
@@ -84,7 +84,7 @@ Events and challenges have a saved draft and a separate published JSON snapshot 
 
 Player event lists, active-event lists, location verification, question loading and answer grading use the backend-only `live_events` and `live_challenges` views of published snapshots. New drafts are hidden. Draft edits preserve the live version until republished. The admin dashboard reads publication status from Express instead of browser local storage. Authors may review their own work; an independent reviewer is not required. Reward-card edits and content deletion remain immediate admin operations.
 
-Deploy `backend/sql/content-publication.sql` before the backend update. The migration preserves existing live content on first application and does not publish new drafts on reruns. See the [draft/review API contract](../handwritten-api.md#draft-review-and-publication-workflow) for endpoint details.
+The content-publication migration precedes the corresponding backend update. The migration preserves existing live content on first application and does not publish new drafts on reruns. See the [draft/review API contract](../handwritten-api.md#draft-review-and-publication-workflow) for endpoint details.
 
 ### External API integration: campus landmark validation
 
@@ -368,207 +368,13 @@ Cards provide a reward and progression mechanism for players participating in Wi
 
 ## 12. Database Design
 
-The application uses a **Supabase PostgreSQL database** consisting of eight tables covering events, challenges, cards, location verification, and the battle system.
+The current checked-in schema defines 15 application tables and two published-content views in Supabase-hosted PostgreSQL. Supabase manages the separate Auth identity tables.
 
-### Events
+The [full database reference](database-schema.md) lists every application column, type, default, constraint and relationship, including trails, notifications, deck snapshots, duel stakes, profile images and album covers. It includes the ER diagram, indexes, deletion behaviour and reasons for the design choices.
 
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `title` | `text` | |
-| `description` | `text` | Nullable |
-| `latitude` | `float8` | |
-| `longitude` | `float8` | |
-| `radius_meters` | `int4` | |
-| `starts_at` | `timestamptz` | |
-| `ends_at` | `timestamptz` | |
-| `created_at` | `timestamptz` | Nullable |
+Application data is accessed through authenticated Express routes and parameterized SQL. The backend verifies administrator UUIDs and player ownership; direct browser table access is restricted by the SQL access-control migrations. Draft content and live snapshots are separate, and critical ownership operations use transactions.
 
-### Challenges
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `event_id` | `uuid` | |
-| `question_text` | `text` | |
-| `question_type` | `text` | |
-| `options` | `jsonb` | Nullable |
-| `correct_answer` | `text` | |
-| `card_id` | `uuid` | Nullable |
-| `created_at` | `timestamptz` | Nullable |
-
-### Location Verifications
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `player_id` | `uuid` | Nullable |
-| `event_id` | `uuid` | Nullable |
-| `distance_meters` | `float8` | Nullable |
-| `verified_at` | `timestamptz` | Nullable |
-
-### Cards
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `title` | `text` | |
-| `rarity` | `text` | |
-| `description` | `text` | Nullable |
-| `accent` | `text` | Nullable |
-| `badge` | `text` | Nullable |
-| `strength` | `text` | Nullable |
-| `points` | `int4` | |
-| `tag` | `text` | Nullable |
-| `created_at` | `timestamptz` | Nullable |
-| `event_id` | `uuid` | Nullable |
-
-### Player Cards
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `player_id` | `uuid` | |
-| `event_id` | `uuid` | |
-| `card_id` | `uuid` | |
-| `awarded_at` | `timestamptz` | Nullable |
-
-### Challenge Attempts
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `player_id` | `uuid` | |
-| `event_id` | `uuid` | |
-| `correct` | `bool` | |
-| `answered_at` | `timestamptz` | Nullable |
-
-### Card Games
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `player_one_id` | `uuid` | |
-| `player_two_id` | `uuid` | Nullable |
-| `category` | `text` | |
-| `status` | `text` | |
-| `winner_id` | `uuid` | Nullable |
-| `created_at` | `timestamptz` | Nullable |
-| `started_at` | `timestamptz` | Nullable |
-| `finished_at` | `timestamptz` | Nullable |
-
-### Game Rounds
-
-| Name | Type | Constraints |
-|------|------|-------------|
-| `id` | `uuid` | Primary |
-| `game_id` | `uuid` | |
-| `round_number` | `int4` | |
-| `player_one_card_id` | `uuid` | Nullable |
-| `player_two_card_id` | `uuid` | Nullable |
-| `player_one_points` | `int4` | Nullable |
-| `player_two_points` | `int4` | Nullable |
-| `winner_id` | `uuid` | Nullable |
-| `status` | `text` | |
-| `created_at` | `timestamptz` | Nullable |
-| `finished_at` | `timestamptz` | Nullable |
-
-### Database Relationships
-
-```mermaid
-erDiagram
-    EVENTS ||--o{ CHALLENGES : "has"
-    EVENTS ||--o{ LOCATION_VERIFICATIONS : "verified against"
-    EVENTS ||--o{ PLAYER_CARDS : "awards from"
-    EVENTS ||--o{ CHALLENGE_ATTEMPTS : "attempted at"
-    EVENTS ||--o{ CARDS : "themed to"
-    CHALLENGES }o--|| CARDS : "rewards"
-    PLAYER_CARDS }o--|| CARDS : "instance of"
-    CARD_GAMES ||--o{ GAME_ROUNDS : "contains"
-    CARDS ||--o{ GAME_ROUNDS : "played in"
-
-    EVENTS {
-        uuid id
-        text title
-        text description
-        float8 latitude
-        float8 longitude
-        int4 radius_meters
-        timestamptz starts_at
-        timestamptz ends_at
-    }
-    CHALLENGES {
-        uuid id
-        uuid event_id
-        text question_text
-        text question_type
-        jsonb options
-        text correct_answer
-        uuid card_id
-    }
-    LOCATION_VERIFICATIONS {
-        uuid id
-        uuid player_id
-        uuid event_id
-        float8 distance_meters
-    }
-    CARDS {
-        uuid id
-        text title
-        text rarity
-        int4 points
-        uuid event_id
-    }
-    PLAYER_CARDS {
-        uuid id
-        uuid player_id
-        uuid event_id
-        uuid card_id
-    }
-    CHALLENGE_ATTEMPTS {
-        uuid id
-        uuid player_id
-        uuid event_id
-        bool correct
-    }
-    CARD_GAMES {
-        uuid id
-        uuid player_one_id
-        uuid player_two_id
-        text category
-        text status
-        uuid winner_id
-    }
-    GAME_ROUNDS {
-        uuid id
-        uuid game_id
-        int4 round_number
-        uuid winner_id
-        text status
-    }
-```
-
-An event can contain multiple challenges and multiple cards. Location verifications, challenge attempts, and player cards each connect a player to an event, recording the outcome of that interaction. Card games consist of multiple game rounds, each of which references the cards played by both participants.
-
-### Row-Level Security (RLS)
-
-All tables enforce Row-Level Security policies to ensure players can only access or modify data they are authorised to.
-
-**Events and Challenges** — viewable by any authenticated user. Insert, update, and delete operations are restricted to administrator accounts, identified by GitHub username in the user's JWT metadata.
-
-**Cards** — viewable by any authenticated user; create, update, and delete operations are currently permitted for any authenticated user.
-
-**Player Cards** — players may only view and insert their own awarded cards (`player_id = auth.uid()`).
-
-**Location Verifications** — players may only insert their own location verification records.
-
-**Challenge Attempts** — players may only insert and view their own challenge attempts.
-
-**Card Games** — players may create their own games, view games they are part of (or open games waiting for a second player), and join a waiting game as the second player. Both participants may update a game they are part of.
-
-**Game Rounds** — players may view, insert, and update rounds belonging only to card games they are participating in.
-
-This ensures that gameplay data, scores, and card ownership cannot be read or modified by unauthorised players, while event and challenge content remains editable only by administrators.
+[Deployment and database setup](deployment.md) documents the hosting layout, environment configuration, migration order and compatibility considerations for existing databases.
 
 ---
 

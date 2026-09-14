@@ -6,7 +6,8 @@ export type BattleRound = {
   player_one_card: CardRecord | null; player_two_card: CardRecord | null;
 };
 export type BattleState = {
-  game: { id: string; status: string; is_cpu: boolean; winner_side: number | null };
+  game: { id: string; status: string; is_cpu: boolean; winner_side: number | null; stakes_enabled?: boolean };
+  stakes?: { side: number; snapshot: CardRecord; accepted: boolean; settled: boolean }[];
   side: number; rounds: BattleRound[]; deck: (CardRecord & { used: boolean })[];
   scores: { one: number; two: number };
 };

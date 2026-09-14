@@ -22,6 +22,7 @@ export default function SignInForm() {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   const [errors, setErrors] = useState<FormErrors>({});
   const [serverError, setServerError] = useState<string | null>(null);
@@ -53,7 +54,7 @@ export default function SignInForm() {
     setResetSuccess(null);
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!email || !emailPattern.test(email)) {
+    if (!email.trim() || !emailPattern.test(email.trim())) {
       setErrors({ email: "Please enter your email above so we know where to send the reset link." });
       return;
     }
@@ -63,9 +64,9 @@ export default function SignInForm() {
     setIsSubmitting(false);
 
     if (error) {
-      setServerError("Couldn't send the password reset email. Please double-check your address.");
+      setServerError(error.message);
     } else {
-      setResetSuccess("Password reset link sent! Check your inbox to pick a new password.");
+      setResetSuccess("If an account exists for this email, check your inbox for a password reset link.");
     }
   }
 
@@ -73,7 +74,7 @@ export default function SignInForm() {
     const nextErrors: FormErrors = {};
 
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailPattern.test(email)) {
+    if (!emailPattern.test(email.trim())) {
       nextErrors.email = "Enter a valid email address.";
     }
 
@@ -98,7 +99,9 @@ export default function SignInForm() {
 
     if (error) {
       if (error.message.toLowerCase().includes("invalid login credentials")) {
-        setServerError("Incorrect email or password.");
+        setServerError("Incorrect email or password. If you joined with Google, use Google to sign in or set a Wits Quest password using Forgot password.");
+      } else if (error.code === "email_not_confirmed") {
+        setServerError("Confirm your email using the sign-up email before signing in.");
       } else {
         setServerError(error.message);
       }
@@ -132,7 +135,7 @@ export default function SignInForm() {
 
         {/* Server error feedback banner */}
         {serverError && (
-          <div className="mb-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div role="alert" className="mb-5 rounded-xl bg-red-50 px-4 py-3 text-sm text-red-700">
             {serverError}
           </div>
         )}
@@ -184,6 +187,7 @@ export default function SignInForm() {
           <button
             type="button"
             onClick={handleForgotPassword}
+            disabled={isSubmitting}
             className="text-[12px] font-medium hover:underline"
             style={{ color: WITS_BLUE }}
           >
@@ -192,14 +196,20 @@ export default function SignInForm() {
         </div>
 
         <div className="mb-6">
+          <div className="relative">
           <input
             id="password"
-            type="password"
+            type={showPassword ? "text" : "password"}
+            autoComplete="current-password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0A1F3D] outline-none transition-colors focus:border-[#043673] focus:ring-4 focus:ring-[#043673]/10"
+            className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-4 pr-14 text-sm text-[#0A1F3D] outline-none transition-colors focus:border-[#043673] focus:ring-4 focus:ring-[#043673]/10"
           />
+          <button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Hide password" : "Show password"} aria-controls="password" className="absolute inset-y-1 right-1 flex w-11 items-center justify-center rounded-lg bg-white text-[#043673] hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-[-2px]">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />{showPassword && <path d="m3 3 18 18" />}</svg>
+          </button>
+          </div>
           {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
         </div>
 
