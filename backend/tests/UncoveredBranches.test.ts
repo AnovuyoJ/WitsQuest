@@ -28,7 +28,6 @@ import verifyLocationRouter from "../routes/events/verifyLocation";
 import gamesRouter from "../routes/games";
 import { exchangeCards } from "../services/exchangeService";
 
-
 const mockCheckMovementPlausibility = checkMovementPlausibility as jest.MockedFunction<typeof checkMovementPlausibility>;
 
 const db = database as any;

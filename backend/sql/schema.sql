@@ -2,6 +2,12 @@
 -- After this file, run content-publication.sql, trails.sql and card-battles.sql before starting the application.
 -- Supabase supplies auth.users; this file does not manage authentication tables.
 BEGIN;
+CREATE TABLE IF NOT EXISTS public.campaigns (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(), name text NOT NULL,
+  starts_at timestamptz NOT NULL, ends_at timestamptz NOT NULL,
+  created_at timestamptz DEFAULT now(), CHECK (ends_at > starts_at)
+);
+ALTER TABLE public.campaigns ENABLE ROW LEVEL SECURITY; 
 CREATE TABLE IF NOT EXISTS public.events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), title text NOT NULL, description text,
   latitude double precision NOT NULL CHECK (latitude BETWEEN -90 AND 90),
@@ -9,6 +15,8 @@ CREATE TABLE IF NOT EXISTS public.events (
   radius_meters integer NOT NULL CHECK (radius_meters > 0),
   access_code text,
   starts_at timestamptz NOT NULL, ends_at timestamptz NOT NULL,
+  campaign_id uuid REFERENCES public.campaigns(id),
+  retired_at timestamptz,
   created_at timestamptz DEFAULT now(), CHECK (ends_at > starts_at)
 );
 CREATE TABLE IF NOT EXISTS public.cards (

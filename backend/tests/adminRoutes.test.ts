@@ -143,8 +143,69 @@ test("GET /events returns rows ordered by starts_at", async () => {
 
   expect(res.json).toHaveBeenCalledWith([draft]);
   expect(query).toHaveBeenCalledWith(
-    "SELECT * FROM public.events ORDER BY starts_at",
+    "SELECT * FROM public.events WHERE ($1::uuid IS NULL OR campaign_id = $1) ORDER BY starts_at",
+    [null]
   );
+});
+
+// POST /events/:id/retire
+test("POST /events/:id/retire hides an active event from players", async () => {
+  const retired = { ...draft, retired_at: "2026-09-12T10:00:00.000Z" };
+  query.mockResolvedValueOnce({ rows: [retired] });
+
+  const { res } = await callRoute(
+    "POST",
+    "/events/:id/retire",
+    makeReq({ params: { id: EVENT_ID } }),
+  );
+
+  expect(res.json).toHaveBeenCalledWith(retired);
+  expect(query).toHaveBeenCalledWith(
+    expect.stringContaining("SET retired_at = now()"),
+    [EVENT_ID],
+  );
+});
+
+test("POST /events/:id/retire rejects when the event is missing or already retired (404)", async () => {
+  query.mockResolvedValueOnce({ rows: [] });
+
+  const { error } = await callRoute(
+    "POST",
+    "/events/:id/retire",
+    makeReq({ params: { id: EVENT_ID } }),
+  );
+
+  expect(error).toMatchObject({ status: 404 });
+});
+
+// POST /events/:id/unretire
+test("POST /events/:id/unretire makes a retired event visible again", async () => {
+  const unretired = { ...draft, retired_at: null };
+  query.mockResolvedValueOnce({ rows: [unretired] });
+
+  const { res } = await callRoute(
+    "POST",
+    "/events/:id/unretire",
+    makeReq({ params: { id: EVENT_ID } }),
+  );
+
+  expect(res.json).toHaveBeenCalledWith(unretired);
+  expect(query).toHaveBeenCalledWith(
+    expect.stringContaining("SET retired_at = NULL"),
+    [EVENT_ID],
+  );
+});
+
+test("POST /events/:id/unretire rejects when the event is missing or not retired (404)", async () => {
+  query.mockResolvedValueOnce({ rows: [] });
+
+  const { error } = await callRoute(
+    "POST",
+    "/events/:id/unretire",
+    makeReq({ params: { id: EVENT_ID } }),
+  );
+
+  expect(error).toMatchObject({ status: 404 });
 });
 
 // POST /events/:id/review
@@ -368,4 +429,51 @@ test("POST /challenges rejects a multiple-choice answer that is not an option", 
 
   expect(error).toMatchObject({ status: 400 });
   expect(query).not.toHaveBeenCalled();
+});
+
+// GET /challenges/stats
+test("GET /challenges/stats returns wrong-answer rates per question", async () => {
+  const stats = [
+    {
+      id: "ch-1",
+      question_text: "Hard question",
+      event_id: EVENT_ID,
+      total_attempts: 10,
+      wrong_attempts: 7,
+      wrong_percentage: 70,
+    },
+    {
+      id: "ch-2",
+      question_text: "Easy question",
+      event_id: EVENT_ID,
+      total_attempts: 10,
+      wrong_attempts: 1,
+      wrong_percentage: 10,
+    },
+  ];
+  query.mockResolvedValueOnce({ rows: stats });
+
+  const { res } = await callRoute("GET", "/challenges/stats", makeReq());
+
+  expect(res.json).toHaveBeenCalledWith(stats);
+  expect(query).toHaveBeenCalledWith(
+    expect.stringContaining("LEFT JOIN public.challenge_attempts"),
+    [null],
+  );
+});
+
+test("GET /challenges/stats filters by eventId when provided", async () => {
+  query.mockResolvedValueOnce({ rows: [] });
+
+  const { res } = await callRoute(
+    "GET",
+    "/challenges/stats",
+    makeReq({ query: { eventId: EVENT_ID } }),
+  );
+
+  expect(res.json).toHaveBeenCalledWith([]);
+  expect(query).toHaveBeenCalledWith(
+    expect.stringContaining("LEFT JOIN public.challenge_attempts"),
+    [EVENT_ID],
+  );
 });
