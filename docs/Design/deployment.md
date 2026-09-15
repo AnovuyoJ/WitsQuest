@@ -96,3 +96,89 @@ Application rollback and database rollback are separate operations. A previous a
 Vercel is the project's chosen Next.js frontend host, while Render provides a separate process for the Express API. This separation matches the two package roots and their distinct build/start commands. Supabase supplies PostgreSQL and Auth together, preserving relational data and a common user identity. MkDocs produces static documentation independently of the application.
 
 The cost of this separation is configuration across multiple services: API origins, Auth return URLs, database permissions and the deployed revisions must agree. Database-specific choices and trade-offs are detailed in [Database design rationale](database-schema.md#design-motivation-and-trade-offs).
+
+
+## Deployment architecture
+
+The Wits Quest deployment separates the frontend, backend, database, and documentation into independent hosted services. Each service has its own build pipeline and environment configuration.
+
+```mermaid
+graph TB
+    subgraph dev["Development"]
+        DEV[Developer Machine]
+        GIT[Gitea Repository<br/>WitsQuest]
+        CI[Gitea Actions CI<br/>test · coverage · typecheck · build]
+    end
+
+    subgraph user["Player / Admin Environment"]
+        BROWSER[Browser<br/>Chrome · Safari · Firefox]
+        GEO[Browser Geolocation API]
+        CAM[Browser Camera API]
+    end
+
+    subgraph vercel["Vercel"]
+        NEXT[Next.js Application<br/>React · TypeScript · Tailwind]
+        STATIC[Static Assets<br/>images · CSS · JS]
+        DOCS[MkDocs Static Site<br/>Documentation]
+    end
+
+    subgraph render["Render"]
+        EXPRESS[Express API<br/>Node 20 · tsx index.ts<br/>witsquest-backend.onrender.com]
+        POOL[pg Connection Pool<br/>max 10 · 10s connect · 15s statement]
+    end
+
+    subgraph supabase["Supabase Cloud"]
+        AUTH[Supabase Auth<br/>Email · Google OAuth · GitHub OAuth · JWT]
+        PG[(PostgreSQL<br/>15 tables · 2 views · RLS)]
+    end
+
+    subgraph external["External Services"]
+        OVERPASS[OpenStreetMap Overpass API<br/>landmark lookup]
+        TILES[OpenStreetMap Tile Service<br/>Leaflet map tiles]
+    end
+
+    DEV -->|git push| GIT
+    GIT -->|triggers| CI
+    CI -->|auto-deploy| NEXT
+    CI -->|auto-deploy| EXPRESS
+    CI -->|build docs| DOCS
+
+    BROWSER -->|HTTPS| NEXT
+    BROWSER -->|HTTPS| DOCS
+    BROWSER --> GEO
+    BROWSER --> CAM
+    GEO -->|coords| BROWSER
+    CAM -->|QR scan| BROWSER
+
+    NEXT -->|NEXT_PUBLIC_API_URL + /api<br/>Bearer JWT| EXPRESS
+    NEXT -->|sign-in · refresh · OAuth| AUTH
+    STATIC --> BROWSER
+
+    EXPRESS -->|validate access token| AUTH
+    EXPRESS -->|DATABASE_URL<br/>parameterized SQL| POOL
+    POOL --> PG
+    EXPRESS -->|landmark lookup| OVERPASS
+    OVERPASS -->|landmark name| EXPRESS
+
+    NEXT -->|load map tiles| TILES
+    TILES -->|tiles| NEXT
+
+    classDef hosting fill:#e1f5ff,stroke:#0288d1,stroke-width:2px
+    classDef external fill:#fff3e0,stroke:#f57c00,stroke-width:2px
+    classDef user fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px
+    classDef db fill:#e8f5e9,stroke:#388e3c,stroke-width:2px
+    classDef dev fill:#f3f4f6,stroke:#6b7280,stroke-width:2px
+
+    class NEXT,STATIC,DOCS,EXPRESS,POOL hosting
+    class OVERPASS,TILES external
+    class BROWSER,GEO,CAM user
+    class PG,AUTH db
+    class DEV,GIT,CI dev
+```
+
+**Notes:**
+- The frontend sends requests to `NEXT_PUBLIC_API_URL` (e.g., `https://witsquest-backend.onrender.com`), with route paths supplying the `/api` prefix.
+- The backend connects **directly** to PostgreSQL via `DATABASE_URL` — it does not use Supabase's Data API.
+- Documentation is built by MkDocs and hosted on Vercel as a static site.
+- Both Google and GitHub OAuth are configured on the Supabase Auth project.
+- CORS is restricted to trusted origins listed in `FRONTEND_URL` on the backend.
