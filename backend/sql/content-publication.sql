@@ -30,7 +30,7 @@ END $$;
 CREATE OR REPLACE VIEW public.live_events AS
   SELECT live.* FROM public.events e
   CROSS JOIN LATERAL jsonb_populate_record(NULL::public.events,e.published_snapshot) live
-  WHERE e.published_snapshot IS NOT NULL;
+  WHERE e.published_snapshot IS NOT NULL AND e.retired_at IS NULL;
 CREATE OR REPLACE VIEW public.live_challenges AS
   SELECT live.* FROM public.challenges c
   CROSS JOIN LATERAL jsonb_populate_record(NULL::public.challenges,c.published_snapshot) live

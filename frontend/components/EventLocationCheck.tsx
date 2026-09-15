@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useLocationVerification } from "@/lib/useLocationVerification";
 
 const WITS_BLUE = "#043673";
@@ -9,8 +10,6 @@ type EventLocationCheckProps = {
   eventId: string;
   eventTitle: string;
   onVerified: () => void;
-  /** Use when this component is already nested inside another card
-   * (e.g. an event list card) so it doesn't duplicate padding/shadow. */
   compact?: boolean;
 };
 
@@ -20,7 +19,8 @@ export default function EventLocationCheck({
   onVerified,
   compact = false,
 }: EventLocationCheckProps) {
-  const { state, verify } = useLocationVerification(eventId);
+  const { state, verify, verifyWithCode } = useLocationVerification(eventId);
+  const [manualCode, setManualCode] = useState("");
 
   const wrapperClass = compact
     ? "w-full text-center"
@@ -106,6 +106,39 @@ export default function EventLocationCheck({
         <p className={`text-sm text-red-600 ${compact ? "" : "mt-2"}`}>
           This quest isn't active right now.
         </p>
+      )}
+
+      {state.status === "low-accuracy" && (
+        <>
+          <p className={`text-sm text-amber-700 ${compact ? "" : "mt-2"}`}>
+            Your GPS signal is too weak here. Look for the access code posted at this location, or ask a nearby organiser for it.
+          </p>
+          <div className={compact ? "mt-3" : "mt-4"}>
+            <label className="block text-left">
+              <span className="text-xs font-semibold text-gray-600">Enter the event code</span>
+              <div className="mt-1 flex gap-2">
+                <input
+                  value={manualCode}
+                  onChange={(e) => setManualCode(e.target.value.toUpperCase())}
+                  placeholder="e.g. GH7F2K"
+                  className="w-full rounded-xl border border-gray-200 px-3 py-2 text-sm font-mono outline-none focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+                />
+                <button
+                  type="button"
+                  onClick={() => verifyWithCode(manualCode)}
+                  disabled={!manualCode.trim()}
+                  className="shrink-0 rounded-xl bg-[#043673] px-4 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                >
+                  Submit
+                </button>
+              </div>
+            </label>
+          </div>
+        </>
+      )}
+
+      {state.status === "verifying-code" && (
+        <p className={`text-sm text-gray-500 ${compact ? "" : "mt-4"}`}>Checking code…</p>
       )}
 
       {state.status === "error" && (

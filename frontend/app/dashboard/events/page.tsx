@@ -9,6 +9,8 @@ import ChallengeCard from "@/components/ChallengeCard";
 import { haversineDistanceMeters } from "@/lib/distance";
 import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 
+import styles from "./events.module.css";
+
 const WITS_BLUE = "#043673";
 
 type Event = {
@@ -27,6 +29,8 @@ type EventWithDistance = Event & {
 };
 
 export default function EventsPage() {
+  const [search, setSearch] = useState("");
+  const [filter, setFilter] = useState("All");
   const [events, setEvents] = useState<EventWithDistance[]>([]);
   useEffect(() => {
     function openLinkedQuest() {
@@ -124,26 +128,17 @@ export default function EventsPage() {
     return isEventActive(event) ? 0 : 2;
   }
 
+  const eventStatus = (event: Event) => new Date(event.starts_at) > new Date() ? "Upcoming" : isEventActive(event) ? "Active" : "Past";
   const orderedEvents = [...events].sort((a, b) => {
     const groupDifference = questGroup(a) - questGroup(b);
     if (groupDifference) return groupDifference;
     return ((a.distanceMeters ?? Infinity) - (b.distanceMeters ?? Infinity)) || 0;
   });
 
+  const visibleEvents = orderedEvents.filter(event => (filter === "All" || (filter === "Completed" ? questGroup(event) === 1 : eventStatus(event) === filter)) && `${event.title} ${event.description || ""}`.toLowerCase().includes(search.trim().toLowerCase()));
   return (
-    <div className="min-h-full px-6 py-6 md:px-10 md:py-8">
-      <ScreenHeader eyebrow="Quest board" title="Nearby quests" description={
-        <>
-        <span className="inline-flex flex-wrap items-center gap-x-3 gap-y-2" aria-label="Quest order: active unfinished, completed, then inactive">
-          <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-[#C9A24B]" />Active quests</span>
-          <span aria-hidden="true" className="text-stone-400">→</span>
-          <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-emerald-500" />Completed</span>
-          <span aria-hidden="true" className="text-stone-400">→</span>
-          <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="h-2.5 w-2.5 rounded-full bg-slate-400" />Inactive</span>
-        </span>
-        <span className="mt-2 block">The nearest quests come first within each group when your location is available.</span>
-        </>
-      } />
+    <div className="min-h-full px-5 pb-8 pt-20 md:px-10 md:py-8">
+      <ScreenHeader eyebrow="Quest board" title="Nearby quests" description="Open an event to view its details and challenges." />
 
       {loading && (
         <ScreenSkeleton cards={3} />
@@ -154,8 +149,13 @@ export default function EventsPage() {
       )}
 
       {!loading && events.length > 0 && (
-        <div className="space-y-3">
-          {orderedEvents.map((event) => {
+        <div className={styles.board}>
+          <div className={styles.toolbar}>
+            <div className={styles.filters} aria-label="Filter events">{["All", "Active", "Upcoming", "Past", "Completed"].map(value => <button type="button" key={value} aria-pressed={filter === value} onClick={() => setFilter(value)}>{value}</button>)}</div>
+            <label className={styles.search}><span className="sr-only">Search events</span><input type="search" placeholder="Search events…" value={search} onChange={event => setSearch(event.target.value)} /></label>
+          </div>
+          {!visibleEvents.length && <p role="status" className="p-5 text-sm text-slate-600">No events match your search and filter.</p>}
+          {visibleEvents.map((event) => {
             const active = isEventActive(event);
             const verified = verifiedEventIds.has(event.id);
             const summary = summaries.find(item => item.event_id === event.id);
@@ -166,15 +166,19 @@ export default function EventsPage() {
                 key={event.id}
                 id={`quest-${event.id}`}
                 name="campus-quests"
-                className={`overflow-hidden rounded-2xl border-t-4 bg-white shadow-[0_1px_16px_-4px_rgba(4,54,115,0.15)] ${completed ? "border-emerald-500" : active ? "border-[#C9A24B]" : "border-[#8CA8C8]"}`}
+                className={styles.event}
               >
-                <summary className="cursor-pointer bg-[#FAF8F3] px-4 py-4 text-base font-bold tracking-tight text-slate-800 transition hover:bg-[#F4EEDf] focus-visible:outline-2 focus-visible:outline-offset-[-4px] focus-visible:outline-[#775718]">
-                  {event.title}
-                  {completed && <span className="ml-3 inline-flex items-center gap-1.5 rounded-md border border-emerald-300 bg-emerald-50 px-2.5 py-1 align-middle text-[10px] font-bold uppercase tracking-wider text-emerald-800"><span aria-hidden="true">✓</span> Quest completed</span>}
+                <summary className={styles.summary}>
+                  <div className={styles.dateBlock}><span>{new Date(event.starts_at).toLocaleDateString(undefined, { day: "numeric", month: "short" })}</span><strong>{new Date(event.starts_at).toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit", hour12: false })}</strong><small>{new Date(event.starts_at).getFullYear()}</small></div>
+                  <div className={styles.intro}><span className={styles.badge}>{completed ? "Completed" : eventStatus(event)}</span><h2>{event.title}</h2><p>{event.description || "Visit this campus quest to discover its challenges and rewards."}</p></div>
+                  <div className={styles.distance}><MapPinIcon size={16} /><span>{formatDistance(event.distanceMeters)}</span></div>
+                  <div className={styles.progress}><span>{summary ? `${summary.completed_questions} / ${summary.total_questions} challenges` : "Progress unavailable"}</span><progress aria-label={`${event.title} progress`} value={summary?.completed_questions || 0} max={summary?.total_questions || 1} /></div>
+                  <span className={styles.openLabel}>View details <span aria-hidden="true">⌄</span></span>
                 </summary>
-                <div className="p-4">
+                <div className="p-5 sm:p-6">
+                  <dl className="mb-4 grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-slate-500">Starts</dt><dd>{new Date(event.starts_at).toLocaleString()}</dd></div><div><dt className="text-slate-500">Ends</dt><dd>{new Date(event.ends_at).toLocaleString()}</dd></div></dl>
                       {event.description && (
-                        <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-600">
+                        <p className="mt-1 text-sm leading-7 text-slate-600">
                           {event.description}
                         </p>
                       )}

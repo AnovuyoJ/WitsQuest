@@ -52,7 +52,7 @@ export default function SignUpForm() {
     const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!email.trim()) {
       newErrors.email = "Email is required";
-    } else if (!emailPattern.test(email)) {
+    } else if (!emailPattern.test(email.trim())) {
       newErrors.email = "Invalid email format";
     }
 

@@ -11,6 +11,11 @@ import {
 import { supabase } from "../lib/supabaseClient";
 
 describe("authentication service", () => {
+  it("trims email whitespace without changing the password", async () => {
+    const spy = jest.spyOn(supabase.auth, "signInWithPassword").mockResolvedValue({ data: { user: null, session: null }, error: null } as never);
+    await signIn(" student@wits.ac.za ", " password with spaces ");
+    expect(spy).toHaveBeenCalledWith({ email: "student@wits.ac.za", password: " password with spaces " });
+  });
   afterEach(() => {
     jest.restoreAllMocks();
   });

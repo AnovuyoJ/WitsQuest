@@ -5,17 +5,26 @@ import { lockGame, playCard, resolveRound, nextRound, latestRound } from "../ser
 import { id, HttpError } from "../services/validation";
 import { startBattle, battleState, battleMove, advanceBattle } from "../services/battleService";
 import { notifyGamePlayers } from "../services/notifications";
+import { stakesReady, settleStakes } from "../services/stakeService";
 
 const router = Router();
 router.use(requireAuth);
 router.get("/", async (req, res) => {
-  const { rows } = await database.query(`SELECT id,player_one_id,player_two_id,category,status,rules_version,is_cpu FROM public.card_games
+  const { rows } = await database.query(`SELECT id,player_one_id,player_two_id,category,status,rules_version,is_cpu,stakes_enabled FROM public.card_games
     WHERE (player_one_id=$1 OR player_two_id=$1) AND status IN ('waiting','active') ORDER BY created_at DESC`, [req.user!.id]);
   res.json(rows);
 });
 router.post("/matchmake", async (req, res) => {
   if (req.body.mode !== undefined && !["player","cpu"].includes(req.body.mode)) throw new HttpError(400,"Choose player or cpu mode.");
-  res.json(await startBattle(req.user!.id,req.body.cardIds,req.body.mode === "cpu"));
+  res.json(await startBattle(req.user!.id,req.body.cardIds,req.body.mode === "cpu",req.body.stakeCardId === undefined ? undefined : id(req.body.stakeCardId)));
+});
+router.post("/:id/battle/accept", async (req, res) => {
+  await transaction(async client => {
+    const game = await lockGame(client,id(req.params.id),req.user!.id);
+    if (!game.stakes_enabled || game.status !== "active") throw new HttpError(409,"Wait for a duel opponent before accepting.");
+    await client.query("UPDATE public.battle_stakes SET accepted=true WHERE game_id=$1 AND side=$2", [game.id,game.player_one_id === req.user!.id ? 1 : 2]);
+  });
+  res.json({ success: true });
 });
 router.get("/:id/battle", async (req, res) => {
   res.json(await battleState(req.user!.id,id(req.params.id)));
@@ -45,16 +54,23 @@ router.get("/:id/players", async (req, res) => {
   res.json(rows[0]);
 });
 router.post("/:id/cancel", async (req, res) => {
-  const result = await database.query(`UPDATE public.card_games SET status='cancelled'
-    WHERE id=$1 AND player_one_id=$2 AND status='waiting' RETURNING id`, [id(req.params.id),req.user!.id]);
-  if (!result.rowCount) throw new HttpError(409,"This waiting game cannot be cancelled.");
-  res.json(result.rows[0]);
+  await transaction(async client => {
+    const game = await lockGame(client,id(req.params.id),req.user!.id);
+    if (game.status !== "waiting" && !(game.status === "active" && game.stakes_enabled && !await stakesReady(client,game.id))) throw new HttpError(409,"This match cannot be cancelled. Forfeit to leave an accepted duel.");
+    await client.query("UPDATE public.card_games SET status='cancelled' WHERE id=$1", [game.id]);
+  });
+  res.json({ success: true });
 });
 router.post("/:id/forfeit", async (req, res) => {
   await transaction(async client => {
     const game = await lockGame(client,id(req.params.id),req.user!.id);
     if (game.status !== "active") throw new HttpError(409,"Game is not active.");
+    if (game.stakes_enabled && !await stakesReady(client,game.id)) {
+      await client.query("UPDATE public.card_games SET status='cancelled' WHERE id=$1", [game.id]);
+      return;
+    }
     const winner = game.player_one_id === req.user!.id ? game.player_two_id : game.player_one_id;
+    await settleStakes(client,game,game.player_one_id === req.user!.id ? 2 : 1);
     await client.query("UPDATE public.card_games SET status='finished',winner_id=$1,winner_side=$3,finished_at=now() WHERE id=$2", [winner,game.id,game.player_one_id === req.user!.id ? 2 : 1]);
     await notifyGamePlayers(client,game,"Match forfeited","A player quit this match. The opponent wins by forfeit.");
   });
