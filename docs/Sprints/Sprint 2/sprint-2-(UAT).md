@@ -1,6 +1,5 @@
 ### Acceptence Criteria:
 
-## Offline Play
 
 **As a player, I want to explore, open, and answer events while offline so that poor campus signal doesn't block me from playing.**
 
@@ -18,7 +17,6 @@
 - Given an offline attempt fails server validation, when synchronization completes, then rewards for that attempt are not awarded and the player is informed.
 - Given an offline attempt has already been successfully synchronized, when synchronization runs again, then the same attempt is not processed or rewarded twice.
 
-## Location Integrity
 
 **As the game, I want to analyze a player's movement history so that I can flag impossible journeys or implausibly fast attempts.**
 
@@ -36,7 +34,6 @@
 - Given the location is unreliable, when the event supports alternative verification, then the player is offered the available alternative proof method.
 - Given the player successfully provides valid alternative proof, when it is verified, then the player is allowed to continue with the event.
 
-## Player vs Player Matches
 
 **As a player, I want to challenge another player to a match so that I can compete against people, not just the computer.**
 
@@ -62,7 +59,6 @@
 - Given the player takes their turn before the deadline, when the match is checked, then the player is not incorrectly forfeited.
 - Given a match has already ended normally, when the inactivity process runs, then the completed match is not changed to a forfeit.
 
-## Profile & Progression
 
 **As a player, I want a profile showing my points, achievements, and streaks so that I have a sense of progress.**
 
@@ -80,7 +76,6 @@
 - Given player scores change, when the standings are refreshed, then the rankings reflect the latest scores.
 - Given there are no ranked players yet, when the standings page is opened, then an appropriate empty-state message is displayed.
 
-## Cards & Deckbuilding
 
 **As a player, I want some cards to be rarer than others so that collecting feels meaningful.**
 
