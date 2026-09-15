@@ -10,10 +10,14 @@ export default function Home() {
   const [checkingSession, setCheckingSession] = useState(true);
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (!mounted) return;
-      if (session) router.replace("/dashboard"); else setCheckingSession(false);
-    });
+    supabase.auth.getSession()
+      .then(({ data: { session } }) => {
+        if (!mounted) return;
+        if (session) router.replace("/dashboard"); else setCheckingSession(false);
+      })
+      .catch(() => {
+        if (mounted) setCheckingSession(false);
+      });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => { if (session) router.replace("/dashboard"); });
     return () => { mounted = false; subscription.unsubscribe(); };
   }, [router]);
