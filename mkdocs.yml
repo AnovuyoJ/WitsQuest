@@ -43,15 +43,15 @@ nav:
       - Sprint 1 Backlog: Sprints/Sprint 1/sprint-1-backlog.md
       - Sprint 1 Retrospective: Sprints/Sprint 1/sprint-1-retrospective.md
     - Sprint 2:
-      - Sprint 2 Burndown Chart: Sprints/sprint-2-burndown-chart.md
-      - Acceptance Criteria 1:  Sprints/sprint-2(UAT).md
-      - Acceptance Criteria 2: Sprints/sprint-2(US).md
-      - Sprint 2 Retrospective: Sprints/sprint-2-retrospective.md
+      - Sprint 2 Burndown Chart: Sprints/Sprint 2/sprint-2-burndown-chart.md
+      - Acceptance Criteria 1:  Sprints/Sprint 2/sprint-2(UAT).md
+      - Acceptance Criteria 2: Sprints/Sprint 2/sprint-2(US).md
+      - Sprint 2 Retrospective: Sprints/Sprint 2/sprint-2-retrospective.md
     - Sprint 3:
-      - Sprint 3 Burndown Chart: sprint-3-burndown-chart.md
-      - Acceptance Criteria 1: sprint-3(UAT).md
-      - Acceptance Criteria 2: sprint-3(US).md
-      - Sprint 3 Retrospective: sprint-3-retrospective.md
+      - Sprint 3 Burndown Chart: Sprints/Sprint 3/sprint-3-burndown-chart.md
+      - Acceptance Criteria 1: Sprints/Sprint 3/sprint-3(UAT).md
+      - Acceptance Criteria 2: Sprints/Sprint 3/sprint-3(US).md
+      - Sprint 3 Retrospective: Sprints/Sprint 3/sprint-3-retrospective.md
   - Meeting Minutes:
     - Sprint 1:
       - Meeting 1: Meeting Minutes/Sprint 1/meeting-minutes-1.md

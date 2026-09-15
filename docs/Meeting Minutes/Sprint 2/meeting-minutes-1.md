@@ -59,3 +59,6 @@
 * Create Gitea Issues for bugs discovered during development.
 
 ---
+
+
+![alt text](<WhatsApp Image 2026-09-15 at 14.41.17.jpeg>)
