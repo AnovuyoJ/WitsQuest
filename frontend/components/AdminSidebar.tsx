@@ -27,6 +27,11 @@ const navItems: NavItem[] = [
     icon: <MapPinIcon />,
   },
   {
+    label: "Campaigns",
+    href: "/dashboard/admin/campaigns",
+    icon: <CampaignIcon />,
+  },
+  {
     label: "Challenges",
     href: "/dashboard/admin/challenges",
     icon: <QuestionIcon />,
@@ -35,6 +40,11 @@ const navItems: NavItem[] = [
     label: "Cards",
     href: "/dashboard/admin/cards",
     icon: <CardIcon />,
+  },
+  {
+    label: "Stats",
+    href: "/dashboard/admin/stats",
+    icon: <StatsIcon />,
   },
 ];
 
@@ -309,6 +319,26 @@ function MapPinIcon() {
   );
 }
 
+function CampaignIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <rect x="3" y="4" width="18" height="14" rx="2" />
+      <path d="M3 9h18" />
+      <path d="M8 14h8" />
+    </svg>
+  );
+}
+
 function QuestionIcon() {
   return (
     <svg
@@ -414,6 +444,25 @@ function MoonIcon() {
       aria-hidden="true"
     >
       <path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z" />
+    </svg>
+  );
+}
+
+function StatsIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M3 3v18h18" />
+      <path d="M7 15l3-4 3 3 5-7" />
     </svg>
   );
 }

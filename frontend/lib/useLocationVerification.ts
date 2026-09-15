@@ -38,8 +38,13 @@ export function useLocationVerification(eventId: string) {
 
     setState({ status: "locating" });
 
+    //console.time("gps-fix");  temp, remove after testing
+
     navigator.geolocation.getCurrentPosition(
       async (position) => {
+        //console.timeEnd("gps-fix");  temp, remove after testing
+
+
         setState({ status: "verifying" });
 
         const { latitude, longitude, accuracy } = position.coords;
@@ -86,7 +91,7 @@ export function useLocationVerification(eventId: string) {
               : "Couldn't get your location. Try again.",
         });
       },
-      { enableHighAccuracy: true, timeout: 10000 }
+      { enableHighAccuracy: true, timeout: 10000, maximumAge : 10000 }
     );
   }
 

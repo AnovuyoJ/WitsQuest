@@ -22,7 +22,9 @@ type Event = {
   radius_meters: number;
   starts_at: string;
   ends_at: string;
+  retired_at: string;
   created_at: string | null;
+  campaign_id: string | null;
   access_code: string | null;
 };
 
@@ -74,6 +76,17 @@ export default function AdminEventsPage() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
 
+  const [campaigns, setCampaigns] = useState<{ id: string; name: string }[]>([]);
+  const [campaignId, setCampaignId] = useState("");
+  const [filterCampaignId, setFilterCampaignId] = useState("");
+
+  useEffect(() => {
+    if (!admin) return;
+    apiRequest<{ id: string; name: string }[]>("/admin/campaigns").then((result) => {
+      if (result.data) setCampaigns(result.data);
+    });
+  }, [admin]);
+
   /*
    * ----------------------------------------------------
    * Check admin access
@@ -124,6 +137,7 @@ export default function AdminEventsPage() {
     setEditingId(null);
     setMessage("");
     setError("");
+    setCampaignId("");
     setAccessCode("");
   }
 
@@ -209,6 +223,7 @@ export default function AdminEventsPage() {
       radius_meters: Math.round(radiusNumber),
       starts_at: startDate.toISOString(),
       ends_at: endDate.toISOString(),
+      campaign_id: campaignId || null,
       access_code: accessCode.trim() || null,
     };
 
@@ -268,6 +283,7 @@ export default function AdminEventsPage() {
     setStartsAt(toDateTimeLocal(event.starts_at));
     setEndsAt(toDateTimeLocal(event.ends_at));
 
+    setCampaignId(event.campaign_id ?? "");
     setAccessCode(event.access_code ?? "");
 
     setMessage("");
@@ -311,6 +327,30 @@ export default function AdminEventsPage() {
     if (editingId === id) {
       resetForm();
     }
+  }
+
+  /*
+   * ----------------------------------------------------
+   * Retire old event
+   * ----------------------------------------------------
+   */
+
+  async function toggleRetire(event: Event) {
+    const action = event.retired_at ? "unretire" : "retire";
+    setError("");
+    setMessage("");
+  
+    const { data, error } = await apiRequest<Event>(`/admin/events/${event.id}/${action}`, "POST");
+  
+    if (error) {
+      setError(error.message);
+      return;
+    }
+  
+    setEvents((current) =>
+      current.map((e) => (e.id === event.id ? (data as Event) : e))
+    );
+    setMessage(event.retired_at ? "Event unretired — visible to players again." : "Event retired — hidden from players.");
   }
 
   /*
@@ -390,6 +430,10 @@ export default function AdminEventsPage() {
       </div>
     );
   }
+
+  const filteredEvents = filterCampaignId
+  ? events.filter((event) => event.campaign_id === filterCampaignId)
+  : events;
 
   /*
    * ----------------------------------------------------
@@ -504,6 +548,22 @@ export default function AdminEventsPage() {
               placeholder="Find the location and complete the challenge..."
               className="mt-2 min-h-28 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
             />
+          </label>
+
+          {/* CAMPAIGN */}
+
+          <label className="block">
+            <span className="text-sm font-semibold text-slate-700">Campaign (optional)</span>
+            <select
+              value={campaignId}
+              onChange={(e) => setCampaignId(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+            >
+              <option value="">No campaign</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
           </label>
 
           {/* LOCATION */}
@@ -717,15 +777,31 @@ export default function AdminEventsPage() {
           </div>
 
           <span className="rounded-full bg-[#043673]/5 px-3 py-1 text-xs font-semibold text-[#043673]">
-            {events.length} events
+            {filteredEvents.length} events
           </span>
+        </div>
+
+        <div className="mb-4">
+          <label className="block max-w-xs">
+            <span className="text-sm font-semibold text-slate-700">Filter by campaign</span>
+            <select
+              value={filterCampaignId}
+              onChange={(e) => setFilterCampaignId(e.target.value)}
+              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+            >
+              <option value="">All events</option>
+              {campaigns.map((c) => (
+                <option key={c.id} value={c.id}>{c.name}</option>
+              ))}
+            </select>
+          </label>
         </div>
 
         {loading ? (
           <div className="py-10 text-center text-sm text-slate-500">
             Loading events...
           </div>
-        ) : events.length === 0 ? (
+        ) : filteredEvents.length === 0 ? (
           <div className="rounded-2xl bg-slate-50 p-8 text-center">
             <p
               className="text-lg font-black tracking-tight"
@@ -741,7 +817,7 @@ export default function AdminEventsPage() {
         ) : (
           <div className="space-y-4">
 
-            {events.map((event) => {
+            {filteredEvents.map((event) => {
               const status = getEventStatus(event);
 
               return (
@@ -768,6 +844,12 @@ export default function AdminEventsPage() {
                         >
                           {status.label}
                         </span>
+
+                        {event.retired_at && (
+                          <span className="rounded-full bg-slate-200 px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wider text-slate-600">
+                            Retired
+                          </span>
+                        )}
 
                       </div>
 
@@ -798,6 +880,14 @@ export default function AdminEventsPage() {
                         className="rounded-lg border border-[#043673]/15 bg-white px-3 py-2 text-xs font-semibold text-[#043673] transition hover:bg-[#043673]/5"
                       >
                         Edit
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => toggleRetire(event)}
+                        className="rounded-lg border border-amber-200 bg-white px-3 py-2 text-xs font-semibold text-amber-700 transition hover:bg-amber-50"
+                      >
+                        {event.retired_at ? "Unretire" : "Retire"}
                       </button>
 
                       <button

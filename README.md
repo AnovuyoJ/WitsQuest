@@ -52,7 +52,7 @@ We branch off `main` for all work (`name/short-feature-description`), and merge 
 ## AI Declaration
 
 
-
+AI was used as a supportive coding and documentation assistant in the development of the WitsQuest campus quest app. It helped generate or refine backend route patterns, frontend data access hooks, test scaffolding, and route/service structure consistent with the Express and Next.js architecture shown in app.ts. However, the app’s core ideas were driven by the human development team and project stakeholders. The AI did not replace system design, product decisions, database modelling, content authoring, or quality review.It supported faster implementation and documentation under human supervision.”
 
 
 
