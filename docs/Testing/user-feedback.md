@@ -69,3 +69,13 @@ The feedback lifecycle is **Recorded > Triaged > Assigned > In progress > Ready 
 Acceptance review combines task outcomes, issue dispositions, regression evidence and remaining limitations. Decisions are **Accepted**, **Accepted with documented low-impact exceptions**, or **Not accepted**, associated with the candidate build and reviewer.
 
 Participant follow-up summarises relevant changes through the agreed communication channel. Session closure includes the retention and removal of temporary accounts and permitted recordings. [Evidence and reporting](test-evidence.md) describes how these records connect.
+
+
+## User Feedback
+
+A user reported that verifying their location felt slow. The cause was that every time a player tapped "Verify arrival," the app asked the phone's GPS for a brand new, fresh location reading from scratch — even if it already had an accurate one from a few seconds earlier (since the map was already tracking their position in the background). Getting a fresh GPS fix can take several seconds, especially indoors or with a weak signal, which is what the user experienced as lag.
+
+The fix tells the browser it's fine to reuse a location reading if it's less than 10 seconds old, instead of always requiring a brand new one. Since players are usually already on the map (and already being tracked) before they tap "Verify arrival," this means most verification attempts can reuse an already-available location instantly, rather than waiting for a new GPS fix every single time.
+
+The link to the Google Form we used to collect this feedback can be found below : 
+https://forms.gle/XzmZ4AFmEmPRy37i8
