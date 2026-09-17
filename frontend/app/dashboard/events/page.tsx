@@ -173,7 +173,7 @@ export default function EventsPage() {
                   <div className={styles.intro}><span className={styles.badge}>{completed ? "Completed" : eventStatus(event)}</span><h2>{event.title}</h2><p>{event.description || "Visit this campus quest to discover its challenges and rewards."}</p></div>
                   <div className={styles.distance}><MapPinIcon size={16} /><span>{formatDistance(event.distanceMeters)}</span></div>
                   <div className={styles.progress}><span>{summary ? `${summary.completed_questions} / ${summary.total_questions} challenges` : "Progress unavailable"}</span><progress aria-label={`${event.title} progress`} value={summary?.completed_questions || 0} max={summary?.total_questions || 1} /></div>
-                  <span className={styles.openLabel}>View details <span aria-hidden="true">⌄</span></span>
+                  <span className={styles.openLabel}>View details <span aria-hidden="true"></span></span>
                 </summary>
                 <div className="p-5 sm:p-6">
                   <dl className="mb-4 grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-slate-500">Starts</dt><dd>{new Date(event.starts_at).toLocaleString()}</dd></div><div><dt className="text-slate-500">Ends</dt><dd>{new Date(event.ends_at).toLocaleString()}</dd></div></dl>
@@ -183,9 +183,7 @@ export default function EventsPage() {
                         </p>
                       )}
 
-                  <div
-                    className="mt-3 flex items-center gap-2 rounded-lg border border-[#E8D9B6] bg-[#FAF4E7] px-3 py-2 text-[#775718]"
-                  >
+                  <div className="mt-3 flex items-center gap-2 rounded-lg border border-[#E8D9B6] bg-gradient-to-br from-[#FAF4E7] to-[#F5EAD3] px-3 py-2 text-[#775718] shadow-[0_1px_2px_rgba(0,0,0,0.04),0_4px_10px_-6px_rgba(119,87,24,0.35)]">
                     <MapPinIcon size={14} />
                     <div className="min-w-0">
                       <p className="text-xs font-semibold" style={{ color: WITS_BLUE }}>
@@ -202,9 +200,13 @@ export default function EventsPage() {
                     <QuestProgress summary={summary} />
                   </>}
                   {summaryError ? <p className="mt-3 text-xs text-amber-800" role="status">{summaryError} <button type="button" onClick={refreshProgress} className="underline">Retry</button></p> : !summary && <p className="mt-3 text-xs text-slate-500">Loading progress and rewards…</p>}
-                  <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 ${active ? "bg-emerald-50 text-emerald-800" : "bg-slate-100 text-slate-600"}`}>
+                  <div className={`mt-3 inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 shadow-sm ${
+                    active
+                      ? "border-emerald-200 bg-gradient-to-b from-emerald-50 to-emerald-100 text-emerald-800"
+                      : "border-slate-200 bg-gradient-to-b from-slate-50 to-slate-100 text-slate-600"
+                  }`}>
                     <span
-                      className={`h-2 w-2 rounded-full ${active ? "bg-green-500" : "bg-gray-300"}`}
+                      className={`h-2 w-2 rounded-full ${active ? "bg-green-500 shadow-[0_0_4px_rgba(34,197,94,0.6)]" : "bg-gray-300"}`}
                     />
                     <span className="text-[11px] font-semibold">
                       {active ? "Active" : "Inactive"}
@@ -213,7 +215,7 @@ export default function EventsPage() {
                 </div>
 
                 {active && (
-                  <div className="border-t border-stone-200 bg-stone-50 px-4 py-3">
+                  <div className="border-t border-stone-200 bg-gradient-to-b from-stone-50 to-stone-100 px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.6)]">
                     {verified ? (
                       <ChallengeCard eventId={event.id} onAnswered={refreshProgress} />
                     ) : (
@@ -230,7 +232,7 @@ export default function EventsPage() {
                 )}
 
                 {!active && (
-                  <div className="border-t border-gray-100 bg-gray-50 px-4 py-2.5">
+                  <div className="border-t border-gray-200 bg-gradient-to-b from-gray-50 to-gray-100 px-4 py-2.5">
                     <p className="text-center text-xs text-gray-500">This quest is resting for now.</p>
                   </div>
                 )}

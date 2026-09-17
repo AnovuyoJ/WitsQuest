@@ -42,7 +42,7 @@ export default function ProfileMenu({ name, email, avatar }: ProfileMenuProps) {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-20 mt-2 w-60 overflow-hidden rounded-2xl bg-white shadow-[0_8px_30px_-8px_rgba(4,54,115,0.3)]">
+        <div className="skeuo-card absolute right-0 z-20 mt-2 w-64 overflow-hidden border-[#043673]/20 shadow-[0_16px_40px_-10px_rgba(4,54,115,0.35)]">
           <div
             className="h-1"
             style={{ background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})` }}

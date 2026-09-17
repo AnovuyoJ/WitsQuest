@@ -36,11 +36,28 @@ export default function LogoutButton({ collapsed }: LogoutButtonProps) {
     <button
       onClick={handleLogout}
       disabled={loading}
-      className={`flex items-center rounded-xl py-2.5 text-sm font-medium text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 ${
+      aria-label={collapsed ? (loading ? "Logging out..." : "Logout") : undefined}
+      className={`flex items-center rounded-xl py-2 text-sm font-semibold transition-all disabled:opacity-50 ${
         collapsed
-          ? "w-10 justify-center px-0"
+          ? "w-10 justify-center px-0 hover:bg-white/10"
           : "w-full gap-3 px-3"
       }`}
+      style={{
+        background: collapsed
+          ? "transparent"
+          : "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)",
+        color: "rgba(255,255,255,0.65)",
+        boxShadow: collapsed
+          ? "none"
+          : "0 1px 4px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)",
+        border: collapsed ? "none" : "1px solid rgba(255,255,255,0.10)",
+      }}
+      onMouseEnter={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.9)";
+      }}
+      onMouseLeave={(e) => {
+        (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.65)";
+      }}
     >
       <span className="flex h-5 w-5 shrink-0 items-center justify-center">
         <LogoutIcon />

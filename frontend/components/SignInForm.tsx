@@ -116,7 +116,7 @@ export default function SignInForm() {
     <form
       onSubmit={handleSubmit}
       noValidate
-      className="w-full max-w-lg overflow-hidden rounded-2xl border border-[#043673]/10 bg-white shadow-[0_24px_60px_-44px_rgba(4,54,115,.8)]"
+      className="skeuo-card w-full max-w-lg overflow-hidden"
     >
       {/* Gold-to-blue accent bar */}
       <div
@@ -127,10 +127,10 @@ export default function SignInForm() {
       <div className="px-9 pb-9 pt-8">
         <div className="mb-7 flex flex-col items-center text-center">
           <Monogram />
-          <h1 className="mt-4 text-[28px] font-black leading-tight tracking-[-.04em] text-[#043673]">
+          <h1 className="mt-4 text-[28px] font-black leading-tight tracking-[-.04em] text-[#043673] skeuo-text-emboss">
             Welcome back
           </h1>
-          <p className="mt-1.5 text-[13px] text-gray-500">Sign in to continue your quest</p>
+          <p className="mt-1.5 text-[13px] font-medium text-slate-500">Sign in to continue your quest</p>
         </div>
 
         {/* Server error feedback banner */}
@@ -162,8 +162,8 @@ export default function SignInForm() {
         </div>
 
         <div className="my-6 flex items-center gap-3">
-          <div className="h-px flex-1 bg-gray-200" />
-          <span className="text-[11px] font-medium uppercase tracking-wider text-gray-400">
+          <div className="h-px flex-1 bg-slate-200 shadow-[0_1px_0_#ffffff]" />
+          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 skeuo-text-emboss">
             or sign in with email
           </span>
           <div className="h-px flex-1 bg-gray-200" />
@@ -204,7 +204,7 @@ export default function SignInForm() {
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="••••••••"
-            className="w-full rounded-xl border border-slate-300 bg-white py-3 pl-4 pr-14 text-sm text-[#0A1F3D] outline-none transition-colors focus:border-[#043673] focus:ring-4 focus:ring-[#043673]/10"
+            className="skeuo-input w-full py-3 pl-4 pr-14 text-sm"
           />
           <button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Hide password" : "Show password"} aria-controls="password" className="absolute inset-y-1 right-1 flex w-11 items-center justify-center rounded-lg bg-white text-[#043673] hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-[-2px]">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />{showPassword && <path d="m3 3 18 18" />}</svg>
@@ -269,7 +269,7 @@ function Field({
 }) {
   return (
     <div className="mb-4">
-      <label htmlFor={id} className="mb-1.5 block text-[13px] font-medium text-gray-600">
+      <label htmlFor={id} className="mb-1.5 block text-[13px] font-bold text-slate-700 skeuo-text-emboss">
         {label}
       </label>
       <input
@@ -278,7 +278,7 @@ function Field({
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={placeholder}
-        className="w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-sm text-[#0A1F3D] outline-none transition-colors focus:border-[#043673] focus:ring-4 focus:ring-[#043673]/10"
+        className="skeuo-input w-full px-4 py-3 text-sm"
       />
       {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
     </div>
@@ -299,7 +299,7 @@ function OAuthButton({
     <button
       type="button"
       onClick={onClick}
-      className="flex w-full items-center justify-center gap-2.5 rounded-xl border border-slate-300 py-3 text-sm font-semibold text-slate-700 transition hover:border-[#043673]/35 hover:bg-[#043673]/5 active:scale-[.99]"
+      className="skeuo-btn-secondary w-full py-3 text-sm font-semibold gap-2.5"
     >
       {icon}
       {label}

@@ -7,6 +7,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
 const WITS_BLUE = "#043673";
+const WITS_BLUE_DARK = "#02234A";
 const WITS_GOLD = "#C9A24B";
 
 type NavItem = {
@@ -68,7 +69,6 @@ export default function Sidebar() {
    * is the GitHub admin.
    */
 
-
   /*
    * Hide Admin navigation from normal users.
    */
@@ -92,8 +92,12 @@ export default function Sidebar() {
       <button
         onClick={() => setMobileOpen(true)}
         aria-label="Open menu"
-        className="fixed left-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-lg text-white shadow-md md:hidden"
-        style={{ background: WITS_BLUE }}
+        className="fixed left-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-lg text-white transition-transform active:scale-95 md:hidden"
+        style={{
+          background: `linear-gradient(145deg, ${WITS_BLUE}, ${WITS_BLUE_DARK})`,
+          boxShadow:
+            "0 4px 10px rgba(4,54,115,0.45), 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+        }}
       >
         <MenuIcon />
       </button>
@@ -105,7 +109,7 @@ export default function Sidebar() {
       {mobileOpen && (
         <div
           onClick={() => setMobileOpen(false)}
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          className="fixed inset-0 z-40 bg-black/50 backdrop-blur-sm md:hidden"
         />
       )}
 
@@ -117,7 +121,11 @@ export default function Sidebar() {
         className={`fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col justify-between py-6 transition-all duration-200 md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } ${collapsed ? "md:w-[76px]" : "md:w-[240px]"}`}
-        style={{ background: WITS_BLUE }}
+        style={{
+          background: `linear-gradient(180deg, ${WITS_BLUE} 0%, ${WITS_BLUE_DARK} 100%)`,
+          boxShadow:
+            "4px 0 20px rgba(0,0,0,0.25), inset -1px 0 0 rgba(255,255,255,0.06)",
+        }}
       >
         {/* ================================================= */}
         {/* TOP */}
@@ -131,7 +139,7 @@ export default function Sidebar() {
             aria-label={
               collapsed ? "Expand sidebar" : "Collapse sidebar"
             }
-            className="hidden h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white md:flex"
+            className="hidden h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-all hover:bg-white/10 hover:text-white hover:shadow-[0_2px_6px_rgba(0,0,0,0.25)] active:scale-95 md:flex"
           >
             <MenuIcon />
           </button>
@@ -171,7 +179,11 @@ export default function Sidebar() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search..."
-                className="w-full rounded-lg border border-white/10 bg-white/10 py-2 pl-9 pr-3 text-sm text-white placeholder-white/50 outline-none transition-colors focus:border-white/30 focus:bg-white/[0.14]"
+                className="w-full rounded-lg border border-black/20 py-2 pl-9 pr-3 text-sm text-white placeholder-white/50 outline-none transition-all focus:border-white/30 focus:shadow-[inset_0_1px_4px_rgba(0,0,0,0.35),0_0_0_2px_rgba(255,255,255,0.08)]"
+                style={{
+                  background: "rgba(0,0,0,0.18)",
+                  boxShadow: "inset 0 1px 3px rgba(0,0,0,0.3)",
+                }}
               />
             </div>
           )}
@@ -189,15 +201,18 @@ export default function Sidebar() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                     isActive
                       ? "text-white"
-                      : "text-white/60 hover:bg-white/5 hover:text-white/90"
+                      : "text-white/60 hover:translate-x-0.5 hover:bg-white/5 hover:text-white/90 hover:shadow-[0_2px_6px_rgba(0,0,0,0.2)]"
                   }`}
                   style={
                     isActive
                       ? {
-                          background: "rgba(255,255,255,0.12)",
+                          background:
+                            "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
+                          boxShadow:
+                            "0 2px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 0 0 1px rgba(255,255,255,0.08)",
                         }
                       : undefined
                   }
@@ -219,7 +234,10 @@ export default function Sidebar() {
                   {isActive && (
                     <span
                       className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
-                      style={{ background: WITS_GOLD }}
+                      style={{
+                        background: WITS_GOLD,
+                        boxShadow: `0 0 6px ${WITS_GOLD}`,
+                      }}
                     />
                   )}
                 </Link>
@@ -232,7 +250,10 @@ export default function Sidebar() {
         {/* BOTTOM */}
         {/* ================================================= */}
 
-        <div className="flex flex-col gap-1.5 px-4 pt-4">
+        <div
+          className="flex flex-col gap-1.5 px-4 pt-4"
+          style={{ boxShadow: "0 -1px 0 rgba(255,255,255,0.06)" }}
+        >
           <LogoutButton collapsed={collapsed} />
 
           {/* Dark mode switch */}
@@ -251,13 +272,16 @@ export default function Sidebar() {
                 className="relative flex h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition-colors"
                 style={{
                   background: darkMode
-                    ? WITS_GOLD
-                    : "rgba(255,255,255,0.2)",
+                    ? `linear-gradient(90deg, ${WITS_GOLD}, #DBB865)`
+                    : "rgba(0,0,0,0.25)",
+                  boxShadow: "inset 0 1px 3px rgba(0,0,0,0.35)",
                 }}
               >
                 <span
-                  className="h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+                  className="h-4 w-4 rounded-full bg-white transition-transform duration-200"
                   style={{
+                    boxShadow:
+                      "0 1px 3px rgba(0,0,0,0.4), 0 1px 1px rgba(0,0,0,0.2)",
                     transform: darkMode
                       ? "translateX(16px)"
                       : "translateX(0)",
@@ -282,16 +306,19 @@ export default function Sidebar() {
                     ? "Switch to light mode"
                     : "Switch to dark mode"
                 }
-                className="relative ml-auto flex h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition-colors"
+                className="relative ml-auto flex h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition-all active:scale-95"
                 style={{
                   background: darkMode
-                    ? WITS_GOLD
-                    : "rgba(255,255,255,0.2)",
+                    ? `linear-gradient(90deg, ${WITS_GOLD}, #DBB865)`
+                    : "rgba(0,0,0,0.25)",
+                  boxShadow: "inset 0 1px 3px rgba(0,0,0,0.35)",
                 }}
               >
                 <span
-                  className="h-4 w-4 rounded-full bg-white shadow transition-transform duration-200"
+                  className="h-4 w-4 rounded-full bg-white transition-transform duration-200"
                   style={{
+                    boxShadow:
+                      "0 1px 3px rgba(0,0,0,0.4), 0 1px 1px rgba(0,0,0,0.2)",
                     transform: darkMode
                       ? "translateX(16px)"
                       : "translateX(0)",

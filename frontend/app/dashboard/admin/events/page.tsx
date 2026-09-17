@@ -445,35 +445,35 @@ export default function AdminEventsPage() {
     <div className="space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
 
       {/* HEADER */}
+      <div className="skeuo-plate-navy rounded-2xl p-6 sm:p-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p
+              className="text-xs font-bold uppercase tracking-[0.28em]"
+              style={{ color: "#E2C66F" }}
+            >
+              Admin console
+            </p>
 
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p
-            className="text-xs font-semibold uppercase tracking-[0.28em]"
-            style={{ color: WITS_GOLD }}
+            <h1
+              className="mt-2 text-4xl font-black tracking-[-0.045em] text-white"
+            >
+              Events
+            </h1>
+
+            <p className="mt-2 text-sm text-white/70">
+              Create and manage campus quests and their locations.
+            </p>
+          </div>
+
+          <Link
+            href="/dashboard/admin"
+            className="skeuo-btn-secondary shrink-0 rounded-xl px-4 py-2 text-sm font-semibold"
           >
-            Admin console
-          </p>
-
-          <h1
-            className="mt-2 text-4xl font-black tracking-[-0.045em]"
-            style={{ color: WITS_BLUE }}
-          >
-            Events
-          </h1>
-
-          <p className="mt-2 text-sm text-slate-500">
-            Create and manage campus quests and their locations.
-          </p>
+            ← Back to dashboard
+          </Link>
         </div>
-
-        <Link
-          href="/dashboard/admin"
-          className="rounded-xl border border-[#043673]/15 bg-white px-4 py-2 text-sm font-semibold text-[#043673] shadow-sm transition hover:bg-[#043673]/5"
-        >
-          ← Back to dashboard
-        </Link>
-      </header>
+      </div>
 
       {/* MESSAGES */}
 

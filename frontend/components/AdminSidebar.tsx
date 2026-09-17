@@ -70,10 +70,14 @@ export default function AdminSidebar({
 
   return (
     <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col justify-between py-6 transition-all duration-200 ${
+      className={`sticky top-0 flex h-screen shrink-0 flex-col justify-between py-6 transition-all duration-200 border-r border-[#021833] ${
         collapsed ? "w-[76px]" : "w-[240px]"
       }`}
-      style={{ background: WITS_BLUE }}
+      style={{
+        background: `linear-gradient(180deg, ${WITS_BLUE} 0%, #02234A 100%)`,
+        boxShadow:
+          "4px 0 24px rgba(0,0,0,0.35), inset -1px 0 0 rgba(255,255,255,0.08)",
+      }}
     >
       {/* TOP */}
       <div className="flex flex-col gap-4 px-4">
@@ -85,7 +89,7 @@ export default function AdminSidebar({
               ? "Expand admin sidebar"
               : "Collapse admin sidebar"
           }
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+          className="flex h-9 w-9 items-center justify-center rounded-lg text-white/80 transition-all hover:bg-white/10 hover:text-white hover:shadow-[0_2px_6px_rgba(0,0,0,0.3)] active:scale-95"
         >
           <MenuIcon />
         </button>
@@ -93,7 +97,7 @@ export default function AdminSidebar({
         {/* ADMIN LABEL */}
         {!collapsed && (
           <div className="px-3">
-            <p className="text-[10px] font-semibold uppercase tracking-[0.25em] text-white/40">
+            <p className="text-[10px] font-bold uppercase tracking-[0.25em] text-[#E2C66F]/80">
               Admin console
             </p>
           </div>
@@ -109,16 +113,18 @@ export default function AdminSidebar({
                 key={item.href}
                 href={item.href}
                 title={collapsed ? item.label : undefined}
-                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors ${
+                className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                   active
                     ? "text-white"
-                    : "text-white/60 hover:bg-white/5 hover:text-white/90"
+                    : "text-white/60 hover:translate-x-0.5 hover:bg-white/5 hover:text-white/90 hover:shadow-[0_2px_6px_rgba(0,0,0,0.2)]"
                 }`}
                 style={
                   active
                     ? {
                         background:
-                          "rgba(255,255,255,0.12)",
+                          "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
+                        boxShadow:
+                          "0 2px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 0 0 1px rgba(255,255,255,0.08)",
                       }
                     : undefined
                 }
@@ -138,6 +144,7 @@ export default function AdminSidebar({
                     className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
                     style={{
                       background: WITS_GOLD,
+                      boxShadow: `0 0 6px ${WITS_GOLD}`,
                     }}
                   />
                 )}
