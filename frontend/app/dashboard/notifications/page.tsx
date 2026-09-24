@@ -4,6 +4,7 @@ import { apiRequest } from "@/lib/api";
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
+import ForwardArrowIcon from "@/components/ForwardArrowIcon";
 
 type Notification = { id: string; title: string; message: string; href: string | null; read_at: string | null; created_at: string };
 
@@ -50,7 +51,7 @@ export default function NotificationsPage() {
           {notifications.map((notification) => (
             <button key={notification.id} type="button" onClick={() => openNotification(notification)} className={`group grid w-full grid-cols-[4px_1fr] gap-4 border-b border-slate-100 px-5 py-5 text-left transition last:border-0 hover:bg-[#F7F9FC] active:bg-[#EEF2F7] ${notification.read_at ? "" : "bg-[#FCF8ED]"}`}>
               <span className={`h-full min-h-12 rounded-full ${notification.read_at ? "bg-slate-200" : "bg-[#C9A24B]"}`} />
-              <span><span className="flex flex-col justify-between gap-1 sm:flex-row sm:items-baseline"><strong className="text-sm text-[#043673]">{notification.title}</strong><time className="font-mono text-[10px] text-slate-400">{new Date(notification.created_at).toLocaleString()}</time></span><span className="mt-1 block text-sm leading-6 text-slate-600">{notification.message}</span>{notification.href && <span className="mt-3 block text-xs font-bold text-[#043673]">Open update →</span>}</span>
+              <span><span className="flex flex-col justify-between gap-1 sm:flex-row sm:items-baseline"><strong className="text-sm text-[#043673]">{notification.title}</strong><time className="font-mono text-[10px] text-slate-400">{new Date(notification.created_at).toLocaleString()}</time></span><span className="mt-1 block text-sm leading-6 text-slate-600">{notification.message}</span>{notification.href && <span className="mt-3 inline-flex items-center gap-1 text-xs font-bold text-[#043673]">Open update <ForwardArrowIcon /></span>}</span>
             </button>
           ))}
         </section>
