@@ -55,12 +55,21 @@ export default function GameRoomPage() {
   const latestRound = state?.rounds[state.rounds.length - 1];
   const finishedRoundId = latestRound?.status === "finished" ? latestRound.id : null;
   const [revealedRoundId, setRevealedRoundId] = useState<string | null>(null);
+  const [secondsLeft, setSecondsLeft] = useState(30);
   useEffect(() => {
     if (!finishedRoundId) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = setTimeout(() => setRevealedRoundId(finishedRoundId), reduced ? 0 : 2500);
     return () => clearTimeout(timer);
   }, [finishedRoundId]);
+  useEffect(() => {
+    const deadline = latestRound?.turn_deadline;
+    if (!deadline || latestRound.status === "finished") return;
+    const update = () => setSecondsLeft(Math.max(0, Math.ceil((new Date(deadline).getTime() - Date.now()) / 1000)));
+    update();
+    const timer = setInterval(update, 250);
+    return () => clearInterval(timer);
+  }, [latestRound?.id, latestRound?.status, latestRound?.turn_deadline]);
   const revealing = !!finishedRoundId && revealedRoundId !== finishedRoundId;
   if (version === 1) return <LegacyGameRoom />;
   if (!state) return <div className="p-8">{error ? <p role="alert">{error} <Link href="/dashboard/games" className="underline">Back to battles</Link></p> : <ScreenSkeleton />}</div>;
@@ -92,9 +101,13 @@ export default function GameRoomPage() {
       {game.status === "active" && awaitingStakes && <div className="mt-5 flex flex-wrap gap-4"><button disabled={busy || stakes.some(stake => stake.side === side && stake.accepted)} onClick={() => action("battle/accept")} className="rounded-xl bg-[#043673] px-4 py-3 font-semibold text-white disabled:opacity-40">Accept these stakes</button><button disabled={busy} onClick={() => action("cancel")} className="underline">Decline and leave</button><p role="status">Both players must accept before playing.</p></div>}
     </section>}
     {round && !awaitingStakes && game.status !== "waiting" && game.status !== "cancelled" && <section className="space-y-5">
-      <h2 className="text-xl font-bold text-[#043673]">Round {round.round_number} / 5</h2>
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-bold text-[#043673]">Round {round.round_number} / 5</h2>
+        {round.status !== "finished" && round.turn_deadline && <div role="timer" aria-label={`${secondsLeft} seconds left in this turn`} className={`min-w-32 rounded-xl border px-4 py-2 text-center shadow-[inset_0_2px_4px_rgba(0,0,0,.18),0_2px_0_rgba(4,54,115,.22)] ${secondsLeft <= 10 ? "border-red-700 bg-red-50 text-red-800" : "border-[#C9A24B] bg-[#FFF7DA] text-[#043673]"}`}><span className="block text-[9px] font-black uppercase tracking-[.14em]">Turn time</span><strong className="text-xl tabular-nums">0:{String(secondsLeft).padStart(2,"0")}</strong></div>}
+      </div>
       {round.status === "finished" ? <>
         <p role="status" className="rounded-xl bg-white p-4 font-semibold">{revealing ? "Revealing the cards…" : round.winner_side === null ? "Equal points — round drawn." : round.winner_side === side ? "You win this round." : `${game.is_cpu ? "CPU" : "Opponent"} wins this round.`}</p>
+        {!revealing && (round.player_one_timed_out || round.player_two_timed_out) && <p className="rounded-xl border border-amber-300 bg-amber-50 p-4 text-sm font-semibold text-amber-900">{(side === 1 ? round.player_one_timed_out : round.player_two_timed_out) ? "Your timer expired, so the game played your next available card." : "Your opponent's timer expired, so the game played their next available card."}</p>}
         <BattleReveal key={round.id} mine={myCard} opponent={opponentCard} opponentName={game.is_cpu ? "CPU" : "Opponent"} finished revealed={!revealing} />
         {game.status === "active" && !revealing && <button disabled={busy} onClick={() => action("battle/next",{ roundId: round.id })} className="rounded-xl bg-[#043673] px-6 py-3 font-semibold text-white disabled:opacity-50">Next round</button>}
       </> : game.status === "active" && <>

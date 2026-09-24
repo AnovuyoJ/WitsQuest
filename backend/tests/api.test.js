@@ -223,6 +223,23 @@ test("CPU commits before play, obeys the rarity mix and supports a complete draw
   expect((await request("/me/cards")).data).toHaveLength(5);
 });
 
+test("expired battle turns auto-play an unused card and reveal the timeout after resolution", async () => {
+  const one = await makeDeck(oneId,40), two = await makeDeck(twoId,0);
+  const game = (await request("/games/matchmake","one","POST",{cardIds:one.map(card => card.id)})).data;
+  await request("/games/matchmake","two","POST",{cardIds:two.map(card => card.id)});
+  const initial = (await request(`/games/${game.id}/battle`,"one")).data;
+  const round = initial.rounds.at(-1);
+  expect(new Date(round.turn_deadline).getTime()).toBeGreaterThan(Date.now());
+
+  await request(`/games/${game.id}/battle/card`,"one","POST",{roundId:round.id,cardId:one[4].id});
+  await mockPg.query("UPDATE public.game_rounds SET turn_deadline=now()-interval '1 second' WHERE id=$1",[round.id]);
+  const expired = (await request(`/games/${game.id}/battle`,"two")).data.rounds.at(-1);
+
+  expect(expired).toMatchObject({status:"finished",player_one_timed_out:false,player_two_timed_out:true});
+  expect(expired.player_one_card.id).toBe(one[4].id);
+  expect(two.map(card => card.id)).toContain(expired.player_two_card.id);
+});
+
 test("CPU availability, cancellation and CPU forfeits are explicit", async () => {
   const deck = await makeDeck();
   await mockPg.query("UPDATE public.challenges SET published_snapshot=NULL,published_revision=NULL WHERE card_id=$1",[deck[1].id]);

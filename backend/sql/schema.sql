@@ -62,7 +62,9 @@ CREATE TABLE IF NOT EXISTS public.game_rounds (
   player_one_card_id uuid REFERENCES public.cards(id), player_two_card_id uuid REFERENCES public.cards(id),
   player_one_points integer, player_two_points integer, winner_id uuid REFERENCES auth.users(id),
   status text NOT NULL CHECK (status IN ('waiting','ready','finished')),
-  created_at timestamptz DEFAULT now(), finished_at timestamptz, UNIQUE(game_id,round_number)
+  created_at timestamptz DEFAULT now(), finished_at timestamptz,
+  turn_deadline timestamptz, player_one_timed_out boolean NOT NULL DEFAULT false,
+  player_two_timed_out boolean NOT NULL DEFAULT false, UNIQUE(game_id,round_number)
 );
 CREATE TABLE IF NOT EXISTS public.notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES auth.users(id),

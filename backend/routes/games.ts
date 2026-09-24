@@ -23,6 +23,10 @@ router.post("/:id/battle/accept", async (req, res) => {
     const game = await lockGame(client,id(req.params.id),req.user!.id);
     if (!game.stakes_enabled || game.status !== "active") throw new HttpError(409,"Wait for a duel opponent before accepting.");
     await client.query("UPDATE public.battle_stakes SET accepted=true WHERE game_id=$1 AND side=$2", [game.id,game.player_one_id === req.user!.id ? 1 : 2]);
+    if (await stakesReady(client,game.id)) {
+      await client.query(`UPDATE public.game_rounds SET turn_deadline=now()+interval '30 seconds'
+        WHERE game_id=$1 AND status='waiting' AND turn_deadline IS NULL`, [game.id]);
+    }
   });
   res.json({ success: true });
 });
