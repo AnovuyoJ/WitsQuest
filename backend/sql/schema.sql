@@ -66,6 +66,18 @@ CREATE TABLE IF NOT EXISTS public.game_rounds (
   turn_deadline timestamptz, player_one_timed_out boolean NOT NULL DEFAULT false,
   player_two_timed_out boolean NOT NULL DEFAULT false, UNIQUE(game_id,round_number)
 );
+CREATE TABLE IF NOT EXISTS public.offline_attempt_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  challenge_id uuid NOT NULL REFERENCES public.challenges(id) ON DELETE CASCADE,
+  verification_id uuid NOT NULL REFERENCES public.location_verifications(id) ON DELETE CASCADE,
+  challenge_revision integer, correct_answer_snapshot text NOT NULL,
+  card_id_snapshot uuid REFERENCES public.cards(id),
+  issued_at timestamptz NOT NULL DEFAULT now(), expires_at timestamptz NOT NULL,
+  sync_deadline timestamptz NOT NULL, consumed_at timestamptz, client_attempt_id uuid UNIQUE,
+  CHECK (expires_at > issued_at), CHECK (sync_deadline >= expires_at)
+);
 CREATE TABLE IF NOT EXISTS public.notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES auth.users(id),
   title text NOT NULL, message text NOT NULL, href text, read_at timestamptz, created_at timestamptz NOT NULL DEFAULT now()

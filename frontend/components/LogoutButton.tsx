@@ -1,6 +1,8 @@
 "use client";
 
 import { signOut } from "@/lib/authService";
+import { clearOfflineDataForOwner } from "@/lib/offlineDb";
+import { supabase } from "@/lib/supabaseClient";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 
@@ -16,12 +18,15 @@ export default function LogoutButton({ collapsed }: LogoutButtonProps) {
     setLoading(true);
 
     try {
+      const { data: sessionData } = await supabase.auth.getSession();
       const { error } = await signOut();
 
       if (error) {
         console.error("Logout error:", error);
         return;
       }
+
+      if (sessionData.session?.user.id) await clearOfflineDataForOwner(sessionData.session.user.id);
 
       router.push("/Login");
       router.refresh();

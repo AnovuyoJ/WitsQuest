@@ -8,15 +8,14 @@ router.get("/:eventId/challenge", requireAuth, async (req, res) => {
   res.json(await loadChallenge(req.user!.id, id(req.params.eventId)));
 });
 router.post("/:eventId/submit-answer", requireAuth, async (req, res) => {
-  res.json(await submitAnswer(req.user!.id, id(req.params.eventId), id(req.body.challengeId), text(req.body.answer, "Answer")));
-});
-router.post("/:eventId/submit-answer", requireAuth, async (req, res) => {
   res.json(await submitAnswer(
     req.user!.id,
     id(req.params.eventId),
     id(req.body.challengeId),
     text(req.body.answer, "Answer"),
-    req.body.attemptedAt 
+    req.body.attemptedAt,
+    req.body.offlineToken === undefined ? undefined : id(req.body.offlineToken),
+    req.body.clientAttemptId === undefined ? undefined : id(req.body.clientAttemptId),
   ));
 });
 export default router;
