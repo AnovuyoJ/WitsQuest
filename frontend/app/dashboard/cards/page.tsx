@@ -8,6 +8,7 @@ import CampusArtwork from "@/components/collection/CampusArtwork";
 import CollectibleCard from "@/components/collection/CollectibleCard";
 import CardInspector from "@/components/collection/CardInspector";
 import styles from "@/components/collection/album.module.css";
+import ForwardArrowIcon from "@/components/ForwardArrowIcon";
 
 const rarities = ["Gold", "Black", "Blue"] as const;
 
@@ -103,7 +104,7 @@ return <div className={`${styles.album} px-5 pb-7 pt-20 sm:px-8 md:pt-7 lg:px-10
               const count = event.cards.filter(row => row.cards?.rarity === rarity).length;
               return count > 0 && <span key={rarity} className={`rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${rarity === "Gold" ? "border-[#ddbc68] bg-[#f6e8c2] text-[#644613]" : rarity === "Black" ? "border-[#546378] bg-[#29364a] text-[#f0f3f7]" : "border-[#afcee5] bg-[#dcecf8] text-[#174e76]"}`}>{count} {rarity}</span>;
             })}</div>
-            <span className="mt-5 flex items-center justify-between border-t border-current/15 pt-3 text-xs font-bold">Open collection<span aria-hidden="true">→</span></span>
+            <span className="mt-5 flex items-center justify-between border-t border-current/15 pt-3 text-xs font-bold">Open collection<ForwardArrowIcon /></span>
           </div>
         </button>)}
       </div>}
@@ -160,4 +161,4 @@ function DuplicateIcon() {
   return <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
     <rect x="8" y="8" width="12" height="12" rx="2" /><path d="M4 16V6a2 2 0 0 1 2-2h10" />
   </svg>;
-}  
+}

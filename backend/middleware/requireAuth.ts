@@ -1,4 +1,5 @@
 import { Request, Response, NextFunction } from "express";
+import { isAuthRetryableFetchError } from "@supabase/auth-js";
 import { authClient } from "../services/authClient";
 
 // Extend Express's Request type so req.user is recognized by TypeScript
@@ -32,6 +33,16 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   const token = authHeader.replace("Bearer ", "");
 
   const { data, error } = await authClient.getUser(token);
+
+  // A local API can still be reachable while the device has no internet. In
+  // that case Supabase cannot validate the token; it is not an expired
+  // session. The client uses this signal to retain an offline answer locally.
+  if (error && isAuthRetryableFetchError(error)) {
+    return res.status(503).json({
+      message: "Authentication is temporarily unavailable. Your offline answer can be saved and synced later.",
+      code: "AUTH_UNAVAILABLE",
+    });
+  }
 
   if (error || !data?.user) {
     return res.status(401).json({ message: "Invalid or expired session." });

@@ -223,6 +223,23 @@ test("CPU commits before play, obeys the rarity mix and supports a complete draw
   expect((await request("/me/cards")).data).toHaveLength(5);
 });
 
+test("expired battle turns auto-play an unused card and reveal the timeout after resolution", async () => {
+  const one = await makeDeck(oneId,40), two = await makeDeck(twoId,0);
+  const game = (await request("/games/matchmake","one","POST",{cardIds:one.map(card => card.id)})).data;
+  await request("/games/matchmake","two","POST",{cardIds:two.map(card => card.id)});
+  const initial = (await request(`/games/${game.id}/battle`,"one")).data;
+  const round = initial.rounds.at(-1);
+  expect(new Date(round.turn_deadline).getTime()).toBeGreaterThan(Date.now());
+
+  await request(`/games/${game.id}/battle/card`,"one","POST",{roundId:round.id,cardId:one[4].id});
+  await mockPg.query("UPDATE public.game_rounds SET turn_deadline=now()-interval '1 second' WHERE id=$1",[round.id]);
+  const expired = (await request(`/games/${game.id}/battle`,"two")).data.rounds.at(-1);
+
+  expect(expired).toMatchObject({status:"finished",player_one_timed_out:false,player_two_timed_out:true});
+  expect(expired.player_one_card.id).toBe(one[4].id);
+  expect(two.map(card => card.id)).toContain(expired.player_two_card.id);
+});
+
 test("CPU availability, cancellation and CPU forfeits are explicit", async () => {
   const deck = await makeDeck();
   await mockPg.query("UPDATE public.challenges SET published_snapshot=NULL,published_revision=NULL WHERE card_id=$1",[deck[1].id]);
@@ -327,6 +344,7 @@ beforeAll(async () => {
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/card-battles.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/battle-stakes.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/profile-images.sql"), "utf8"));
+  await mockPg.exec(readFileSync(path.join(__dirname, "../sql/offline-attempts.sql"), "utf8"));
   await mockPg.query("INSERT INTO auth.users (id) VALUES ($1),($2),($3)", [adminId,oneId,twoId]);
   server = app.listen(0, "127.0.0.1");
   await new Promise(resolve => server.once("listening", resolve));
@@ -613,6 +631,46 @@ test("the server decides correctness, scopes the player, and prevents duplicate 
   expect((await request("/me/cards", "one")).data).toHaveLength(1);
   expect((await request("/me/cards", "two")).data).toHaveLength(0);
   expect((await request(`/events/${event.id}/challenge`)).data).toBeNull();
+});
+
+test("offline answers require a player-bound lease, preserve the issued snapshot and reject replay tampering", async () => {
+  await request(`/events/${event.id}/verify-location`, "one", "POST", { latitude: event.latitude, longitude: event.longitude });
+  const loaded = (await request(`/events/${event.id}/challenge`, "one")).data;
+  expect(loaded.offline_token).toMatch(/^[0-9a-f-]{36}$/i);
+  const lease = (await mockPg.query("SELECT * FROM public.offline_attempt_sessions WHERE id=$1", [loaded.offline_token])).rows[0];
+  const attemptedAt = new Date(lease.issued_at).toISOString();
+  const attemptId = "10000000-0000-4000-8000-000000000001";
+
+  expect((await request(`/events/${event.id}/submit-answer`, "one", "POST", {
+    challengeId: challenge.id, answer: "Yes", attemptedAt,
+  })).status).toBe(400);
+  expect((await request(`/events/${event.id}/submit-answer`, "two", "POST", {
+    challengeId: challenge.id, answer: "Yes", attemptedAt,
+    offlineToken: loaded.offline_token, clientAttemptId: attemptId,
+  })).status).toBe(403);
+  expect((await request(`/events/${event.id}/submit-answer`, "one", "POST", {
+    challengeId: challenge.id, answer: "Yes",
+    attemptedAt: new Date(new Date(lease.issued_at).getTime()-1000).toISOString(),
+    offlineToken: loaded.offline_token, clientAttemptId: attemptId,
+  })).status).toBe(410);
+
+  await mockPg.query(`UPDATE public.challenges SET published_snapshot=
+    jsonb_set(published_snapshot,'{correct_answer}','\"Changed after download\"'::jsonb) WHERE id=$1`, [challenge.id]);
+  const accepted = await request(`/events/${event.id}/submit-answer`, "one", "POST", {
+    challengeId: challenge.id, answer: "Yes", attemptedAt,
+    offlineToken: loaded.offline_token, clientAttemptId: attemptId,
+  });
+  expect(accepted.data).toMatchObject({ correct: true, cardAwarded: true, alreadyCompleted: false });
+
+  const replay = await request(`/events/${event.id}/submit-answer`, "one", "POST", {
+    challengeId: challenge.id, answer: "No", attemptedAt,
+    offlineToken: loaded.offline_token, clientAttemptId: attemptId,
+  });
+  expect(replay.data).toMatchObject({ correct: true, cardAwarded: false, alreadyCompleted: true });
+  expect((await request(`/events/${event.id}/submit-answer`, "one", "POST", {
+    challengeId: challenge.id, answer: "No", attemptedAt,
+    offlineToken: loaded.offline_token, clientAttemptId: "10000000-0000-4000-8000-000000000002",
+  })).status).toBe(409);
 });
 
 test("a failed reward rolls back the attempt so the player can retry", async () => {
