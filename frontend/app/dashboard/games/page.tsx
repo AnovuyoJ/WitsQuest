@@ -11,6 +11,10 @@ import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScree
 import styles from "./games.module.css";
 
 type PendingGame = { id: string; status: string; is_cpu: boolean; rules_version: number; stakes_enabled?: boolean };
+type LiveMatch = {
+  id: string; started_at: string | null; is_cpu: boolean; player_one_name: string; player_two_name: string;
+  player_one_score: number; player_two_score: number; round_number: number | null;
+};
 const rarityOrder = { Blue: 0, Black: 1, Gold: 2 };
 
 export default function GamesPage() {
@@ -19,20 +23,23 @@ export default function GamesPage() {
   const [selected, setSelected] = useState<string[]>([]);
   const [stake, setStake] = useState("");
   const [games, setGames] = useState<PendingGame[]>([]);
+  const [liveMatches, setLiveMatches] = useState<LiveMatch[]>([]);
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
-    const [collection, pending] = await Promise.all([
+    const [collection, pending, live] = await Promise.all([
       apiRequest<PlayerCardRecord[]>("/me/cards"),
       apiRequest<PendingGame[]>("/games"),
+      apiRequest<LiveMatch[]>("/games/live"),
     ]);
     if (collection.error || pending.error) setError(collection.error?.message || pending.error?.message || "Could not load battles.");
     else {
       setCards(Array.from(new Map((collection.data ?? []).filter((row) => row.cards).map((row) => [row.card_id, row.cards!])).values())
         .sort((a, b) => rarityOrder[a.rarity] - rarityOrder[b.rarity]));
       setGames(pending.data ?? []);
+      setLiveMatches(live.data ?? []);
     }
     setLoading(false);
   }, []);
@@ -133,6 +140,29 @@ export default function GamesPage() {
               <p className={styles.panelNote}>Finish or cancel your current battle before starting another.</p>
             </section>
           ) : null}
+
+          <section className={styles.activePanel} aria-labelledby="live-matches-heading">
+            <div className={styles.panelHeading}>
+              <div><p>Spectator gallery</p><h2 id="live-matches-heading">Live matches</h2></div>
+              <span className={styles.activeLamp}><i /> Live</span>
+            </div>
+            {liveMatches.length ? (
+              <div className={styles.battleList}>
+                {liveMatches.map((match) => (
+                  <article key={match.id} className={styles.battleRow}>
+                    <span className={styles.battleType} aria-hidden="true">{match.is_cpu ? "CPU" : "VS"}</span>
+                    <div>
+                      <h3>{match.player_one_name} vs {match.player_two_name}</h3>
+                      <p>{match.player_one_score} – {match.player_two_score} · Round {match.round_number ?? 1} of 5</p>
+                    </div>
+                    <div className={styles.battleActions}>
+                      <Link href={`/dashboard/games/spectate/${match.id}`} className={styles.resumeButton}>Watch <ForwardArrowIcon /></Link>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            ) : <p className={styles.panelNote}>No other matches are live right now. Check back soon.</p>}
+          </section>
 
           {!cards.length ? (
             <div className={styles.emptyFrame}>

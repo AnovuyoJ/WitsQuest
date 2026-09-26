@@ -14,6 +14,21 @@ router.get("/", async (req, res) => {
     WHERE (player_one_id=$1 OR player_two_id=$1) AND status IN ('waiting','active') ORDER BY created_at DESC`, [req.user!.id]);
   res.json(rows);
 });
+// Spectators receive only public, already-revealed information. In particular,
+// active round card choices and both sides' remaining decks stay private.
+router.get("/live", async (req, res) => {
+  const { rows } = await database.query(`SELECT g.id,g.started_at,g.is_cpu,
+    COALESCE(u1.raw_user_meta_data->>'full_name',u1.raw_user_meta_data->>'name','Player 1') AS player_one_name,
+    CASE WHEN g.is_cpu THEN 'Campus CPU' ELSE COALESCE(u2.raw_user_meta_data->>'full_name',u2.raw_user_meta_data->>'name','Player 2') END AS player_two_name,
+    (SELECT count(*) FILTER (WHERE winner_side=1)::int FROM public.game_rounds WHERE game_id=g.id) AS player_one_score,
+    (SELECT count(*) FILTER (WHERE winner_side=2)::int FROM public.game_rounds WHERE game_id=g.id) AS player_two_score,
+    (SELECT round_number FROM public.game_rounds WHERE game_id=g.id ORDER BY round_number DESC LIMIT 1) AS round_number
+    FROM public.card_games g JOIN auth.users u1 ON u1.id=g.player_one_id LEFT JOIN auth.users u2 ON u2.id=g.player_two_id
+    WHERE g.status='active' AND g.rules_version=2 AND g.player_one_id<>$1
+      AND (g.is_cpu OR g.player_two_id<>$1)
+    ORDER BY g.started_at DESC`, [req.user!.id]);
+  res.json(rows);
+});
 router.post("/matchmake", async (req, res) => {
   if (req.body.mode !== undefined && !["player","cpu"].includes(req.body.mode)) throw new HttpError(400,"Choose player or cpu mode.");
   res.json(await startBattle(req.user!.id,req.body.cardIds,req.body.mode === "cpu",req.body.stakeCardId === undefined ? undefined : id(req.body.stakeCardId)));
@@ -32,6 +47,32 @@ router.post("/:id/battle/accept", async (req, res) => {
 });
 router.get("/:id/battle", async (req, res) => {
   res.json(await battleState(req.user!.id,id(req.params.id)));
+});
+router.get("/:id/spectate", async (req, res) => {
+  const gameId = id(req.params.id);
+  const { rows } = await database.query(`SELECT g.id,g.status,g.started_at,g.winner_side,g.is_cpu,
+    COALESCE(u1.raw_user_meta_data->>'full_name',u1.raw_user_meta_data->>'name','Player 1') AS player_one_name,
+    CASE WHEN g.is_cpu THEN 'Campus CPU' ELSE COALESCE(u2.raw_user_meta_data->>'full_name',u2.raw_user_meta_data->>'name','Player 2') END AS player_two_name
+    FROM public.card_games g JOIN auth.users u1 ON u1.id=g.player_one_id LEFT JOIN auth.users u2 ON u2.id=g.player_two_id
+    WHERE g.id=$1 AND g.status IN ('active','finished') AND g.rules_version=2
+      AND g.player_one_id<>$2 AND (g.is_cpu OR g.player_two_id<>$2)`, [gameId,req.user!.id]);
+  const game = rows[0];
+  if (!game) throw new HttpError(404,"This match is no longer available to watch.");
+  const rounds = (await database.query(`SELECT r.id,r.round_number,r.status,r.winner_side,r.turn_deadline,
+    r.player_one_timed_out,r.player_two_timed_out,
+    (r.player_one_card_id IS NOT NULL) AS player_one_submitted,
+    (r.player_two_card_id IS NOT NULL) AS player_two_submitted,
+    CASE WHEN r.status='finished' THEN d1.snapshot ELSE NULL END AS player_one_card,
+    CASE WHEN r.status='finished' THEN d2.snapshot ELSE NULL END AS player_two_card
+    FROM public.game_rounds r
+    LEFT JOIN public.battle_decks d1 ON d1.game_id=r.game_id AND d1.side=1 AND d1.card_id=r.player_one_card_id
+    LEFT JOIN public.battle_decks d2 ON d2.game_id=r.game_id AND d2.side=2 AND d2.card_id=r.player_two_card_id
+    WHERE r.game_id=$1 ORDER BY r.round_number`, [gameId])).rows;
+  const scores = {
+    one: rounds.filter(round => round.winner_side === 1).length,
+    two: rounds.filter(round => round.winner_side === 2).length,
+  };
+  res.json({ game, rounds, scores });
 });
 router.post("/:id/battle/card", async (req, res) => {
   res.json(await battleMove(req.user!.id,id(req.params.id),id(req.body.roundId),id(req.body.cardId)));
