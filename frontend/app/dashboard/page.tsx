@@ -10,6 +10,50 @@ import { supabase } from "@/lib/supabaseClient";
 
 type ActiveEvent = { id: string; title: string; description: string | null; ends_at: string };
 
+/* Pirate-flavored inline icons — thin gold linework to match the existing skeuo-gold palette */
+function CompassIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M15.2 8.8 13 13l-4.2 2.2L11 11l4.2-2.2Z" fill="currentColor" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+function TreasureChestIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <rect x="3.5" y="10" width="17" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3.5 10c0-3.3 2.2-5.5 8.5-5.5S20.5 6.7 20.5 10" stroke="currentColor" strokeWidth="1.6" />
+      <path d="M3.5 13.5h17" stroke="currentColor" strokeWidth="1.6" />
+      <rect x="10.3" y="12" width="3.4" height="3" rx="0.6" stroke="currentColor" strokeWidth="1.4" />
+    </svg>
+  );
+}
+
+function ShipWheelIcon({ className = "" }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="7" stroke="currentColor" strokeWidth="1.6" />
+      <circle cx="12" cy="12" r="2.2" stroke="currentColor" strokeWidth="1.6" />
+      {[0, 45, 90, 135, 180, 225, 270, 315].map((deg) => (
+        <line
+          key={deg}
+          x1="12"
+          y1="12"
+          x2="12"
+          y2="2.3"
+          stroke="currentColor"
+          strokeWidth="1.6"
+          strokeLinecap="round"
+          transform={`rotate(${deg} 12 12)`}
+        />
+      ))}
+    </svg>
+  );
+}
+
 export default function DashboardPage() {
   const router = useRouter();
   const [checkingSession, setCheckingSession] = useState(true);
@@ -35,13 +79,13 @@ export default function DashboardPage() {
   if (checkingSession) return <div className="min-h-full p-5 sm:p-8"><ScreenSkeleton cards={3} /></div>;
 
   return (
-    <div className="min-h-full px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
+    <div className="relative min-h-full px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
       <header className="mb-8 flex items-start justify-between gap-4">
         <div>
           <p className="inline-block text-[11px] font-extrabold uppercase tracking-[0.28em] text-[#9A741E] skeuo-text-emboss">
             WitsQuest field desk
           </p>
-          <h1 className="mt-2 text-[clamp(2rem,6vw,3.2rem)] font-black leading-none tracking-[-0.055em] text-[#043673] skeuo-text-emboss">
+          <h1 className="font-pirate mt-2 text-[clamp(2rem,6vw,3.2rem)] font-black leading-none tracking-[-0.02em] text-[#043673] skeuo-text-emboss">
             What is in play?
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 font-medium">
@@ -58,10 +102,13 @@ export default function DashboardPage() {
           className="skeuo-plate-navy group relative min-h-60 overflow-hidden p-6 text-white transition-all hover:-translate-y-1 active:translate-y-0.5 sm:p-8"
         >
           <div className="absolute -bottom-20 -right-14 h-64 w-64 rounded-full border-[36px] border-white/5 transition-transform group-hover:scale-105" />
-          <p className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#E2C66F] skeuo-text-deboss">
-            Live campus map
-          </p>
-          <h2 className="mt-4 max-w-md text-3xl font-black tracking-[-0.045em] [text-shadow:0_2px_8px_rgba(0,0,0,0.4)] sm:text-4xl">
+          <div className="flex items-center gap-2 text-[#E2C66F]">
+            <CompassIcon className="h-4 w-4" />
+            <p className="text-[11px] font-extrabold uppercase tracking-[0.24em] skeuo-text-deboss">
+              Live campus map
+            </p>
+          </div>
+          <h2 className="font-pirate mt-4 max-w-md text-[1.9rem] font-black tracking-[-0.01em] [text-shadow:0_2px_8px_rgba(0,0,0,0.4)] sm:text-[2.4rem]">
             Find the next pin before your next lecture.
           </h2>
           <span className="skeuo-badge-gold absolute bottom-6 left-6 text-xs font-black sm:bottom-8 sm:left-8">
@@ -73,11 +120,12 @@ export default function DashboardPage() {
           href="/dashboard/cards"
           className="skeuo-plate-gold group flex min-h-52 flex-col justify-between p-6 text-[#082C58] transition-all hover:-translate-y-1 active:translate-y-0.5 sm:p-8"
         >
-          <span className="skeuo-badge-gold self-start">
+          <span className="skeuo-badge-gold inline-flex items-center gap-1.5 self-start">
+            <TreasureChestIcon className="h-3.5 w-3.5" />
             Your collection
           </span>
           <div>
-            <h2 className="text-3xl font-black tracking-[-0.04em] text-[#082C58] skeuo-text-emboss">
+            <h2 className="font-pirate text-[1.9rem] font-black tracking-[-0.01em] text-[#082C58] skeuo-text-emboss">
               Cards worth the walk.
             </h2>
             <p className="mt-2 text-sm leading-6 text-[#082C58]/75 font-semibold">
@@ -97,7 +145,8 @@ export default function DashboardPage() {
             <p className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#9A741E] skeuo-text-emboss">
               Happening now
             </p>
-            <h2 id="active-heading" className="mt-1 text-2xl font-black tracking-tight text-[#043673] skeuo-text-emboss">
+            <h2 id="active-heading" className="font-pirate mt-1 flex items-center gap-2 text-[1.7rem] font-black tracking-tight text-[#043673] skeuo-text-emboss">
+              <ShipWheelIcon className="h-5 w-5 shrink-0 text-[#9A741E]" />
               Active challenges
             </h2>
           </div>

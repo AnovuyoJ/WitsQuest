@@ -3,21 +3,28 @@
 :root {
   --background: #f4f6f9;
   --foreground: #10233d;
+  --font-pirate: var(--font-pirata), var(--font-geist-sans), Arial, Helvetica, sans-serif;
   color-scheme: light;
 }
 
 :root {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
+  --font-sans: var(--font-pirate);
   --font-mono: var(--font-geist-mono);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-pirate);
   text-rendering: optimizeLegibility;
+}
+
+/* Utility for spots that want the display face explicitly */
+.font-pirate {
+  font-family: var(--font-pirate);
+  letter-spacing: 0.01em;
 }
 
 button, a, input { -webkit-tap-highlight-color: transparent; }
@@ -25,7 +32,7 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 /* Fade the artwork independently, keeping text and panels fully opaque. */
 .campus-background {
   background-color: #f7f9fc;
-  background-image: linear-gradient(#f7f9fcc4, #f7f9fcc4), url("/art/campus-map.webp");
+  background-image: linear-gradient(#f7f9fcc4, #f7f9fcc4), url("/art/campus-map.png");
   background-repeat: repeat;
   background-position: center top;
   background-size: auto, 1050px auto;
@@ -33,7 +40,7 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 
 .campus-background-dark {
   background-color: #0b1220;
-  background-image: linear-gradient(#0b1220f4, #0b1220f4), url("/art/campus-map.webp");
+  background-image: linear-gradient(#0b1220f4, #0b1220f4), url("/art/campus-map.png");
 }
 
 :focus-visible { outline: 3px solid rgba(201, 162, 75, 0.7); outline-offset: 3px; }

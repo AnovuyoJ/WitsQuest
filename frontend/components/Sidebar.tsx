@@ -6,9 +6,21 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
-const WITS_BLUE = "#043673";
-const WITS_BLUE_DARK = "#02234A";
+const PARCHMENT_LIGHT = "#f3e2b3";
+const PARCHMENT_MID = "#e3c98c";
+const PARCHMENT_DARK = "#b98f52";
+const RIBBON_DARK = "#3f2414";
 const WITS_GOLD = "#C9A24B";
+
+const RIBBON_FILL =
+  "linear-gradient(180deg, #8c4b2a 0%, #602d16 50%, #3b1706 100%)";
+const RIBBON_FILL_ACTIVE =
+  "linear-gradient(180deg, #a55a33 0%, #733818 50%, #4a1e09 100%)";
+
+/* Notched banner-ribbon shape: inward V-notch (swallowtail) on left and right ends. */
+const RIBBON_CLIP = "polygon(0% 0%, 100% 0%, 90% 50%, 100% 100%, 0% 100%, 10% 50%)";
+
+
 
 type NavItem = {
   label: string;
@@ -54,6 +66,37 @@ const navItems: NavItem[] = [
     href: "/dashboard/games",
   },
 ];
+const WOODEN_PLANKS_TEXTURE = `
+  /* Vertical grain streaks (subtle) */
+  repeating-linear-gradient(
+    90deg,
+    rgba(120, 70, 20, 0.03) 0px,
+    rgba(120, 70, 20, 0) 15px,
+    rgba(120, 70, 20, 0.05) 30px,
+    rgba(120, 70, 20, 0) 45px
+  ),
+  /* Horizontal wood grain streaks (subtle) */
+  repeating-linear-gradient(
+    to bottom,
+    rgba(255, 255, 255, 0) 0px,
+    rgba(255, 255, 255, 0.1) 8px,
+    rgba(120, 70, 20, 0.04) 12px,
+    rgba(255, 255, 255, 0) 20px
+  ),
+  /* Main continuous horizontal planks and dark seams */
+  repeating-linear-gradient(
+    to bottom,
+    #e0b78a 0px,
+    #c99e6d 68px,
+    #452511 68px,
+    #452511 72px
+  )
+`.replace(/\s+/g, ' ').trim();// Add this constant above your component (or alongside your other styles)
+
+
+/* Mottled parchment: soft light/dark blotches over a cream-to-tan base, plus a
+   burnt vignette at the edges so it reads as aged paper rather than a flat fill. */
+
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -92,11 +135,12 @@ export default function Sidebar() {
       <button
         onClick={() => setMobileOpen(true)}
         aria-label="Open menu"
-        className="fixed left-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-lg text-white transition-transform active:scale-95 md:hidden"
+        className="fixed left-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-lg text-[#f3e4c8] transition-transform active:scale-95 md:hidden"
         style={{
-          background: `linear-gradient(145deg, ${WITS_BLUE}, ${WITS_BLUE_DARK})`,
+          background: RIBBON_FILL,
+          border: `1px solid ${RIBBON_DARK}`,
           boxShadow:
-            "0 4px 10px rgba(4,54,115,0.45), 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.15)",
+            "0 4px 10px rgba(60,35,10,0.4), 0 1px 2px rgba(0,0,0,0.3), inset 0 1px 0 rgba(255,255,255,0.25)",
         }}
       >
         <MenuIcon />
@@ -119,19 +163,23 @@ export default function Sidebar() {
 
       <aside
         className={`fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col justify-between py-6 transition-all duration-200 md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0 ${
-          mobileOpen ? "translate-x-0" : "-translate-x-full"
-        } ${collapsed ? "md:w-[76px]" : "md:w-[240px]"}`}
-        style={{
-          background: `linear-gradient(180deg, ${WITS_BLUE} 0%, ${WITS_BLUE_DARK} 100%)`,
-          boxShadow:
-            "4px 0 20px rgba(0,0,0,0.25), inset -1px 0 0 rgba(255,255,255,0.06)",
-        }}
-      >
+    mobileOpen ? "translate-x-0" : "-translate-x-full"
+  } ${collapsed ? "md:w-[76px]" : "md:w-[240px]"}`}
+  style={{
+    background: WOODEN_PLANKS_TEXTURE,
+    boxShadow:
+      "6px 0 24px rgba(0,0,0,0.6), inset 0 0 40px rgba(0,0,0,0.5)",
+  }}
+>
+       
+        
+
         {/* ================================================= */}
         {/* TOP */}
         {/* ================================================= */}
 
         <div className="flex min-h-0 flex-1 flex-col gap-4 px-4">
+         
           {/* Desktop collapse button */}
 
           <button
@@ -139,7 +187,7 @@ export default function Sidebar() {
             aria-label={
               collapsed ? "Expand sidebar" : "Collapse sidebar"
             }
-            className="hidden h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-all hover:bg-white/10 hover:text-white hover:shadow-[0_2px_6px_rgba(0,0,0,0.25)] active:scale-95 md:flex"
+            className="hidden h-9 w-9 items-center justify-center rounded-lg text-[#5c3b22]/80 transition-all hover:bg-black/10 hover:text-[#3f2414] hover:shadow-[0_2px_6px_rgba(60,35,10,0.25)] active:scale-95 md:flex"
           >
             <MenuIcon />
           </button>
@@ -150,7 +198,7 @@ export default function Sidebar() {
             <button
               onClick={() => setMobileOpen(false)}
               aria-label="Close menu"
-              className="flex h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white"
+              className="flex h-9 w-9 items-center justify-center rounded-lg text-[#5c3b22]/80 transition-colors hover:bg-black/10 hover:text-[#3f2414]"
             >
               <CloseIcon />
             </button>
@@ -164,13 +212,13 @@ export default function Sidebar() {
             <button
               onClick={() => setCollapsed(false)}
               aria-label="Expand sidebar to search"
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white md:flex"
+              className="hidden h-9 w-9 items-center justify-center rounded-lg text-[#5c3b22]/80 transition-colors hover:bg-black/10 hover:text-[#3f2414] md:flex"
             >
               <SearchIcon />
             </button>
           ) : (
             <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#5c3b22]/60">
                 <SearchIcon />
               </span>
 
@@ -179,10 +227,11 @@ export default function Sidebar() {
                 value={query}
                 onChange={(event) => setQuery(event.target.value)}
                 placeholder="Search..."
-                className="w-full rounded-lg border border-black/20 py-2 pl-9 pr-3 text-sm text-white placeholder-white/50 outline-none transition-all focus:border-white/30 focus:shadow-[inset_0_1px_4px_rgba(0,0,0,0.35),0_0_0_2px_rgba(255,255,255,0.08)]"
+                className="w-full rounded-lg border py-2 pl-9 pr-3 text-sm text-[#3f2414] placeholder-[#5c3b22]/50 outline-none transition-all focus:shadow-[inset_0_1px_4px_rgba(60,35,10,0.3),0_0_0_2px_rgba(201,162,75,0.45)]"
                 style={{
-                  background: "rgba(0,0,0,0.18)",
-                  boxShadow: "inset 0 1px 3px rgba(0,0,0,0.3)",
+                  background: "rgba(255,255,255,0.35)",
+                  borderColor: "rgba(90,60,20,0.35)",
+                  boxShadow: "inset 0 1px 3px rgba(60,35,10,0.25)",
                 }}
               />
             </div>
@@ -192,7 +241,7 @@ export default function Sidebar() {
           {/* NAVIGATION */}
           {/* ================================================= */}
 
-          <nav className="scroll-thin mt-2 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
+          <nav className="scroll-thin mt-2 flex min-h-0 flex-1 flex-col gap-2.5 overflow-y-auto px-0.5">
             {filteredNavItems.map((item) => {
               const isActive = pathname === item.href;
 
@@ -201,21 +250,18 @@ export default function Sidebar() {
                   key={item.href}
                   href={item.href}
                   onClick={() => setMobileOpen(false)}
-                  className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
-                    isActive
-                      ? "text-white"
-                      : "text-white/60 hover:translate-x-0.5 hover:bg-white/5 hover:text-white/90 hover:shadow-[0_2px_6px_rgba(0,0,0,0.2)]"
-                  }`}
-                  style={
-                    isActive
-                      ? {
-                          background:
-                            "linear-gradient(135deg, rgba(255,255,255,0.18), rgba(255,255,255,0.06))",
-                          boxShadow:
-                            "0 2px 8px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.2), inset 0 0 0 1px rgba(255,255,255,0.08)",
-                        }
-                      : undefined
-                  }
+                  className={`flex items-center gap-3 py-2.5 text-sm font-bold uppercase tracking-wide text-[#fdf0d5] transition-all ${
+                    collapsed ? "justify-center rounded-xl px-2" : "px-6"
+                  } ${isActive ? "" : "hover:brightness-105 hover:-translate-y-0.5"}`}
+                  style={{
+                    background: isActive ? RIBBON_FILL_ACTIVE : RIBBON_FILL,
+                    clipPath: collapsed ? undefined : RIBBON_CLIP,
+                    border: collapsed ? `1px solid ${RIBBON_DARK}` : undefined,
+                    boxShadow: isActive
+                      ? `0 3px 0 ${RIBBON_DARK}, 0 6px 14px rgba(60,35,10,0.4), inset 0 1px 0 rgba(255,255,255,0.35), 0 0 0 2px rgba(201,162,75,0.55)`
+                      : `0 3px 0 ${RIBBON_DARK}, 0 5px 10px rgba(60,35,10,0.3), inset 0 1px 0 rgba(255,255,255,0.25)`,
+                    textShadow: "0 1px 2px rgba(0,0,0,0.45)",
+                  }}
                 >
                   {/* Icon */}
 
@@ -252,8 +298,14 @@ export default function Sidebar() {
 
         <div
           className="flex flex-col gap-1.5 px-4 pt-4"
-          style={{ boxShadow: "0 -1px 0 rgba(255,255,255,0.06)" }}
+          style={{ boxShadow: "0 -1px 0 rgba(90,60,20,0.25)" }}
         >
+          {!collapsed && (
+            <div className="pointer-events-none mb-1 flex justify-center opacity-25">
+              <CompassRoseWatermark />
+            </div>
+          )}
+
           <LogoutButton collapsed={collapsed} />
 
           {/* Dark mode switch */}
@@ -266,15 +318,15 @@ export default function Sidebar() {
                   ? "Switch to light mode"
                   : "Switch to dark mode"
               }
-              className="hidden items-center justify-center rounded-xl px-3 py-2.5 text-white/60 transition-colors hover:bg-white/5 hover:text-white/90 md:flex"
+              className="hidden items-center justify-center rounded-xl px-3 py-2.5 text-[#5c3b22]/75 transition-colors hover:bg-black/10 hover:text-[#3f2414] md:flex"
             >
               <span
                 className="relative flex h-5 w-9 shrink-0 items-center rounded-full px-0.5 transition-colors"
                 style={{
                   background: darkMode
                     ? `linear-gradient(90deg, ${WITS_GOLD}, #DBB865)`
-                    : "rgba(0,0,0,0.25)",
-                  boxShadow: "inset 0 1px 3px rgba(0,0,0,0.35)",
+                    : "rgba(90,60,20,0.28)",
+                  boxShadow: "inset 0 1px 3px rgba(60,35,10,0.35)",
                 }}
               >
                 <span
@@ -291,11 +343,11 @@ export default function Sidebar() {
             </button>
           ) : (
             <div className="flex items-center gap-3 rounded-xl px-3 py-2.5">
-              <span className="flex h-5 w-5 shrink-0 items-center justify-center text-white/60">
+              <span className="flex h-5 w-5 shrink-0 items-center justify-center text-[#5c3b22]/75">
                 {darkMode ? <MoonIcon /> : <SunIcon />}
               </span>
 
-              <span className="text-sm text-white/60">
+              <span className="text-sm text-[#5c3b22]/75">
                 {darkMode ? "Dark mode" : "Light mode"}
               </span>
 
@@ -310,8 +362,8 @@ export default function Sidebar() {
                 style={{
                   background: darkMode
                     ? `linear-gradient(90deg, ${WITS_GOLD}, #DBB865)`
-                    : "rgba(0,0,0,0.25)",
-                  boxShadow: "inset 0 1px 3px rgba(0,0,0,0.35)",
+                    : "rgba(90,60,20,0.28)",
+                  boxShadow: "inset 0 1px 3px rgba(60,35,10,0.35)",
                 }}
               >
                 <span
@@ -336,6 +388,31 @@ export default function Sidebar() {
 /* ========================================================= */
 /* ICONS */
 /* ========================================================= */
+
+function CompassRoseWatermark() {
+  return (
+    <svg
+      width="40"
+      height="40"
+      viewBox="0 0 40 40"
+      fill="none"
+      aria-hidden="true"
+    >
+      <circle cx="20" cy="20" r="17" stroke="#5c3b22" strokeWidth="1" />
+      <circle cx="20" cy="20" r="12" stroke="#5c3b22" strokeWidth="0.75" />
+      <path
+        d="M20 4 L23 20 L20 36 L17 20 Z"
+        fill="#5c3b22"
+      />
+      <path
+        d="M4 20 L20 17 L36 20 L20 23 Z"
+        fill="#5c3b22"
+        opacity="0.6"
+      />
+      <circle cx="20" cy="20" r="2" fill="#5c3b22" />
+    </svg>
+  );
+}
 
 function MenuIcon() {
   return (
