@@ -213,7 +213,7 @@ router.get("/analytics", async (_req, res) => {
             COUNT(a.id) FILTER (WHERE a.correct = true)::numeric
             / COUNT(a.id) * 100,
             1
-          )
+          )::float
           ELSE 0
         END AS success_percentage
       FROM public.challenges c
