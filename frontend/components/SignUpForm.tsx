@@ -11,7 +11,7 @@ type FormError = {
   confirmPassword?: string;
 };
 
-const WITS_BLUE = "#043673";
+const WITS_BLUE = "#6f3d20";
 const WITS_GOLD = "#C9A24B";
 
 export default function SignUpForm() {
@@ -101,10 +101,10 @@ export default function SignUpForm() {
     return (
       <div className="skeuo-card w-full max-w-sm p-10 text-center">
         <Monogram />
-        <h2 className="mt-5 text-2xl font-black tracking-tight text-[#043673]">Check your email</h2>
+        <h2 className="mt-5 text-2xl font-black tracking-tight text-[#6f3d20]">Check your email</h2>
         <p className="mt-2 text-sm leading-relaxed text-gray-500">
           We&apos;ve sent a confirmation link to{" "}
-          <span className="font-medium text-[#0A1F3D]">{email}</span>. Click it to activate your
+          <span className="font-medium text-[#6f3d20]">{email}</span>. Click it to activate your
           account and start exploring campus.
         </p>
       </div>
@@ -126,7 +126,7 @@ export default function SignUpForm() {
       <div className="px-9 pb-9 pt-8">
         <div className="mb-7 flex flex-col items-center text-center">
           <Monogram />
-          <h1 className="mt-4 text-[28px] font-black leading-tight tracking-[-.04em] text-[#043673] skeuo-text-emboss">
+          <h1 className="mt-4 text-[28px] font-black leading-tight tracking-[-.04em] text-[#6f3d20] skeuo-text-emboss">
             Join Wits Quest
           </h1>
           <p className="mt-1.5 text-[13px] font-medium text-slate-500">Explore Wits, one quest at a time</p>
@@ -144,17 +144,19 @@ export default function SignUpForm() {
             label="Continue with Google"
             icon={<GoogleIcon />}
             onClick={handleGoogleSignIn}
+            textColor="#6f3d20"
           />
           <OAuthButton
             label="Continue with GitHub"
             icon={<GitHubIcon />}
             onClick={handleGithubSignIn}
+            textColor="#6f3d20"
           />
         </div>
 
         <div className="my-6 flex items-center gap-3">
           <div className="h-px flex-1 bg-slate-200 shadow-[0_1px_0_#ffffff]" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 skeuo-text-emboss">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#6f3d20] skeuo-text-emboss">
             or sign up with email
           </span>
           <div className="h-px flex-1 bg-gray-200" />
@@ -223,11 +225,11 @@ function Monogram() {
     <div
       className="flex h-14 w-14 items-center justify-center rounded-2xl"
       style={{
-        background: `linear-gradient(155deg, ${WITS_BLUE} 0%, #0A1F3D 100%)`,
-        boxShadow: `0 0 0 3px ${WITS_GOLD}33`,
+        background: `linear-gradient(155deg, ${WITS_BLUE} 0%, #3f2414 100%)`,
+        boxShadow: `0 0 0 3px rgba(201, 162, 75, 0.35)`,
       }}
     >
-      <span className="text-lg font-black tracking-wide" style={{ color: WITS_GOLD }}>
+      <span className="text-lg font-black tracking-wide text-white">
         WQ
       </span>
     </div>
@@ -255,7 +257,7 @@ function Field({
 }) {
   return (
     <div className={last ? "mb-6" : "mb-4"}>
-      <label htmlFor={id} className="mb-1.5 block text-[13px] font-bold text-slate-700 skeuo-text-emboss">
+      <label htmlFor={id} className="mb-1.5 block text-[13px] font-bold text-[#6f3d20] skeuo-text-emboss">
         {label}
       </label>
       <input
@@ -276,16 +278,19 @@ function OAuthButton({
   label,
   icon,
   onClick,
+  textColor = "#6f3d20",
 }: {
   label: string;
   icon: React.ReactNode;
   onClick?: () => void;
+  textColor?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className="skeuo-btn-secondary w-full py-3 text-sm font-semibold gap-2.5"
+      style={{ color: textColor }}
     >
       {icon}
       {label}

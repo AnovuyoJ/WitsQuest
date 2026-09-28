@@ -15,7 +15,7 @@ type FormErrors = {
   password?: string;
 };
 
-const WITS_BLUE = "#043673";
+const WITS_BLUE = "#6f3d20";
 const WITS_GOLD = "#C9A24B";
 
 export default function SignInForm() {
@@ -127,7 +127,7 @@ export default function SignInForm() {
       <div className="px-9 pb-9 pt-8">
         <div className="mb-7 flex flex-col items-center text-center">
           <Monogram />
-          <h1 className="mt-4 text-[28px] font-black leading-tight tracking-[-.04em] text-[#043673] skeuo-text-emboss">
+          <h1 className="mt-4 text-[28px] font-black leading-tight tracking-[-.04em] text-[#6f3d20] skeuo-text-emboss">
             Welcome back
           </h1>
           <p className="mt-1.5 text-[13px] font-medium text-slate-500">Sign in to continue your quest</p>
@@ -153,17 +153,19 @@ export default function SignInForm() {
             label="Continue with Google"
             icon={<GoogleIcon />}
             onClick={handleGoogleSignIn}
+            textColor="#6f3d20"
           />
           <OAuthButton
             label="Continue with GitHub"
             icon={<GitHubIcon />}
             onClick={handleGithubSignIn}
+            textColor="#6f3d20"
           />
         </div>
 
         <div className="my-6 flex items-center gap-3">
           <div className="h-px flex-1 bg-slate-200 shadow-[0_1px_0_#ffffff]" />
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 skeuo-text-emboss">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#6f3d20] skeuo-text-emboss">
             or sign in with email
           </span>
           <div className="h-px flex-1 bg-gray-200" />
@@ -180,7 +182,7 @@ export default function SignInForm() {
         />
 
         <div className="mb-1.5 flex items-center justify-between">
-          <label htmlFor="password" className="block text-[13px] font-medium text-gray-600">
+          <label htmlFor="password" className="block text-[13px] font-medium text-[#6f3d20]">
             Password
           </label>
           {/* 5. Triggering in-line password reset instead of dead link */}
@@ -206,7 +208,7 @@ export default function SignInForm() {
             placeholder="••••••••"
             className="skeuo-input w-full py-3 pl-4 pr-14 text-sm"
           />
-          <button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Hide password" : "Show password"} aria-controls="password" className="absolute inset-y-1 right-1 flex w-11 items-center justify-center rounded-lg bg-white text-[#043673] hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-[-2px]">
+          <button type="button" onClick={() => setShowPassword(value => !value)} aria-label={showPassword ? "Hide password" : "Show password"} aria-controls="password" className="absolute inset-y-1 right-1 flex w-11 items-center justify-center rounded-lg bg-white text-[#6f3d20] hover:bg-white focus-visible:outline-2 focus-visible:outline-offset-[-2px]">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12Z" /><circle cx="12" cy="12" r="3" />{showPassword && <path d="m3 3 18 18" />}</svg>
           </button>
           </div>
@@ -239,11 +241,11 @@ function Monogram() {
     <div
       className="flex h-14 w-14 items-center justify-center rounded-2xl"
       style={{
-        background: `linear-gradient(155deg, ${WITS_BLUE} 0%, #0A1F3D 100%)`,
-        boxShadow: `0 0 0 3px ${WITS_GOLD}33`,
+        background: `linear-gradient(155deg, ${WITS_BLUE} 0%, #3f2414 100%)`,
+        boxShadow: `0 0 0 3px rgba(201, 162, 75, 0.35)`,
       }}
     >
-      <span className="text-lg font-black tracking-wide" style={{ color: WITS_GOLD }}>
+      <span className="text-lg font-black tracking-wide text-white">
         WQ
       </span>
     </div>
@@ -269,7 +271,7 @@ function Field({
 }) {
   return (
     <div className="mb-4">
-      <label htmlFor={id} className="mb-1.5 block text-[13px] font-bold text-slate-700 skeuo-text-emboss">
+      <label htmlFor={id} className="mb-1.5 block text-[13px] font-bold text-[#6f3d20] skeuo-text-emboss">
         {label}
       </label>
       <input
@@ -290,16 +292,19 @@ function OAuthButton({
   label,
   icon,
   onClick,
+  textColor = "#6f3d20",
 }: {
   label: string;
   icon: React.ReactNode;
   onClick?: () => void;
+  textColor?: string;
 }) {
   return (
     <button
       type="button"
       onClick={onClick}
       className="skeuo-btn-secondary w-full py-3 text-sm font-semibold gap-2.5"
+      style={{ color: textColor }}
     >
       {icon}
       {label}

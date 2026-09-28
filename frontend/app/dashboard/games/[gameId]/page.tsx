@@ -74,37 +74,45 @@ export default function GameRoomPage() {
   const myCard = side === 1 ? round?.player_one_card : round?.player_two_card;
   const opponentCard = side === 1 ? round?.player_two_card : round?.player_one_card;
   return <div className="mx-auto max-w-6xl p-5 sm:p-8 lg:p-10">
-    <ScreenHeader eyebrow="Five-card battle" title={game.is_cpu ? "You vs Campus CPU" : "Player battle"} description={game.stakes_enabled ? "Card Duel: the match winner takes the losing stake." : "Friendly battle: both players keep their cards."} action={<Link href="/dashboard/games" className="text-sm font-semibold text-[#043673] underline">Back</Link>} />
+    <ScreenHeader
+      eyebrow="Five-card battle"
+      title={game.is_cpu ? "You vs Campus CPU" : "Player battle"}
+      eyebrowClassName="text-white"
+      titleClassName="text-white"
+      descriptionClassName="text-white/80"
+      description={game.stakes_enabled ? "Card Duel: the match winner takes the losing stake." : "Friendly battle: both players keep their cards."}
+      action={<Link href="/dashboard/games" className="text-sm font-semibold text-white underline">Back</Link>}
+    />
     {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-4 text-red-800">{error}</p>}
     <div className="mb-6 flex flex-wrap items-center gap-4 rounded-2xl border border-slate-200 bg-white p-5">
-      <p aria-live="polite" className="mr-auto text-lg font-bold text-[#043673]">You {myScore} – {opponentScore} {game.is_cpu ? "CPU" : "Opponent"}</p>
-      <Link href="/dashboard/settings/rulebook" className="text-sm text-[#043673] underline">Rules</Link>
+      <p aria-live="polite" className="mr-auto text-lg font-bold text-white">You {myScore} – {opponentScore} {game.is_cpu ? "CPU" : "Opponent"}</p>
+      <Link href="/dashboard/settings/rulebook" className="text-sm text-white underline">Rules</Link>
       {["waiting","active"].includes(game.status) && <button disabled={busy} className="text-sm text-red-700 underline" onClick={() => {
         if (game.status === "waiting" || window.confirm(game.stakes_enabled ? "Leave this duel? After both accept, forfeiting loses your staked card." : "Forfeit this friendly battle?")) void action(game.status === "waiting" ? "cancel" : "forfeit");
       }}>{game.status === "waiting" ? "Cancel lobby" : "Forfeit match"}</button>}
     </div>
-    {game.status === "waiting" && <p role="status" className="rounded-2xl bg-white p-8 text-center">Your deck is locked. Waiting for another player with a valid five-card deck…</p>}
-    {game.status === "cancelled" && <p role="status" className="rounded-2xl bg-white p-8">Lobby cancelled. Your cards are safe.</p>}
-    {game.status === "finished" && !revealing && <section className="mb-6 rounded-2xl border border-[#C9A24B] bg-white p-6" aria-live="polite"><h2 className="text-2xl font-bold text-[#043673]">{game.winner_side === null ? "Match drawn" : game.winner_side === side ? "You won the match!" : `${game.is_cpu ? "The CPU" : "Your opponent"} won the match`}</h2><p className="mt-2 text-slate-600">{rounds.filter(r => r.status === "finished").length < 5 ? "The match ended by forfeit. " : "Five rounds complete. "}{game.stakes_enabled ? game.winner_side === null ? "Draw: both stakes returned." : game.winner_side === side ? "You keep your cards and receive the opposing staked card." : "Your staked card was transferred to your opponent. You keep your other cards." : "You keep all your cards."}</p><Link href="/dashboard/games" className="mt-4 inline-block font-semibold text-[#043673] underline">Build another deck</Link></section>}
+    {game.status === "waiting" && <p role="status" className="rounded-2xl bg-white p-8 text-center text-white">Your deck is locked. Waiting for another player with a valid five-card deck…</p>}
+    {game.status === "cancelled" && <p role="status" className="rounded-2xl bg-white p-8 text-white">Lobby cancelled. Your cards are safe.</p>}
+    {game.status === "finished" && !revealing && <section className="mb-6 rounded-2xl border border-[#C9A24B] bg-white p-6" aria-live="polite"><h2 className="text-2xl font-bold text-white">{game.winner_side === null ? "Match drawn" : game.winner_side === side ? "You won the match!" : `${game.is_cpu ? "The CPU" : "Your opponent"} won the match`}</h2><p className="mt-2 text-slate-600">{rounds.filter(r => r.status === "finished").length < 5 ? "The match ended by forfeit. " : "Five rounds complete. "}{game.stakes_enabled ? game.winner_side === null ? "Draw: both stakes returned." : game.winner_side === side ? "You keep your cards and receive the opposing staked card." : "Your staked card was transferred to your opponent. You keep your other cards." : "You keep all your cards."}</p><Link href="/dashboard/games" className="mt-4 inline-block font-semibold text-white underline">Build another deck</Link></section>}
     {game.stakes_enabled && <section className="my-6 rounded-2xl border border-amber-300 bg-white p-5">
-      <h2 className="text-xl font-bold">Cards at stake</h2><p className="my-3 text-sm">Different rarities are allowed. Accept only if you agree to risk your card for the opposing card.</p>
-      <div className="grid max-w-2xl gap-5 sm:grid-cols-2">{stakes.map(stake => <div key={stake.side}><p className="mb-2 font-semibold">{stake.side === side ? "Your stake" : "Opponent stake"} · {stake.accepted ? "Accepted" : "Not accepted"}</p><BattleCard card={stake.snapshot} /></div>)}</div>
-      {game.status === "active" && awaitingStakes && <div className="mt-5 flex flex-wrap gap-4"><button disabled={busy || stakes.some(stake => stake.side === side && stake.accepted)} onClick={() => action("battle/accept")} className="rounded-xl bg-[#043673] px-4 py-3 font-semibold text-white disabled:opacity-40">Accept these stakes</button><button disabled={busy} onClick={() => action("cancel")} className="underline">Decline and leave</button><p role="status">Both players must accept before playing.</p></div>}
+      <h2 className="text-xl font-bold text-white">Cards at stake</h2><p className="my-3 text-sm text-white">Different rarities are allowed. Accept only if you agree to risk your card for the opposing card.</p>
+      <div className="grid max-w-2xl gap-5 sm:grid-cols-2">{stakes.map(stake => <div key={stake.side}><p className="mb-2 font-semibold text-white">{stake.side === side ? "Your stake" : "Opponent stake"} · {stake.accepted ? "Accepted" : "Not accepted"}</p><BattleCard card={stake.snapshot} /></div>)}</div>
+      {game.status === "active" && awaitingStakes && <div className="mt-5 flex flex-wrap gap-4"><button disabled={busy || stakes.some(stake => stake.side === side && stake.accepted)} onClick={() => action("battle/accept")} className="rounded-xl bg-[#043673] px-4 py-3 font-semibold text-white disabled:opacity-40">Accept these stakes</button><button disabled={busy} onClick={() => action("cancel")} className="underline text-white">Decline and leave</button><p role="status" className="text-white">Both players must accept before playing.</p></div>}
     </section>}
     {round && !awaitingStakes && game.status !== "waiting" && game.status !== "cancelled" && <section className="space-y-5">
-      <h2 className="text-xl font-bold text-[#043673]">Round {round.round_number} / 5</h2>
+      <h2 className="text-xl font-bold text-white">Round {round.round_number} / 5</h2>
       {round.status === "finished" ? <>
-        <p role="status" className="rounded-xl bg-white p-4 font-semibold">{revealing ? "Revealing the cards…" : round.winner_side === null ? "Equal points — round drawn." : round.winner_side === side ? "You win this round." : `${game.is_cpu ? "CPU" : "Opponent"} wins this round.`}</p>
+        <p role="status" className="rounded-xl bg-white p-4 font-semibold text-white">{revealing ? "Revealing the cards…" : round.winner_side === null ? "Equal points — round drawn." : round.winner_side === side ? "You win this round." : `${game.is_cpu ? "CPU" : "Opponent"} wins this round.`}</p>
         <BattleReveal key={round.id} mine={myCard} opponent={opponentCard} opponentName={game.is_cpu ? "CPU" : "Opponent"} finished revealed={!revealing} />
         {game.status === "active" && !revealing && <button disabled={busy} onClick={() => action("battle/next",{ roundId: round.id })} className="rounded-xl bg-[#043673] px-6 py-3 font-semibold text-white disabled:opacity-50">Next round</button>}
       </> : game.status === "active" && <>
-        {submitted ? <><p role="status" className="rounded-2xl bg-white p-6">Your card is locked. Waiting for your opponent…</p><BattleReveal mine={myCard} opponent={null} opponentName={game.is_cpu ? "CPU" : "Opponent"} finished={false} /></> : <>
-          <p className="text-sm text-slate-600">Choose an unused card. Your opponent’s choice stays hidden until you both submit.</p>
+        {submitted ? <><p role="status" className="rounded-2xl bg-white p-6 text-white">Your card is locked. Waiting for your opponent…</p><BattleReveal mine={myCard} opponent={null} opponentName={game.is_cpu ? "CPU" : "Opponent"} finished={false} /></> : <>
+          <p className="text-sm text-white/80">Choose an unused card. Your opponent’s choice stays hidden until you both submit.</p>
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{deck.filter(card => !card.used).map(card => <BattleCard key={card.id} card={card} selected={selected === card.id} disabled={busy} onClick={() => setSelected(card.id)} />)}</div>
           <button disabled={busy || !deck.some(card => card.id === selected && !card.used)} onClick={() => action("battle/card",{ roundId: round.id,cardId: selected })} className="rounded-xl bg-[#043673] px-6 py-3 font-semibold text-white disabled:opacity-40">{busy ? "Submitting…" : "Lock in card"}</button>
         </>}
       </>}
     </section>}
-    {rounds.some(r => r.status === "finished") && <section className="mt-8 rounded-2xl bg-white p-5"><h2 className="font-bold text-[#043673]">Round history</h2><ol className="mt-3 space-y-3 text-sm">{rounds.filter(r => r.status === "finished" && (!revealing || r.id !== round?.id)).map(r => <li key={r.id}>Round {r.round_number}: {r.player_one_card?.title} ({r.player_one_card?.points}) vs {r.player_two_card?.title} ({r.player_two_card?.points}) — {r.winner_side === null ? "Draw" : r.winner_side === side ? "You won" : "Opponent won"}</li>)}</ol></section>}
+    {rounds.some(r => r.status === "finished") && <section className="mt-8 rounded-2xl bg-white p-5"><h2 className="font-bold text-white">Round history</h2><ol className="mt-3 space-y-3 text-sm text-white">{rounds.filter(r => r.status === "finished" && (!revealing || r.id !== round?.id)).map(r => <li key={r.id}>Round {r.round_number}: {r.player_one_card?.title} ({r.player_one_card?.points}) vs {r.player_two_card?.title} ({r.player_two_card?.points}) — {r.winner_side === null ? "Draw" : r.winner_side === side ? "You won" : "Opponent won"}</li>)}</ol></section>}
   </div>;
 }

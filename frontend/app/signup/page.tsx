@@ -1,10 +1,34 @@
+import Link from "next/link";
 import SignUpForm from "@/components/SignUpForm";
 
 export default function SignUpPage() {
   return (
-    <main className="grid min-h-[100dvh] bg-[#C9A24B] lg:grid-cols-[.8fr_1.2fr]">
-      <aside className="hidden p-12 text-[#082C58] lg:flex lg:flex-col lg:justify-between"><span className="text-sm font-black">WQ / WITS</span><div><p className="text-[10px] font-bold uppercase tracking-[.28em]">Join the quest</p><h2 className="mt-4 text-5xl font-black leading-[.95] tracking-[-.055em]">Build a collection from the campus around you.</h2></div><p className="text-sm text-[#082C58]/60">Made for Wits students</p></aside>
-      <section className="flex items-center justify-center campus-background px-5 py-8 sm:p-10"><SignUpForm /></section>
+    <main
+      className="min-h-[100dvh] text-[#10233D]"
+      style={{
+        backgroundImage: "linear-gradient(rgba(17, 12, 8, 0.52), rgba(17, 12, 8, 0.68)), url('/art/campus-map.png')",
+        backgroundPosition: "center",
+        backgroundRepeat: "no-repeat",
+        backgroundSize: "cover",
+      }}
+    >
+      <nav className="mx-auto flex max-w-6xl items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
+        <Link href="/" className="flex items-center gap-3 font-black tracking-tight text-[#f3d9a5] skeuo-text-emboss">
+          <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#8d4f2d] to-[#3f2414] text-xs font-black text-white shadow-[inset_0_1px_1px_rgba(255,255,255,0.35),0_2px_5px_rgba(0,0,0,0.25)] border border-[#2a170d]">
+            WQ
+          </span>
+          WitsQuest
+        </Link>
+        <Link href="/Login" className="skeuo-btn-secondary px-5 py-2.5 text-sm font-bold" style={{ color: "#6f3d20" }}>
+          Sign in
+        </Link>
+      </nav>
+
+      <section className="mx-auto flex max-w-6xl items-center justify-center px-5 pb-10 pt-3 sm:px-8 lg:px-12">
+        <div className="flex w-full items-center justify-center py-4 sm:py-6">
+          <SignUpForm />
+        </div>
+      </section>
     </main>
   );
 }
