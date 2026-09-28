@@ -356,6 +356,8 @@ beforeAll(async () => {
   await mockPg.exec("CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY, raw_user_meta_data jsonb DEFAULT '{}');");
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/schema.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/content-publication.sql"), "utf8"));
+  await mockPg.exec(readFileSync(path.join(__dirname, "../sql/zones.sql"), "utf8"));
+  await mockPg.exec(readFileSync(path.join(__dirname, "../sql/zone-claims.sql"),"utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/trails.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/card-battles.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/battle-stakes.sql"), "utf8"));
@@ -372,7 +374,7 @@ beforeEach(async () => {
   await mockPg.query("INSERT INTO auth.users (id) VALUES ($1),($2),($3) ON CONFLICT DO NOTHING", [adminId,oneId,twoId]);
   await mockPg.exec("TRUNCATE public.trails;");
   require("../services/landmarkService").requireLandmark.mockResolvedValue({ name: "Great Hall", osmUrl: "https://www.openstreetmap.org/way/123" });
-  await mockPg.exec("TRUNCATE public.events, public.cards, public.challenges, public.location_verifications, public.challenge_attempts, public.player_cards, public.card_games, public.game_rounds, public.notifications CASCADE;");
+  await mockPg.exec("TRUNCATE public.events, public.cards, public.challenges, public.location_verifications, public.challenge_attempts, public.player_cards, public.card_games, public.game_rounds, public.notifications, public.zones, public.zone_claims CASCADE;");
   event = (await request("/admin/events", "admin", "POST", { title: "Campus event", description: "Test", latitude: -26.1924, longitude: 28.0308, radius_meters: 50,
     starts_at: new Date(Date.now()-3600000).toISOString(), ends_at: new Date(Date.now()+3600000).toISOString() })).data;
   card = (await request("/admin/cards", "admin", "POST", { event_id: event.id, title: "Reward", rarity: "Gold", points: 60, tag: "History" })).data;
@@ -710,6 +712,770 @@ test("admin analytics calculates observed card award rates", async () => {
 test("admin analytics requires administrator access", async () => {
   expect((await request("/admin/analytics", "one")).status).toBe(403);
   expect((await request("/admin/analytics", "")).status).toBe(401);
+});
+
+test("admin can create a zone", async () => {
+  const result = await request(
+    "/admin/zones",
+    "admin",
+    "POST",
+    {
+      name: "East Campus",
+      description: "Historic East Campus locations",
+    }
+  );
+
+  expect(result.status).toBe(201);
+  expect(result.data.name).toBe("East Campus");
+  expect(result.data.description).toBe("Historic East Campus locations");
+  expect(result.data.id).toEqual(expect.any(String));
+});
+
+test("admin can list zones with location counts", async () => {
+  const zone = (
+    await mockPg.query(
+      `INSERT INTO public.zones (name, description)
+       VALUES ($1, $2)
+       RETURNING id`,
+      ["East Campus", "Historic East Campus locations"]
+    )
+  ).rows[0];
+
+  const result = await request("/admin/zones", "admin");
+
+  expect(result.status).toBe(200);
+  expect(result.data).toEqual([
+    expect.objectContaining({
+      id: zone.id,
+      name: "East Campus",
+      description: "Historic East Campus locations",
+      location_count: 0,
+    }),
+  ]);
+});
+
+test("admin can add an existing location to a zone", async () => {
+  const zone = (
+    await mockPg.query(
+      `INSERT INTO public.zones (name, description)
+       VALUES ($1, $2)
+       RETURNING id`,
+      ["East Campus", "Historic East Campus locations"]
+    )
+  ).rows[0];
+
+  const result = await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    {
+      event_id: event.id,
+    }
+  );
+
+  expect(result.status).toBe(201);
+  expect(result.data).toEqual({ success: true });
+
+  const links = (
+    await mockPg.query(
+      `SELECT zone_id, event_id
+       FROM public.zone_locations
+       WHERE zone_id=$1 AND event_id=$2`,
+      [zone.id, event.id]
+    )
+  ).rows;
+
+  expect(links).toHaveLength(1);
+});
+
+test("admin can add multiple locations to the same zone", async () => {
+  const second = (
+    await request(
+      "/admin/events",
+      "admin",
+      "POST",
+      {
+        title: "Solomon Mahlangu House",
+        description: "Second test location",
+        latitude: -26.1924,
+        longitude: 28.0308,
+        radius_meters: 50,
+        starts_at: new Date(Date.now() - 3600000).toISOString(),
+        ends_at: new Date(Date.now() + 3600000).toISOString(),
+      }
+    )
+  ).data;
+
+  await publish("events", second);
+
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  const firstResult = await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: event.id }
+  );
+
+  const secondResult = await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: second.id }
+  );
+
+  expect(firstResult.status).toBe(201);
+  expect(secondResult.status).toBe(201);
+
+  const result = (
+    await mockPg.query(
+      `SELECT e.title
+       FROM public.zone_locations zl
+       JOIN public.events e ON e.id = zl.event_id
+       WHERE zl.zone_id = $1
+       ORDER BY e.title`,
+      [zone.id]
+    )
+  ).rows;
+
+  expect(result).toEqual([
+    { title: "Campus event" },
+    { title: "Solomon Mahlangu House" },
+  ]);
+});
+
+test("admin can get a zone with its locations", async () => {
+  const second = (
+    await request(
+      "/admin/events",
+      "admin",
+      "POST",
+      {
+        title: "Solomon Mahlangu House",
+        description: "Second test location",
+        latitude: -26.1924,
+        longitude: 28.0308,
+        radius_meters: 50,
+        starts_at: new Date(Date.now() - 3600000).toISOString(),
+        ends_at: new Date(Date.now() + 3600000).toISOString(),
+      }
+    )
+  ).data;
+
+  await publish("events", second);
+
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: event.id }
+  );
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: second.id }
+  );
+
+  const result = await request(
+    `/admin/zones/${zone.id}`,
+    "admin"
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.data.name).toBe("East Campus");
+  expect(result.data.description).toBe(
+    "Historic East Campus locations"
+  );
+  expect(result.data.locations).toEqual([
+    expect.objectContaining({
+      id: event.id,
+      title: "Campus event",
+    }),
+    expect.objectContaining({
+      id: second.id,
+      title: "Solomon Mahlangu House",
+    }),
+  ]);
+});
+
+test("admin can remove a location from a zone", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: event.id }
+  );
+
+  const result = await request(
+    `/admin/zones/${zone.id}/locations/${event.id}`,
+    "admin",
+    "DELETE"
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.data).toEqual({ success: true });
+
+  const links = (
+    await mockPg.query(
+      `SELECT zone_id, event_id
+       FROM public.zone_locations
+       WHERE zone_id=$1 AND event_id=$2`,
+      [zone.id, event.id]
+    )
+  ).rows;
+
+  expect(links).toHaveLength(0);
+});
+
+test("admin cannot remove a location that is not part of a zone", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  const result = await request(
+    `/admin/zones/${zone.id}/locations/${event.id}`,
+    "admin",
+    "DELETE"
+  );
+
+  expect(result.status).toBe(404);
+  expect(result.data.message).toBe(
+    "Location is not part of this zone."
+  );
+});
+
+test("admin can delete a zone", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  const result = await request(
+    `/admin/zones/${zone.id}`,
+    "admin",
+    "DELETE"
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.data).toEqual({ success: true });
+
+  const deletedZone = (
+    await mockPg.query(
+      `SELECT id
+       FROM public.zones
+       WHERE id=$1`,
+      [zone.id]
+    )
+  ).rows;
+
+  expect(deletedZone).toHaveLength(0);
+});
+
+test("deleting a zone removes its location assignments but keeps the location", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    {
+      event_id: event.id,
+    }
+  );
+
+  const result = await request(
+    `/admin/zones/${zone.id}`,
+    "admin",
+    "DELETE"
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.data).toEqual({ success: true });
+
+  const links = (
+    await mockPg.query(
+      `SELECT zone_id, event_id
+       FROM public.zone_locations
+       WHERE zone_id=$1`,
+      [zone.id]
+    )
+  ).rows;
+
+  expect(links).toHaveLength(0);
+
+  const location = (
+    await mockPg.query(
+      `SELECT id, title
+       FROM public.events
+       WHERE id=$1`,
+      [event.id]
+    )
+  ).rows;
+
+  expect(location).toEqual([
+    {
+      id: event.id,
+      title: "Campus event",
+    },
+  ]);
+});
+
+test("admin cannot delete a zone that does not exist", async () => {
+  const result = await request(
+    "/admin/zones/00000000-0000-4000-8000-999999999999",
+    "admin",
+    "DELETE"
+  );
+
+  expect(result.status).toBe(404);
+  expect(result.data.message).toBe("Zone not found.");
+});
+
+test("zone can contain multiple content-author-defined locations", async () => {
+  const second = (
+    await request(
+      "/admin/events",
+      "admin",
+      "POST",
+      {
+        title: "Solomon Mahlangu House",
+        description: "Second test location",
+        latitude: -26.1924,
+        longitude: 28.0308,
+        radius_meters: 50,
+        starts_at: new Date(Date.now() - 3600000).toISOString(),
+        ends_at: new Date(Date.now() + 3600000).toISOString(),
+      }
+    )
+  ).data;
+
+  await publish("events", second);
+
+  const zone = (
+    await mockPg.query(
+      `INSERT INTO public.zones (name, description)
+       VALUES ($1, $2)
+       RETURNING *`,
+      ["East Campus", "Historic East Campus locations"]
+    )
+  ).rows[0];
+
+  await mockPg.query(
+    `INSERT INTO public.zone_locations (zone_id, event_id)
+     VALUES ($1, $2), ($1, $3)`,
+    [zone.id, event.id, second.id]
+  );
+
+  const result = (
+    await mockPg.query(
+      `SELECT e.title
+       FROM public.zone_locations zl
+       JOIN public.events e ON e.id = zl.event_id
+       WHERE zl.zone_id = $1
+       ORDER BY e.title`,
+      [zone.id]
+    )
+  ).rows;
+
+  expect(result).toEqual([
+    { title: "Campus event" },
+    { title: "Solomon Mahlangu House" },
+  ]);
+});
+
+test("player cannot claim a zone before completing challenges", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "Central Campus",
+        description: "Central campus locations",
+      }
+    )
+  ).data;
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    {
+      event_id: event.id,
+    }
+  );
+
+  await mockPg.query(
+    `INSERT INTO public.challenges
+      (event_id, question_text, question_type, correct_answer)
+     VALUES ($1, $2, $3, $4)`,
+    [
+      event.id,
+      "What is this place?",
+      "text",
+      "Campus",
+    ]
+  );
+
+  const result = await request(
+    `/zones/${zone.id}/claim`,
+    "one",
+    "POST"
+  );
+
+  expect(result.status).toBe(409);
+  expect(result.data.message).toBe(
+    "Complete a challenge at every location in this zone before claiming it."
+  );
+});
+
+test("player zone progress shows completed locations", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "Central Campus",
+        description: "Central campus locations",
+      }
+    )
+  ).data;
+
+  const second = (
+    await request(
+      "/admin/events",
+      "admin",
+      "POST",
+      {
+        title: "Solomon Mahlangu House",
+        description: "Second test location",
+        latitude: -26.1924,
+        longitude: 28.0308,
+        radius_meters: 50,
+        starts_at: new Date(Date.now() - 3600000).toISOString(),
+        ends_at: new Date(Date.now() + 3600000).toISOString(),
+      }
+    )
+  ).data;
+
+  await publish("events", second);
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: event.id }
+  );
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: second.id }
+  );
+
+  const challengeOne = (
+    await mockPg.query(
+      `INSERT INTO public.challenges
+        (event_id, question_text, question_type, correct_answer)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [event.id, "Question one", "text", "Answer one"]
+    )
+  ).rows[0];
+
+  const challengeTwo = (
+    await mockPg.query(
+      `INSERT INTO public.challenges
+        (event_id, question_text, question_type, correct_answer)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [second.id, "Question two", "text", "Answer two"]
+    )
+  ).rows[0];
+
+  await mockPg.query(
+    `INSERT INTO public.challenge_attempts
+      (player_id, event_id, challenge_id, correct)
+     VALUES ($1, $2, $3, $4)`,
+    [oneId, event.id, challengeOne.id, true]
+  );
+
+  const result = await request(
+    `/zones/${zone.id}`,
+    "one",
+    "GET"
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.data.location_count).toBe(2);
+  expect(result.data.completed_location_count).toBe(1);
+  expect(result.data.eligible).toBe(false);
+});
+
+test("player can claim a zone after completing a challenge at every location", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "Central Campus",
+        description: "Central campus locations",
+      }
+    )
+  ).data;
+
+  const second = (
+    await request(
+      "/admin/events",
+      "admin",
+      "POST",
+      {
+        title: "Solomon Mahlangu House",
+        description: "Second test location",
+        latitude: -26.1924,
+        longitude: 28.0308,
+        radius_meters: 50,
+        starts_at: new Date(Date.now() - 3600000).toISOString(),
+        ends_at: new Date(Date.now() + 3600000).toISOString(),
+      }
+    )
+  ).data;
+
+  await publish("events", second);
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: event.id }
+  );
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: second.id }
+  );
+
+  const challengeOne = (
+    await mockPg.query(
+      `INSERT INTO public.challenges
+        (event_id, question_text, question_type, correct_answer)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [event.id, "Question one", "text", "Answer one"]
+    )
+  ).rows[0];
+
+  const challengeTwo = (
+    await mockPg.query(
+      `INSERT INTO public.challenges
+        (event_id, question_text, question_type, correct_answer)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [second.id, "Question two", "text", "Answer two"]
+    )
+  ).rows[0];
+
+  await mockPg.query(
+    `INSERT INTO public.challenge_attempts
+      (player_id, event_id, challenge_id, correct)
+     VALUES
+      ($1, $2, $3, true),
+      ($1, $4, $5, true)`,
+    [
+      oneId,
+      event.id,
+      challengeOne.id,
+      second.id,
+      challengeTwo.id,
+    ]
+  );
+
+  const result = await request(
+    `/zones/${zone.id}/claim`,
+    "one",
+    "POST"
+  );
+
+  expect(result.status).toBe(201);
+  expect(result.data.success).toBe(true);
+  expect(result.data.claimed).toBe(true);
+
+  const claim = (
+    await mockPg.query(
+      `SELECT zone_id, player_id
+       FROM public.zone_claims
+       WHERE zone_id=$1`,
+      [zone.id]
+    )
+  ).rows;
+
+  expect(claim).toHaveLength(1);
+  expect(claim[0].player_id).toBe(oneId);
+});
+
+test("another player cannot claim an already claimed zone", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "Central Campus",
+        description: "Central campus locations",
+      }
+    )
+  ).data;
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: event.id }
+  );
+
+  const challenge = (
+    await mockPg.query(
+      `INSERT INTO public.challenges
+        (event_id, question_text, question_type, correct_answer)
+       VALUES ($1, $2, $3, $4)
+       RETURNING id`,
+      [event.id, "Question", "text", "Answer"]
+    )
+  ).rows[0];
+
+  // Both players have completed the challenge.
+  await mockPg.query(
+    `INSERT INTO public.challenge_attempts
+      (player_id, event_id, challenge_id, correct)
+     VALUES
+      ($1, $2, $3, true),
+      ($4, $2, $3, true)`,
+    [oneId, event.id, challenge.id, twoId]
+  );
+
+  // Player one claims it first.
+  const firstClaim = await request(
+    `/zones/${zone.id}/claim`,
+    "one",
+    "POST"
+  );
+
+  expect(firstClaim.status).toBe(201);
+
+  // Player two now contests the same zone.
+  const secondClaim = await request(
+    `/zones/${zone.id}/claim`,
+    "two",
+    "POST"
+  );
+
+  expect(secondClaim.status).toBe(409);
+  expect(secondClaim.data.message).toBe(
+    "This zone has already been claimed by another player."
+  );
+
+  const claim = (
+    await mockPg.query(
+      `SELECT player_id
+       FROM public.zone_claims
+       WHERE zone_id=$1`,
+      [zone.id]
+    )
+  ).rows;
+
+  expect(claim).toHaveLength(1);
+  expect(claim[0].player_id).toBe(oneId);
+});
+
+test("player cannot claim a zone with no locations", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "Empty Zone",
+        description: "No locations yet",
+      }
+    )
+  ).data;
+
+  const result = await request(
+    `/zones/${zone.id}/claim`,
+    "one",
+    "POST"
+  );
+
+  expect(result.status).toBe(409);
+  expect(result.data.message).toBe(
+    "Complete a challenge at every location in this zone before claiming it."
+  );
 });
 
 test("trails validate stops and require admin review and published events", async () => {

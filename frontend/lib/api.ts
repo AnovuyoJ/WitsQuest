@@ -5,6 +5,43 @@ export const API_URL = (process.env.NEXT_PUBLIC_API_URL || "http://localhost:500
 export type ApiError = { message: string; code?: string; status?: number };
 export type ApiResult<T> = { data: T | null; error: ApiError | null };
 
+export type ZoneLocationRecord = {
+  id: string;
+  title: string;
+  latitude: number;
+  longitude: number;
+  completed: boolean;
+};
+
+export type ZoneRecord = {
+  id: string;
+  name: string;
+  description: string | null;
+  location_count: number;
+  completed_location_count: number;
+  eligible: boolean;
+  claimed_by: string | null;
+  claimed_by_me: boolean;
+  locations: ZoneLocationRecord[];
+};
+
+export async function getZones(): Promise<ApiResult<ZoneRecord[]>> {
+  return apiRequest<ZoneRecord[]>("/zones");
+}
+
+export async function getZone(id: string): Promise<ApiResult<ZoneRecord>> {
+  return apiRequest<ZoneRecord>(`/zones/${id}`);
+}
+
+export async function claimZone(id: string): Promise<ApiResult<{
+  success: boolean;
+  claimed: boolean;
+  alreadyClaimed?: boolean;
+  zone?: ZoneRecord;
+}>> {
+  return apiRequest(`/zones/${id}/claim`, "POST");
+}
+
 // Only fixed, handwritten Express routes are called. No table names, SQL, or query builders cross the network.
 export async function apiRequest<T>(path: string, method = "GET", body?: unknown): Promise<ApiResult<T>> {
   try {

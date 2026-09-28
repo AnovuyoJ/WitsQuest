@@ -8,6 +8,7 @@ import verifyLocationRouter from "./routes/events/verifyLocation";
 import submitAnswerRouter from "./routes/events/submitAnswer";
 import { HttpError } from "./services/validation";
 import { adminTrailsRouter, trailsRouter } from "./routes/trails";
+import zonesRouter from "./routes/zones";
 
 export const app = express();
 app.disable("x-powered-by");
@@ -26,6 +27,7 @@ app.use("/api/admin/trails", adminTrailsRouter);
 app.use("/api/trails", trailsRouter);
 app.use("/api/games", gamesRouter);
 app.use("/api/events", verifyLocationRouter, submitAnswerRouter);
+app.use("/api/zones", zonesRouter);
 app.use("/api", catalogRouter);
 app.get("/", (_req, res) => { res.json({ message: "Campus Quest backend is running." }); });
 app.use((_req, res) => { res.status(404).json({ message: "Route not found." }); });
