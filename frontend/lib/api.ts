@@ -41,3 +41,33 @@ export type CardRecord = {
 export type PlayerCardRecord = {
   id: string; player_id: string; event_id: string; card_id: string; awarded_at: string | null; cards: CardRecord | null;
 };
+export type PlayerProgress = {
+  points: number;
+  correctAnswers: number;
+  attempts: number;
+  cardsOwned: number;
+  battlesCompleted: number;
+  battlesWon: number;
+  currentStreak: number;
+  achievements: Array<{
+    id: string;
+    title: string;
+    description: string;
+    earned: boolean;
+  }>;
+};
+
+export type LeaderboardEntry = {
+  playerId: string;
+  playerName: string;
+  rank: number | null;
+  points: number;
+  currentStreak: number;
+  achievementsEarned: number;
+  isCurrentPlayer: boolean;
+};
+
+export type Leaderboard = {
+  entries: LeaderboardEntry[];
+  currentPlayer: LeaderboardEntry | null;
+};

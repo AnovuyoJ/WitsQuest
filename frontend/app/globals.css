@@ -6,7 +6,7 @@
   color-scheme: light;
 }
 
-@theme inline {
+:root {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
@@ -44,13 +44,7 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 
 /* Add this to frontend/app/globals.css */
 
-/* Firefox */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #043673 #f1f1f1;
-}
-
-/* Chrome, Edge, Safari */
+/* Chrome, Edge, and Safari */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
@@ -75,15 +69,326 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   width: 4px;
 }
 
-.scroll-thin {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
-}
-
 .scroll-thin::-webkit-scrollbar-thumb {
   background: rgba(255, 255, 255, 0.3);
 }
 
 .scroll-thin::-webkit-scrollbar-track {
   background: transparent;
+}
+
+/* ==========================================================================
+   SKEUOMORPHIC DESIGN SYSTEM TOKENS & UTILITIES
+   ========================================================================== */
+
+/* --- Tactile Cards & Plates --- */
+.skeuo-card {
+  position: relative;
+  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
+  border: 1px solid rgba(4, 54, 115, 0.16);
+  border-radius: 1.25rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(4, 54, 115, 0.05),
+    0 2px 4px rgba(4, 54, 115, 0.04),
+    0 10px 28px -6px rgba(4, 54, 115, 0.14);
+}
+
+.skeuo-card-interactive {
+  position: relative;
+  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+  border: 1px solid rgba(4, 54, 115, 0.16);
+  border-radius: 1.25rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.95),
+    inset 0 -1px 0 rgba(4, 54, 115, 0.05),
+    0 3px 6px rgba(4, 54, 115, 0.05),
+    0 12px 28px -8px rgba(4, 54, 115, 0.16);
+  transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.15s cubic-bezier(0.2, 0, 0, 1), border-color 0.15s ease;
+}
+
+.skeuo-card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: rgba(201, 162, 75, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 1),
+    0 6px 12px rgba(4, 54, 115, 0.08),
+    0 20px 36px -12px rgba(4, 54, 115, 0.22);
+}
+
+.skeuo-card-interactive:active {
+  transform: translateY(1px);
+  box-shadow:
+    inset 0 1px 3px rgba(4, 54, 115, 0.1),
+    0 2px 4px rgba(4, 54, 115, 0.06);
+}
+
+/* --- Sunken Wells & Recessed Areas --- */
+.skeuo-well {
+  background: linear-gradient(180deg, #edf2f8 0%, #f5f8fc 100%);
+  border: 1px solid rgba(4, 54, 115, 0.12);
+  border-radius: 1rem;
+  box-shadow:
+    inset 0 2px 5px rgba(4, 54, 115, 0.12),
+    inset 0 1px 2px rgba(0, 0, 0, 0.06),
+    0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+/* --- Tactile 3D Push Buttons --- */
+.skeuo-btn-primary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #0a4d9b 0%, #043673 52%, #022652 100%);
+  color: #ffffff !important;
+  font-weight: 700;
+  border: 1px solid #021e42;
+  border-radius: 0.875rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    0 3px 0 #021a38,
+    0 6px 14px -2px rgba(4, 54, 115, 0.45);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
+  transition: filter 0.15s ease, transform 0.1s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.1s cubic-bezier(0.2, 0, 0, 1);
+  cursor: pointer;
+  -webkit-user-select: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.skeuo-btn-primary:hover:not(:disabled) {
+  filter: brightness(1.08);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.45),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.25),
+    0 4px 0 #021a38,
+    0 8px 18px -2px rgba(4, 54, 115, 0.55);
+}
+
+.skeuo-btn-primary:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.55),
+    0 1px 0 #021a38,
+    0 2px 4px rgba(4, 54, 115, 0.2);
+}
+
+.skeuo-btn-gold {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #fae08f 0%, #c9a24b 55%, #ad8530 100%);
+  color: #07264d !important;
+  font-weight: 800;
+  border: 1px solid #856118;
+  border-radius: 0.875rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.75),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.15),
+    0 3px 0 #6e4f10,
+    0 6px 16px -2px rgba(184, 140, 44, 0.45);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
+  transition: filter 0.15s ease, transform 0.1s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.1s cubic-bezier(0.2, 0, 0, 1);
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+.skeuo-btn-gold:hover:not(:disabled) {
+  filter: brightness(1.07);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 0 rgba(0, 0, 0, 0.15),
+    0 4px 0 #6e4f10,
+    0 8px 20px -2px rgba(184, 140, 44, 0.55);
+}
+
+.skeuo-btn-gold:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 5px rgba(0, 0, 0, 0.4),
+    0 1px 0 #6e4f10,
+    0 2px 4px rgba(184, 140, 44, 0.25);
+}
+
+.skeuo-btn-secondary {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #ffffff 0%, #f2f5f9 60%, #e2e8f1 100%);
+  color: #043673 !important;
+  font-weight: 700;
+  border: 1px solid #c4d0df;
+  border-radius: 0.875rem;
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    inset 0 -1px 0 rgba(4, 54, 115, 0.08),
+    0 2px 0 #b3c2d4,
+    0 4px 10px -2px rgba(4, 54, 115, 0.12);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
+  transition: filter 0.15s ease, transform 0.1s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.1s cubic-bezier(0.2, 0, 0, 1);
+  
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  
+}
+
+.skeuo-btn-secondary:hover:not(:disabled) {
+  filter: brightness(1.03);
+  box-shadow:
+    inset 0 1px 0 #ffffff,
+    0 3px 0 #b3c2d4,
+    0 6px 14px -2px rgba(4, 54, 115, 0.18);
+}
+
+.skeuo-btn-secondary:active:not(:disabled) {
+  transform: translateY(2px);
+  box-shadow:
+    inset 0 2px 4px rgba(4, 54, 115, 0.15),
+    0 0 0 #b3c2d4,
+    0 1px 2px rgba(0, 0, 0, 0.05);
+}
+
+/* --- Sunken Debossed Input Well --- */
+.skeuo-input {
+  background: linear-gradient(180deg, #f5f8fc 0%, #ffffff 32%);
+  border: 1px solid #c5d3e3;
+  border-radius: 0.875rem;
+  box-shadow:
+    inset 0 2px 4px rgba(4, 54, 115, 0.09),
+    inset 0 1px 2px rgba(0, 0, 0, 0.06),
+    0 1px 0 #ffffff;
+  color: #0a1f3d;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.skeuo-input:focus {
+  outline: none;
+  border-color: #043673;
+  box-shadow:
+    inset 0 1px 2px rgba(0, 0, 0, 0.06),
+    0 0 0 3px rgba(201, 162, 75, 0.35),
+    0 1px 0 #ffffff;
+}
+
+/* --- Embossed Medallions & Badges --- */
+.skeuo-badge-gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #fef4d8 0%, #f7e4b2 60%, #eed28a 100%);
+  border: 1px solid #d4b568;
+  color: #6a4c0d;
+  font-weight: 800;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    inset 0 -1px 0 rgba(106, 76, 13, 0.15),
+    0 1px 3px rgba(106, 76, 13, 0.2);
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
+}
+
+.skeuo-badge-blue {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #0d54a5 0%, #043673 100%);
+  border: 1px solid #032752;
+  color: #e2c66f;
+  font-weight: 800;
+  font-size: 0.6875rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.3),
+    0 1px 3px rgba(4, 54, 115, 0.3);
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.4);
+}
+
+.skeuo-badge-emerald {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  background: linear-gradient(180deg, #e9fbf2 0%, #d1f5e2 100%);
+  border: 1px solid #99e2b8;
+  color: #065f3a;
+  font-weight: 700;
+  font-size: 0.6875rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.8),
+    0 1px 2px rgba(6, 95, 58, 0.12);
+}
+
+/* --- Cylindrical 3D Progress Bar --- */
+.skeuo-progress {
+  height: 0.625rem;
+  width: 100%;
+  border-radius: 9999px;
+  background: #e2e9f3;
+  border: 1px solid #c5d3e3;
+  box-shadow:
+    inset 0 2px 3px rgba(0, 0, 0, 0.15),
+    0 1px 0 rgba(255, 255, 255, 0.7);
+  overflow: hidden;
+}
+
+.skeuo-progress::-webkit-progress-bar {
+  background: #e2e9f3;
+  box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.15);
+  border-radius: 9999px;
+}
+
+.skeuo-progress::-webkit-progress-value {
+  background: linear-gradient(180deg, #fbe8a6 0%, #c9a24b 45%, #9e7520 100%);
+  border-radius: 9999px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.15);
+}
+
+/* --- Leather / Folio Plates --- */
+.skeuo-plate-navy {
+  position: relative;
+  background: linear-gradient(170deg, #094794 0%, #043673 40%, #02234a 100%);
+  border: 1px solid #082d5a;
+  border-radius: 1.5rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.2),
+    inset 0 0 0 1px rgba(201, 162, 75, 0.25),
+    0 4px 10px rgba(4, 54, 115, 0.15),
+    0 18px 40px -10px rgba(4, 54, 115, 0.45);
+}
+
+.skeuo-plate-gold {
+  position: relative;
+  background: linear-gradient(160deg, #fff7e0 0%, #f6e8c4 50%, #edd8a4 100%);
+  border: 1px solid #dfc78f;
+  border-radius: 1.5rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 0 0 1px rgba(184, 140, 44, 0.2),
+    0 4px 8px rgba(118, 88, 22, 0.08),
+    0 16px 36px -10px rgba(118, 88, 22, 0.25);
+}
+
+/* --- Text Emboss / Deboss Effects --- */
+.skeuo-text-emboss {
+  text-shadow: 0 1px 0 rgba(255, 255, 255, 0.85);
+}
+
+.skeuo-text-deboss {
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.45);
 }

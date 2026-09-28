@@ -2,6 +2,7 @@ import type { CardRecord } from "./api";
 
 export type BattleRound = {
   id: string; round_number: number; status: string; winner_side: number | null;
+  turn_deadline: string | null; player_one_timed_out: boolean; player_two_timed_out: boolean;
   player_one_submitted: boolean; player_two_submitted: boolean;
   player_one_card: CardRecord | null; player_two_card: CardRecord | null;
 };
