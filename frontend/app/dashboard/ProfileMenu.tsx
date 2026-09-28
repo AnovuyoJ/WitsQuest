@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 
 
-const WITS_BLUE = "#043673";
+const WITS_BROWN = "#6f3d20";
 const WITS_GOLD = "#C9A24B";
 
 type ProfileMenuProps = {
@@ -35,7 +35,7 @@ export default function ProfileMenu({ name, email, avatar }: ProfileMenuProps) {
         aria-label="Open profile menu"
         aria-expanded={open}
         className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105"
-        style={{ background: `linear-gradient(155deg, ${WITS_BLUE} 0%, #0A1F3D 100%)` }}
+        style={{ background: `linear-gradient(155deg, ${WITS_BROWN} 0%, #4a2716 100%)` }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {avatar ? <img src={avatar} alt="" className="h-full w-full rounded-full object-cover" /> : initial}
@@ -45,7 +45,7 @@ export default function ProfileMenu({ name, email, avatar }: ProfileMenuProps) {
         <div className="skeuo-card absolute right-0 z-20 mt-2 w-64 overflow-hidden border-[#043673]/20 shadow-[0_16px_40px_-10px_rgba(4,54,115,0.35)]">
           <div
             className="h-1"
-            style={{ background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})` }}
+            style={{ background: `linear-gradient(90deg, ${WITS_BROWN}, ${WITS_GOLD})` }}
           />
 
           <div className="px-4 py-3.5">

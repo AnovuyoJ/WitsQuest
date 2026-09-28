@@ -31,7 +31,7 @@ export default function DashboardLayout({
         )}
 
         <div
-          className={`campus-background min-w-0 flex-1 transition-colors duration-200 ${
+          className={`campus-background ${!isAdminArea ? "non-admin-shell" : ""} ${!isAdminArea && pathname.startsWith("/dashboard/games") ? "games-background" : ""} min-w-0 flex-1 transition-colors duration-200 ${
             darkMode ? "campus-background-dark text-white" : "text-slate-900"
           }`}
         >

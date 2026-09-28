@@ -82,10 +82,10 @@ export default function DashboardPage() {
     <div className="relative min-h-full px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
       <header className="mb-8 flex items-start justify-between gap-4">
         <div>
-          <p className="inline-block text-[11px] font-extrabold uppercase tracking-[0.28em] text-[#9A741E] skeuo-text-emboss">
+          <p className="inline-block text-[13px] font-extrabold uppercase tracking-[0.28em] text-white skeuo-text-emboss">
             WitsQuest field desk
           </p>
-          <h1 className="font-pirate mt-2 text-[clamp(2rem,6vw,3.2rem)] font-black leading-none tracking-[-0.02em] text-[#043673] skeuo-text-emboss">
+          <h1 className="font-pirate mt-2 text-[clamp(2rem,6vw,3.2rem)] font-black leading-none tracking-[-0.02em] text-[#6f3d20] skeuo-text-emboss">
             What is in play?
           </h1>
           <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 font-medium">
@@ -99,16 +99,16 @@ export default function DashboardPage() {
       <section className="grid gap-5 lg:grid-cols-[1.38fr_.62fr]">
         <Link
           href="/dashboard/map"
-          className="skeuo-plate-navy group relative min-h-60 overflow-hidden p-6 text-white transition-all hover:-translate-y-1 active:translate-y-0.5 sm:p-8"
+          className="dashboard-map-card group relative min-h-60 overflow-hidden p-6 text-white transition-all hover:-translate-y-1 active:translate-y-0.5 sm:p-8"
         >
           <div className="absolute -bottom-20 -right-14 h-64 w-64 rounded-full border-[36px] border-white/5 transition-transform group-hover:scale-105" />
-          <div className="flex items-center gap-2 text-[#E2C66F]">
+          <div className="relative z-10 flex items-center gap-2 text-[#E2C66F]">
             <CompassIcon className="h-4 w-4" />
             <p className="text-[11px] font-extrabold uppercase tracking-[0.24em] skeuo-text-deboss">
               Live campus map
             </p>
           </div>
-          <h2 className="font-pirate mt-4 max-w-md text-[1.9rem] font-black tracking-[-0.01em] [text-shadow:0_2px_8px_rgba(0,0,0,0.4)] sm:text-[2.4rem]">
+          <h2 className="relative z-10 font-pirate mt-4 max-w-md text-[1.9rem] font-black tracking-[-0.01em] [text-shadow:0_2px_8px_rgba(0,0,0,0.4)] sm:text-[2.4rem]">
             Find the next pin before your next lecture.
           </h2>
           <span className="skeuo-badge-gold absolute bottom-6 left-6 text-xs font-black sm:bottom-8 sm:left-8">
@@ -118,21 +118,28 @@ export default function DashboardPage() {
 
         <Link
           href="/dashboard/cards"
-          className="skeuo-plate-gold group flex min-h-52 flex-col justify-between p-6 text-[#082C58] transition-all hover:-translate-y-1 active:translate-y-0.5 sm:p-8"
+          className="skeuo-plate-gold group relative flex min-h-52 flex-col justify-between overflow-hidden p-6 text-[#6f3d20] transition-all hover:-translate-y-1 active:translate-y-0.5 sm:p-8"
         >
-          <span className="skeuo-badge-gold inline-flex items-center gap-1.5 self-start">
+          <div className="absolute bottom-3 right-3 z-0 flex h-24 w-24 items-center justify-center overflow-hidden rounded-full border border-[#6f3d20]/20 bg-transparent">
+            <img
+              src="/art/skull.png"
+              alt="Pirate skull emblem"
+              className="h-[6.4rem] w-[6.4rem] scale-[1.2] object-contain opacity-100 drop-shadow-none"
+            />
+          </div>
+          <span className="relative z-10 skeuo-badge-gold inline-flex items-center gap-1.5 self-start">
             <TreasureChestIcon className="h-3.5 w-3.5" />
             Your collection
           </span>
-          <div>
-            <h2 className="font-pirate text-[1.9rem] font-black tracking-[-0.01em] text-[#082C58] skeuo-text-emboss">
+          <div className="relative z-10">
+            <h2 className="font-pirate text-[1.9rem] font-black tracking-[-0.01em] text-[#6f3d20] skeuo-text-emboss">
               Cards worth the walk.
             </h2>
-            <p className="mt-2 text-sm leading-6 text-[#082C58]/75 font-semibold">
+            <p className="mt-2 text-sm leading-6 text-[#6f3d20]/75 font-semibold">
               Review every reward and prepare your battle deck.
             </p>
           </div>
-          <span className="text-sm font-black text-[#082C58] underline underline-offset-4">
+          <span className="relative z-10 text-sm font-black text-[#6f3d20] underline underline-offset-4">
             View cards →
           </span>
         </Link>
@@ -142,17 +149,17 @@ export default function DashboardPage() {
       <section className="mt-10" aria-labelledby="active-heading">
         <div className="mb-5 flex items-end justify-between gap-4">
           <div>
-            <p className="text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#9A741E] skeuo-text-emboss">
+            <p className="text-[13px] font-extrabold uppercase tracking-[0.24em] text-white skeuo-text-emboss">
               Happening now
             </p>
-            <h2 id="active-heading" className="font-pirate mt-1 flex items-center gap-2 text-[1.7rem] font-black tracking-tight text-[#043673] skeuo-text-emboss">
+            <h2 id="active-heading" className="font-pirate mt-1 flex items-center gap-2 text-[1.7rem] font-black tracking-tight text-[#6f3d20] skeuo-text-emboss">
               <ShipWheelIcon className="h-5 w-5 shrink-0 text-[#9A741E]" />
               Active challenges
             </h2>
           </div>
           <Link
             href="/dashboard/events"
-            className="text-sm font-black text-[#043673] hover:underline skeuo-text-emboss"
+            className="text-sm font-black text-[#6f3d20] hover:underline skeuo-text-emboss"
           >
             See all →
           </Link>
@@ -167,7 +174,7 @@ export default function DashboardPage() {
           >
             <Link
               href="/dashboard/map"
-              className="skeuo-btn-primary px-6 py-3 text-sm font-black text-white"
+              className="skeuo-btn-gold px-6 py-3 text-sm font-black text-[#1f160c]"
             >
               Check the map
             </Link>
@@ -178,7 +185,7 @@ export default function DashboardPage() {
               <Link
                 href="/dashboard/events"
                 key={event.id}
-                className="skeuo-card-interactive p-6 flex flex-col justify-between"
+                className={`skeuo-card-interactive p-6 flex flex-col justify-between ${index === 2 ? "bg-black text-[#6f3d20]" : ""}`}
               >
                 <div>
                   <div className="flex items-center justify-between">
@@ -190,18 +197,18 @@ export default function DashboardPage() {
                       className="h-2.5 w-2.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8),inset_0_1px_1px_#ffffff]"
                     />
                   </div>
-                  <h3 className="mt-4 text-lg font-black text-[#043673] skeuo-text-emboss">
+                  <h3 className="mt-4 text-lg font-black text-[#6f3d20] skeuo-text-emboss">
                     {event.title}
                   </h3>
-                  <p className="mt-2 line-clamp-2 text-sm leading-6 text-slate-600 font-medium">
+                  <p className={`mt-2 line-clamp-2 text-sm leading-6 font-medium ${index === 2 ? "text-[#d4b579]" : "text-slate-600"}`}>
                     {event.description || "Reach the location to reveal this campus challenge."}
                   </p>
                 </div>
-                <div className="mt-6 border-t border-slate-200/80 pt-3 flex items-center justify-between">
-                  <span className="text-[11px] font-bold text-slate-500">
+                <div className={`mt-6 border-t pt-3 flex items-center justify-between ${index === 2 ? "border-[#d4b579]/30" : "border-slate-200/80"}`}>
+                  <span className={`text-[11px] font-bold ${index === 2 ? "text-[#d4b579]" : "text-slate-500"}`}>
                     Ends {new Date(event.ends_at).toLocaleString([], { weekday: "short", hour: "2-digit", minute: "2-digit" })}
                   </span>
-                  <span className="text-xs font-black text-[#043673]">
+                  <span className="text-xs font-black text-[#6f3d20]">
                     Join quest →
                   </span>
                 </div>

@@ -32,15 +32,62 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 /* Fade the artwork independently, keeping text and panels fully opaque. */
 .campus-background {
   background-color: #f7f9fc;
-  background-image: linear-gradient(#f7f9fcc4, #f7f9fcc4), url("/art/campus-map.png");
+  background-image: url("/art/campus-map.png");
   background-repeat: repeat;
   background-position: center top;
-  background-size: auto, 1050px auto;
+  background-size: 1050px auto;
 }
 
 .campus-background-dark {
   background-color: #0b1220;
   background-image: linear-gradient(#0b1220f4, #0b1220f4), url("/art/campus-map.png");
+}
+
+.non-admin-shell h1,
+.non-admin-shell h2,
+.non-admin-shell h3,
+.non-admin-shell h4,
+.non-admin-shell h5,
+.non-admin-shell h6 {
+  color: #775718;
+}
+
+.non-admin-shell a,
+.non-admin-shell label,
+.non-admin-shell strong,
+.non-admin-shell b,
+.non-admin-shell th,
+.non-admin-shell td,
+.non-admin-shell [class*="text-[#043673]"] ,
+.non-admin-shell [class*="text-[#0A1F3D]"] ,
+.non-admin-shell [class*="text-[#10233D]"] ,
+.non-admin-shell [class*="text-[#082C58]"] ,
+.non-admin-shell [class*="text-blue-"],
+.non-admin-shell [class*="text-sky-"],
+.non-admin-shell [class*="text-cyan-"],
+.non-admin-shell [style*="color:#043673"],
+.non-admin-shell [style*="color: #043673"],
+.non-admin-shell [style*="color:rgb(4, 54, 115)"] {
+  color: #6f3d20 !important;
+}
+
+.trails-page {
+  background-image: url("/art/campus-map.png");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+}
+
+.games-background {
+  background-color: #120d09;
+  background-image: url("/art/pirate-map.png.jpg");
+  background-repeat: no-repeat;
+  background-position: center center;
+  background-size: cover;
+}
+
+.games-page {
+  background: transparent;
 }
 
 :focus-visible { outline: 3px solid rgba(201, 162, 75, 0.7); outline-offset: 3px; }
@@ -377,6 +424,43 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
     inset 0 0 0 1px rgba(201, 162, 75, 0.25),
     0 4px 10px rgba(4, 54, 115, 0.15),
     0 18px 40px -10px rgba(4, 54, 115, 0.45);
+}
+
+.dashboard-map-card {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.08), rgba(0,0,0,0.08)),
+    linear-gradient(135deg, #8c4b2a 0%, #602d16 42%, #3b1706 100%);
+  border: 1px solid rgba(214, 173, 96, 0.42);
+  border-radius: 1.5rem;
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,0.18),
+    inset 0 0 0 1px rgba(214, 173, 96, 0.2),
+    0 18px 40px -10px rgba(35, 23, 16, 0.4);
+}
+
+.dashboard-map-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    repeating-linear-gradient(
+      90deg,
+      rgba(255,255,255,0.04),
+      rgba(255,255,255,0.04) 2px,
+      rgba(38, 22, 11, 0.1) 2px,
+      rgba(38, 22, 11, 0.1) 6px
+    );
+  mix-blend-mode: soft-light;
+  pointer-events: none;
+}
+
+.dashboard-map-card::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(120deg, rgba(255,255,255,0.08), transparent 30%, rgba(0,0,0,0.12) 100%);
+  pointer-events: none;
 }
 
 .skeuo-plate-gold {

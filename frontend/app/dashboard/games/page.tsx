@@ -56,30 +56,38 @@ export default function GamesPage() {
     else await load();
     setBusy(false);
   }
-  return <div className="mx-auto max-w-6xl p-5 sm:p-8 lg:p-10">
-    <ScreenHeader eyebrow="Battle arena" title="Build your battle deck" description="Five cards. Five rounds. Choose 1 Gold, 2 Black and 2 Blue from any events. Each card can be played once." action={<Link href="/dashboard/settings/rulebook" className="text-sm font-semibold text-[#043673] underline">Rulebook</Link>} />
+  return <div className="games-page mx-auto max-w-6xl p-5 sm:p-8 lg:p-10">
+    <ScreenHeader
+      eyebrow="Battle arena"
+      title="Build your battle deck"
+      eyebrowClassName="text-white"
+      titleClassName="text-white"
+      descriptionClassName="text-white/85"
+      description="Five cards. Five rounds. Choose 1 Gold, 2 Black and 2 Blue from any events. Each card can be played once."
+      action={<Link href="/dashboard/settings/rulebook" className="text-sm font-semibold text-white underline">Rulebook</Link>}
+    />
     {error && <p role="alert" className="mb-5 rounded-xl bg-red-50 p-4 text-sm text-red-800">{error}</p>}
     {loading ? <ScreenSkeleton /> : <>
-      {games.length > 0 && <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6"><h2 className="text-xl font-bold text-[#043673]">Your battles</h2>
+      {games.length > 0 && <section className="mb-8 rounded-2xl border border-slate-200 bg-white p-6"><h2 className="text-xl font-bold text-white">Your battles</h2>
         {games.map(game => <div key={game.id} className="mt-4 flex flex-wrap items-center gap-4">
-          <p className="mr-auto text-sm">{game.rules_version === 1 ? "Legacy match" : game.is_cpu ? "CPU battle" : "Player battle"} · {game.status === "waiting" ? "Waiting for opponent" : "In progress"}</p>
-          <Link href={`/dashboard/games/${game.id}`} className="font-semibold text-[#043673] underline">Resume</Link>
+          <p className="mr-auto text-sm text-white">{game.rules_version === 1 ? "Legacy match" : game.is_cpu ? "CPU battle" : "Player battle"} · {game.status === "waiting" ? "Waiting for opponent" : "In progress"}</p>
+          <Link href={`/dashboard/games/${game.id}`} className="font-semibold text-white underline">Resume</Link>
           <button disabled={busy} onClick={() => end(game)} className="text-sm text-red-700 underline disabled:opacity-50">{game.status === "waiting" ? "Cancel lobby" : "Forfeit"}</button>
-        </div>)}<p className="mt-4 text-sm text-slate-600">Finish or cancel your current battle before starting another.</p>
+        </div>)}<p className="mt-4 text-sm text-white/80">Finish or cancel your current battle before starting another.</p>
       </section>}
-      {!cards.length ? <StatePanel title="Your deck starts with your collection" description="Complete event challenges to collect 1 Gold, 2 different Black and 2 different Blue cards."><Link href="/dashboard/events" className="font-semibold text-[#043673] underline">Find an event</Link></StatePanel> : <>
+      {!cards.length ? <StatePanel title="Your deck starts with your collection" description="Complete event challenges to collect 1 Gold, 2 different Black and 2 different Blue cards."><Link href="/dashboard/events" className="font-semibold text-gold underline">Find an event</Link></StatePanel> : <>
         <section className="mb-6 rounded-2xl border border-[#C9A24B]/50 bg-white p-5" aria-label="Deck selection">
-          <h2 className="text-lg font-bold text-[#043673]">Your deck: {chosen.length}/5</h2>
-          <p aria-live="polite" className="mt-2 text-sm text-slate-600">Gold {counts.Gold}/1 · Black {counts.Black}/2 · Blue {counts.Blue}/2</p>
-          <p className="mt-2 text-sm text-slate-600">Select a card to add it. Select it again to remove it. Extra copies appear only once here.</p>
+          <h2 className="text-lg font-bold text-white">Your deck: {chosen.length}/5</h2>
+          <p aria-live="polite" className="mt-2 text-sm text-white">Gold {counts.Gold}/1 · Black {counts.Black}/2 · Blue {counts.Blue}/2</p>
+          <p className="mt-2 text-sm text-white/80">Select a card to add it. Select it again to remove it. Extra copies appear only once here.</p>
           <div className="mt-4 flex flex-wrap gap-3">
-            <label className="w-full text-sm font-semibold">Card Duel stake<select aria-label="Card Duel stake" value={selected.includes(stake) ? stake : ""} onChange={event => setStake(event.target.value)} disabled={busy} className="ml-3 rounded-lg border p-2"><option value="">Choose one deck card</option>{chosen.map(card => <option key={card.id} value={card.id}>{card.title} · {card.rarity} · {card.points} points</option>)}</select></label>
-            <p className="w-full text-sm text-slate-600">Card Duel: risk one copy of your chosen card. Stakes can be different rarities. Review and accept both stakes after matching. The winner takes the loser’s stake; a draw returns both. Friendly and CPU battles have no stakes.</p>
-            <button disabled={!ready || busy || games.length > 0 || !selected.includes(stake)} onClick={() => start("duel")} className="rounded-xl bg-red-800 px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">Find a Card Duel</button>
-            <button disabled={!ready || busy || games.length > 0} onClick={() => start("player")} className="rounded-xl bg-[#043673] px-5 py-3 text-sm font-semibold text-white disabled:opacity-40">{busy ? "Please wait…" : "Find a player"}</button>
-            <button disabled={!ready || busy || games.length > 0} onClick={() => start("cpu")} className="rounded-xl bg-[#C9A24B] px-5 py-3 text-sm font-semibold text-[#082C58] disabled:opacity-40">Play against CPU</button>
+            <label className="w-full text-sm font-semibold text-white">Card Duel stake<select aria-label="Card Duel stake" value={selected.includes(stake) ? stake : ""} onChange={event => setStake(event.target.value)} disabled={busy} className="ml-3 rounded-lg border p-2"><option value="">Choose one deck card</option>{chosen.map(card => <option key={card.id} value={card.id}>{card.title} · {card.rarity} · {card.points} points</option>)}</select></label>
+            <p className="w-full text-sm text-white/80">Card Duel: risk one copy of your chosen card. Stakes can be different rarities. Review and accept both stakes after matching. The winner takes the loser’s stake; a draw returns both. Friendly and CPU battles have no stakes.</p>
+            <button disabled={!ready || busy || games.length > 0 || !selected.includes(stake)} onClick={() => start("duel")} className="rounded-xl bg-[#6f3d20] px-5 py-3 text-sm font-semibold text-[#f9f1e2] shadow-[0_4px_0_#4d2a16] transition hover:brightness-110 disabled:opacity-40">Find a Card Duel</button>
+            <button disabled={!ready || busy || games.length > 0} onClick={() => start("player")} className="rounded-xl border border-[#c9aa72] bg-[#f3e7ca] px-5 py-3 text-sm font-semibold text-[#5c3417] shadow-[0_4px_0_#d4b57a] transition hover:brightness-105 disabled:opacity-40">{busy ? "Please wait…" : "Find a player"}</button>
+            <button disabled={!ready || busy || games.length > 0} onClick={() => start("cpu")} className="rounded-xl bg-[#6f3d20] px-5 py-3 text-sm font-semibold text-[#f9f1e2] shadow-[0_4px_0_#4d2a16] transition hover:brightness-110 disabled:opacity-40">Play against CPU</button>
           </div>
-          {!ready && <p className="mt-3 text-sm text-slate-600">Complete the rarity mix to start. Need more cards? Visit events or exchange extras in My cards.</p>}
+          {!ready && <p className="mt-3 text-sm text-white/80">Complete the rarity mix to start. Need more cards? Visit events or exchange extras in My cards.</p>}
         </section>
         <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">{cards.map(card => <div key={card.id}><BattleCard card={card} selected={selected.includes(card.id)} disabled={busy || card.points < 0 || card.points > 100} onClick={() => toggle(card)} />{(card.points < 0 || card.points > 100) && <p className="mt-2 text-sm text-red-800">Needs an admin point correction before use.</p>}</div>)}</div>
       </>}
