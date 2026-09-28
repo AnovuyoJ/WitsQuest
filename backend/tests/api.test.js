@@ -457,6 +457,261 @@ test("admin dashboard lists challenges with an optional validated event filter",
   expect((await request("/admin/challenges", "")).status).toBe(401);
 });
 
+test("admin analytics returns location, question and card engagement data", async () => {
+  const result = await request("/admin/analytics", "admin");
+
+  expect(result.status).toBe(200);
+  expect(result.data).toEqual(
+    expect.objectContaining({
+      locations: expect.any(Array),
+      questions: expect.any(Array),
+      cards: expect.any(Array),
+    })
+  );
+
+  expect(result.data.locations).toHaveLength(1);
+  expect(result.data.questions).toHaveLength(1);
+  expect(result.data.cards).toHaveLength(1);
+
+  expect(result.data.locations[0]).toMatchObject({
+    id: event.id,
+    title: event.title,
+    total_verifications: 0,
+    unique_players: 0,
+  });
+
+  expect(result.data.questions[0]).toMatchObject({
+    id: challenge.id,
+    question_text: challenge.question_text,
+    event_id: event.id,
+    total_attempts: 0,
+    unique_players: 0,
+    correct_attempts: 0,
+    wrong_attempts: 0,
+    success_percentage: 0,
+  });
+
+  expect(result.data.cards[0]).toMatchObject({
+    id: card.id,
+    title: card.title,
+    rarity: card.rarity,
+    event_id: event.id,
+    total_awards: 0,
+    unique_players: 0,
+    award_percentage: 0,
+  });
+});
+
+test("admin analytics calculates location and question engagement", async () => {
+  await request(
+    `/events/${event.id}/verify-location`,
+    "one",
+    "POST",
+    {
+      latitude: event.latitude,
+      longitude: event.longitude,
+    }
+  );
+
+  await request(
+    `/events/${event.id}/submit-answer`,
+    "one",
+    "POST",
+    {
+      challengeId: challenge.id,
+      answer: "Yes",
+    }
+  );
+
+  const result = await request("/admin/analytics", "admin");
+
+  expect(result.status).toBe(200);
+
+  expect(result.data.locations[0]).toMatchObject({
+    id: event.id,
+    total_verifications: 1,
+    unique_players: 1,
+  });
+
+  expect(result.data.questions[0]).toMatchObject({
+    id: challenge.id,
+    total_attempts: 1,
+    unique_players: 1,
+    correct_attempts: 1,
+    wrong_attempts: 0,
+    success_percentage: 100,
+  });
+});
+
+test("admin analytics separates attempts, unique players and correct answers", async () => {
+  await request(
+    `/events/${event.id}/verify-location`,
+    "one",
+    "POST",
+    {
+      latitude: event.latitude,
+      longitude: event.longitude,
+    }
+  );
+
+  await request(
+    `/events/${event.id}/submit-answer`,
+    "one",
+    "POST",
+    {
+      challengeId: challenge.id,
+      answer: "No",
+    }
+  );
+
+  const second = (
+    await request(
+      "/admin/challenges",
+      "admin",
+      "POST",
+      {
+        ...challenge,
+        question_text: "Second question?",
+      }
+    )
+  ).data;
+
+  await publish("challenges", second);
+
+  await request(
+    `/events/${event.id}/verify-location`,
+    "two",
+    "POST",
+    {
+      latitude: event.latitude,
+      longitude: event.longitude,
+    }
+  );
+
+  await request(
+    `/events/${event.id}/submit-answer`,
+    "two",
+    "POST",
+    {
+      challengeId: second.id,
+      answer: "Yes",
+    }
+  );
+
+  const result = await request("/admin/analytics", "admin");
+
+  const firstQuestion = result.data.questions.find(
+    question => question.id === challenge.id
+  );
+
+  const secondQuestion = result.data.questions.find(
+    question => question.id === second.id
+  );
+
+  expect(firstQuestion).toMatchObject({
+    total_attempts: 1,
+    unique_players: 1,
+    correct_attempts: 0,
+    wrong_attempts: 1,
+    success_percentage: 0,
+  });
+
+  expect(secondQuestion).toMatchObject({
+    total_attempts: 1,
+    unique_players: 1,
+    correct_attempts: 1,
+    wrong_attempts: 0,
+    success_percentage: 100,
+  });
+
+  expect(result.data.locations[0]).toMatchObject({
+    total_verifications: 2,
+    unique_players: 2,
+  });
+});
+
+test("admin analytics calculates observed card award rates", async () => {
+  await request(
+    `/events/${event.id}/verify-location`,
+    "one",
+    "POST",
+    {
+      latitude: event.latitude,
+      longitude: event.longitude,
+    }
+  );
+
+  await request(
+    `/events/${event.id}/submit-answer`,
+    "one",
+    "POST",
+    {
+      challengeId: challenge.id,
+      answer: "Yes",
+    }
+  );
+
+  const secondCard = (
+    await request(
+      "/admin/cards",
+      "admin",
+      "POST",
+      {
+        ...card,
+        title: "Second Reward",
+        rarity: "Blue",
+      }
+    )
+  ).data;
+
+  const secondChallenge = (
+    await request(
+      "/admin/challenges",
+      "admin",
+      "POST",
+      {
+        ...challenge,
+        question_text: "Second reward question?",
+        card_id: secondCard.id,
+      }
+    )
+  ).data;
+
+  await publish("challenges", secondChallenge);
+
+  await request(
+    `/events/${event.id}/submit-answer`,
+    "one",
+    "POST",
+    {
+      challengeId: secondChallenge.id,
+      answer: "Yes",
+    }
+  );
+
+  const result = await request("/admin/analytics", "admin");
+
+  const gold = result.data.cards.find(c => c.id === card.id);
+  const blue = result.data.cards.find(c => c.id === secondCard.id);
+
+  expect(gold).toMatchObject({
+    total_awards: 1,
+    unique_players: 1,
+    award_percentage: 50,
+  });
+
+  expect(blue).toMatchObject({
+    total_awards: 1,
+    unique_players: 1,
+    award_percentage: 50,
+  });
+});
+
+test("admin analytics requires administrator access", async () => {
+  expect((await request("/admin/analytics", "one")).status).toBe(403);
+  expect((await request("/admin/analytics", "")).status).toBe(401);
+});
+
 test("trails validate stops and require admin review and published events", async () => {
   expect((await request("/trails", "")).status).toBe(401);
   expect((await request("/admin/trails", "one", "POST", {})).status).toBe(403);
