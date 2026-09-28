@@ -11,6 +11,7 @@ const workspaces = [
   { key: "trails", label: "Trails", action: "Build trail", icon: "🧭", detail: "Connect your quests into a journey.", tone: "bg-[#EDF5EA] border-[#CDDFC5]" },
   { key: "challenges", label: "Challenges", action: "Add challenge", icon: "🧠", detail: "Give curious explorers something to solve.", tone: "bg-[#FCEEE7] border-[#EBD0C2]" },
   { key: "cards", label: "Cards", action: "Create card", icon: "🏅", detail: "Make a discovery worth collecting.", tone: "bg-[#F5F0FA] border-[#DDD1E8]" },
+  { key: "zones", label: "Zones", action: "Build zone", icon: "🗺️", detail: "Group campus locations into territories.", tone: "bg-[#EEF2FA] border-[#CFD8EB]" },
 ];
 export default function AdminDashboardPage() {
   const { checkingAccess, isAdmin } = useAdminAccess();
@@ -42,7 +43,7 @@ export default function AdminDashboardPage() {
     <section id="create-content" className="mt-8 scroll-mt-6" aria-labelledby="create-heading">
       <h2 id="create-heading" className="text-xl font-bold">Your next creation</h2>
       <p className="mt-1 text-sm text-stone-600">Choose a workspace to start something new or polish what’s already there.</p>
-      <nav className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Content management">
+      <nav className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-5" aria-label="Content management">
         {workspaces.map(workspace => <Link key={workspace.key} href={`/dashboard/admin/${workspace.key}`} className={`group rounded-2xl border p-5 transition-shadow hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-[#76561C] ${workspace.tone}`}>
           <div className="flex items-center justify-between gap-3"><span aria-hidden="true" className="text-2xl">{workspace.icon}</span><span className="text-xs font-medium text-stone-600">{loading ? "Loading…" : counts[workspace.key] == null ? "Count unavailable" : `${counts[workspace.key]} saved`}</span></div>
           <h3 className="mt-5 font-bold">{workspace.action} <span aria-hidden="true" className="float-right">↗</span></h3>
