@@ -130,12 +130,25 @@ router.post("/:id/accept", async (req, res) => {
       throw new HttpError(409, "Trade failed because one of the players no longer owns the card.");
     }
 
+    // Sender gives up the offered card
     await client.query(
-      "INSERT INTO public.player_cards (player_id, card_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+      "DELETE FROM public.player_cards WHERE player_id = $1 AND card_id = $2",
+      [trade.sender_id, trade.offered_card_id]
+    );
+    // Recipient gives up the requested card
+    await client.query(
+      "DELETE FROM public.player_cards WHERE player_id = $1 AND card_id = $2",
+      [trade.recipient_id, trade.requested_card_id]
+    );
+
+    // Recipient receives the offered card
+    await client.query(
+      "INSERT INTO public.player_cards (player_id, card_id) VALUES ($1, $2)",
       [trade.recipient_id, trade.offered_card_id]
     );
+    // Sender receives the requested card
     await client.query(
-      "INSERT INTO public.player_cards (player_id, card_id) VALUES ($1, $2) ON CONFLICT DO NOTHING",
+      "INSERT INTO public.player_cards (player_id, card_id) VALUES ($1, $2)",
       [trade.sender_id, trade.requested_card_id]
     );
 
