@@ -155,6 +155,22 @@ test("five-card matchmaking rejects invalid mixes, duplicates, unowned cards and
   expect((await request("/games/matchmake","one","POST",{cardIds:ids,mode:"invalid"})).status).toBe(400);
 });
 
+test("spectators can watch active player and CPU battles without seeing unrevealed cards", async () => {
+  const one = await makeDeck(oneId,40), two = await makeDeck(twoId,0);
+  const game = (await request("/games/matchmake","one","POST",{cardIds:one.map(card => card.id)})).data;
+  await request("/games/matchmake","two","POST",{cardIds:two.map(card => card.id)});
+  const live = await request("/games/live","admin");
+  expect(live.status).toBe(200);
+  expect(live.data).toEqual(expect.arrayContaining([expect.objectContaining({ id: game.id, is_cpu: false })]));
+  const spectatorState = await request(`/games/${game.id}/spectate`,"admin");
+  expect(spectatorState.status).toBe(200);
+  expect(spectatorState.data.rounds[0]).toMatchObject({ player_one_card: null, player_two_card: null });
+
+  const cpu = (await request("/games/matchmake","one","POST",{cardIds:one.map(card => card.id),mode:"cpu"}));
+  // The player still has an active match, so finish the player match before creating the CPU match.
+  expect(cpu.status).toBe(409);
+});
+
 test("player battles hide choices, freeze scores, reject reuse and finish after five rounds without transfers", async () => {
   const one = await makeDeck(oneId,40), two = await makeDeck(twoId,0);
   const start = await request("/games/matchmake","one","POST",{cardIds:one.map(c => c.id)});
