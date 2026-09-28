@@ -71,3 +71,4 @@
 * Document external libraries and their purposes.
 * Collect evidence of client meetings and feedback.
 
+![alt text](<WhatsApp Image 2026-09-15 at 14.42.02.jpeg>)

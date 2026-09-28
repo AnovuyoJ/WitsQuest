@@ -361,10 +361,10 @@ export default function AdminCardsPage() {
    */
 
   return (
-    <div className="space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
+    <div className="min-h-screen space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
       {/* HEADER */}
 
-      <header>
+      <header className="skeuo-plate-navy p-6 sm:p-8 rounded-2xl mb-8">
         <p
           className="text-xs font-semibold uppercase tracking-[0.28em]"
           style={{ color: WITS_GOLD }}
@@ -373,13 +373,12 @@ export default function AdminCardsPage() {
         </p>
 
         <h1
-          className="mt-2 text-4xl font-black tracking-[-0.045em]"
-          style={{ color: WITS_BLUE }}
+          className="mt-2 text-4xl font-black tracking-[-0.045em] text-white"
         >
           Cards
         </h1>
 
-        <p className="mt-2 text-sm text-slate-500">
+        <p className="mt-2 text-sm text-white/70">
           Create reward cards and attach them to events.
         </p>
       </header>
@@ -388,13 +387,13 @@ export default function AdminCardsPage() {
       <AlbumCoverEditor events={events} />
 
       {message && (
-        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700">
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
           {message}
         </div>
       )}
 
       {error && (
-        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 shadow-[inset_0_1px_3px_rgba(0,0,0,0.08)]">
           {error}
         </div>
       )}
@@ -404,7 +403,7 @@ export default function AdminCardsPage() {
 
         <form
           onSubmit={handleSubmit}
-          className="rounded-2xl border border-[#043673]/12 bg-white p-6"
+          className="skeuo-card p-6 rounded-2xl"
         >
           <div className="mb-6">
             <p
@@ -430,7 +429,7 @@ export default function AdminCardsPage() {
             {/* EVENT */}
 
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700">
+              <span className="text-sm font-bold text-slate-700 skeuo-text-emboss">
                 Event
               </span>
 
@@ -441,7 +440,7 @@ export default function AdminCardsPage() {
                     e.target.value
                   )
                 }
-                className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
+                className="skeuo-input mt-2 w-full px-4 py-3 text-sm bg-white cursor-pointer outline-none"
               >
                 <option value="">
                   Select event
@@ -461,7 +460,7 @@ export default function AdminCardsPage() {
             {/* TITLE */}
 
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700">
+              <span className="text-sm font-bold text-slate-700 skeuo-text-emboss">
                 Card title
               </span>
 
@@ -471,14 +470,14 @@ export default function AdminCardsPage() {
                   setTitle(e.target.value)
                 }
                 placeholder="Great Hall Explorer"
-                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
+                className="skeuo-input mt-2 w-full px-4 py-3 text-sm outline-none"
               />
             </label>
 
             {/* RARITY */}
 
             <div>
-              <span className="text-sm font-semibold text-slate-700">
+              <span className="text-sm font-bold text-slate-700 skeuo-text-emboss">
                 Rarity
               </span>
 
@@ -500,10 +499,10 @@ export default function AdminCardsPage() {
                       onClick={() =>
                         setRarity(item)
                       }
-                      className={`rounded-xl border px-3 py-3 text-sm font-semibold transition ${
+                      className={`px-3 py-3 text-sm font-semibold rounded-xl transition ${
                         selected
-                          ? "border-[#043673] bg-[#043673] text-white"
-                          : "border-slate-200 bg-slate-50 text-slate-600 hover:bg-white"
+                          ? "skeuo-btn-primary"
+                          : "skeuo-btn-secondary"
                       }`}
                     >
                       {item}
@@ -516,7 +515,7 @@ export default function AdminCardsPage() {
             {/* DESCRIPTION */}
 
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700">
+              <span className="text-sm font-bold text-slate-700 skeuo-text-emboss">
                 Description
               </span>
 
@@ -528,7 +527,7 @@ export default function AdminCardsPage() {
                   )
                 }
                 placeholder="Awarded for completing the Great Hall quest."
-                className="mt-2 min-h-28 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
+                className="skeuo-input mt-2 min-h-28 w-full px-4 py-3 text-sm outline-none"
               />
             </label>
 
@@ -536,7 +535,7 @@ export default function AdminCardsPage() {
               {/* POINTS */}
 
               <label className="block">
-                <span className="text-sm font-semibold text-slate-700">
+                <span className="text-sm font-bold text-slate-700 skeuo-text-emboss">
                   Battle points (0–100)
                 </span>
 
@@ -550,14 +549,14 @@ export default function AdminCardsPage() {
                   onChange={(e) =>
                     setPoints(e.target.value)
                   }
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
+                  className="skeuo-input mt-2 w-full px-4 py-3 text-sm outline-none"
                 />
               </label>
 
               {/* TAG */}
 
               <label className="block">
-                <span className="text-sm font-semibold text-slate-700">
+                <span className="text-sm font-bold text-slate-700 skeuo-text-emboss">
                   Tag
                 </span>
 
@@ -566,7 +565,7 @@ export default function AdminCardsPage() {
                   onChange={(e) =>
                     setTag(e.target.value)
                   }
-                  className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673]"
+                  className="skeuo-input mt-2 w-full px-4 py-3 text-sm bg-white cursor-pointer outline-none"
                 >
                   {tagOptions.map(option => <option key={option} value={option}>{option}</option>)}
                 </select>
@@ -577,10 +576,7 @@ export default function AdminCardsPage() {
               <button
                 type="submit"
                 disabled={saving}
-                className="rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:brightness-110 disabled:opacity-50"
-                style={{
-                  background: WITS_BLUE,
-                }}
+                className="skeuo-btn-primary px-5 py-3 text-sm font-semibold rounded-xl disabled:opacity-50"
               >
                 {saving
                   ? "Saving..."
@@ -593,7 +589,7 @@ export default function AdminCardsPage() {
                 <button
                   type="button"
                   onClick={resetForm}
-                  className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                  className="skeuo-btn-secondary px-5 py-3 text-sm font-semibold rounded-xl"
                 >
                   Cancel
                 </button>
@@ -604,7 +600,7 @@ export default function AdminCardsPage() {
 
         {/* PREVIEW */}
 
-        <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
+        <section className="skeuo-card p-6 rounded-2xl">
           <p
             className="text-xs font-semibold uppercase tracking-[0.2em]"
             style={{ color: WITS_GOLD }}
@@ -620,7 +616,7 @@ export default function AdminCardsPage() {
           </h2>
 
           <div
-            className="relative mt-6 overflow-hidden rounded-2xl p-6 text-white shadow-[0_22px_48px_-32px_rgba(4,54,115,.85)]"
+            className="relative mt-6 overflow-hidden rounded-2xl p-6 text-white shadow-[0_8px_32px_-8px_rgba(0,0,0,0.6),inset_0_1px_0_rgba(255,255,255,0.15)]"
             style={{
               background: `linear-gradient(135deg, ${theme.accent}, rgba(0,0,0,0.88))`,
             }}
@@ -660,7 +656,7 @@ export default function AdminCardsPage() {
 
       {/* EXISTING CARDS */}
 
-      <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
+      <section className="skeuo-card p-6 rounded-2xl">
         <div className="mb-5 flex items-center justify-between">
           <div>
             <p
@@ -678,13 +674,13 @@ export default function AdminCardsPage() {
             </h2>
           </div>
 
-          <span className="rounded-full bg-[#043673]/5 px-3 py-1 text-xs font-semibold text-[#043673]">
+          <span className="skeuo-badge-blue">
             {cards.length} cards
           </span>
         </div>
 
         {cards.length === 0 ? (
-          <div className="rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-8 text-center">
+          <div className="skeuo-well p-8 rounded-2xl text-center">
             <p className="text-sm text-slate-500">
               No cards have been created yet.
             </p>
@@ -694,7 +690,7 @@ export default function AdminCardsPage() {
             {cards.map((card) => (
               <div
                 key={card.id}
-                className="rounded-2xl border border-slate-200 bg-slate-50 p-4"
+                className="skeuo-card p-4 rounded-2xl"
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
@@ -709,7 +705,7 @@ export default function AdminCardsPage() {
                     </p>
                   </div>
 
-                  <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase text-[#043673]">
+                  <span className="skeuo-badge-blue text-[10px]">
                     {card.rarity}
                   </span>
                 </div>
@@ -736,7 +732,7 @@ export default function AdminCardsPage() {
                     onClick={() =>
                       editCard(card)
                     }
-                    className="rounded-lg border border-[#043673]/15 bg-white px-3 py-2 text-xs font-semibold text-[#043673]"
+                    className="skeuo-btn-secondary px-3 py-2 text-xs font-semibold rounded-lg"
                   >
                     Edit
                   </button>
@@ -746,7 +742,7 @@ export default function AdminCardsPage() {
                     onClick={() =>
                       deleteCard(card.id)
                     }
-                    className="rounded-lg border border-red-100 bg-white px-3 py-2 text-xs font-semibold text-red-500"
+                    className="rounded-lg border border-red-100 bg-white px-3 py-2 text-xs font-semibold text-red-500 shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_-1px_0_rgba(0,0,0,0.04)]"
                   >
                     Delete
                   </button>

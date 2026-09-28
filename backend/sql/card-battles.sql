@@ -15,6 +15,9 @@ ALTER TABLE public.card_games ADD COLUMN IF NOT EXISTS rules_version integer NOT
 ALTER TABLE public.card_games ADD COLUMN IF NOT EXISTS is_cpu boolean NOT NULL DEFAULT false;
 ALTER TABLE public.card_games ADD COLUMN IF NOT EXISTS winner_side integer CHECK (winner_side IN (1,2));
 ALTER TABLE public.game_rounds ADD COLUMN IF NOT EXISTS winner_side integer CHECK (winner_side IN (1,2));
+ALTER TABLE public.game_rounds ADD COLUMN IF NOT EXISTS turn_deadline timestamptz;
+ALTER TABLE public.game_rounds ADD COLUMN IF NOT EXISTS player_one_timed_out boolean NOT NULL DEFAULT false;
+ALTER TABLE public.game_rounds ADD COLUMN IF NOT EXISTS player_two_timed_out boolean NOT NULL DEFAULT false;
 CREATE TABLE IF NOT EXISTS public.battle_decks (
   game_id uuid NOT NULL REFERENCES public.card_games(id) ON DELETE CASCADE,
   side integer NOT NULL CHECK (side IN (1,2)),

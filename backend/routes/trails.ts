@@ -67,6 +67,7 @@ trailsRouter.get("/", async (req, res) => {
   const { rows } = await database.query(`SELECT t.id, t.published_snapshot->>'title' AS title,
     t.published_snapshot->>'description' AS description,
     stop.ordinality::int AS position, stop.event_id, e.title AS event_title,
+    e.latitude, e.longitude, e.radius_meters,
     e.starts_at, e.ends_at,
     (e.id IS NOT NULL) AS available,
     COALESCE(e.starts_at<=now() AND e.ends_at>=now(),false) AS active,

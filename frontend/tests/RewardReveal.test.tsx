@@ -8,7 +8,10 @@ const request = jest.fn<typeof fetch>();
 const response = (data: unknown) => ({ ok: true, json: async () => data }) as Response;
 beforeEach(() => {
   request.mockReset(); globalThis.fetch = request;
-  jest.spyOn(supabase.auth, "getSession").mockResolvedValue({ data: { session: { access_token: "token" } }, error: null } as never);
+  jest.spyOn(supabase.auth, "getSession").mockResolvedValue({
+    data: { session: { access_token: "token", user: { id: "player-one" } } },
+    error: null,
+  } as never);
 });
 afterEach(() => { cleanup(); globalThis.fetch = originalFetch; jest.restoreAllMocks(); });
 
@@ -17,7 +20,16 @@ test.each([
   { correct: false, cardAwarded: false, alreadyCompleted: false, reveal: false },
   { correct: true, cardAwarded: false, alreadyCompleted: true, reveal: false },
 ])("reward reveal follows the server result: %j", async result => {
-  request.mockResolvedValueOnce(response({ id: "question", event_id: "event", question_text: "Ready?", question_type: "true_false", options: null, card_id: "card" }))
+  request.mockResolvedValueOnce(response({
+    id: "question",
+    event_id: "event",
+    question_text: "Ready?",
+    question_type: "true_false",
+    options: null,
+    card_id: "card",
+    offline_token: "lease-one",
+    offline_expires_at: "2100-01-01T00:00:00.000Z",
+  }))
     .mockResolvedValueOnce(response({ ...result, correctAnswer: "True" }))
     .mockResolvedValueOnce(response([{ id: "card", title: "Campus Explorer", rarity: "Gold", points: 60 }]));
   render(<ChallengeCard eventId="event" />);

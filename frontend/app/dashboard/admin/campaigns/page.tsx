@@ -156,32 +156,45 @@ export default function AdminCampaignsPage() {
 
   return (
     <div className="space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.28em]" style={{ color: WITS_GOLD }}>
-            Admin console
-          </p>
-          <h1 className="mt-2 text-4xl font-black tracking-[-0.045em]" style={{ color: WITS_BLUE }}>
-            Campaigns
-          </h1>
-          <p className="mt-2 text-sm text-slate-500">
-            Group events under a named campaign (e.g. an open day or term) to schedule and organize them together.
-          </p>
+
+      {/* HEADER */}
+      <div className="skeuo-plate-navy rounded-2xl p-6 sm:p-8">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.28em]" style={{ color: "#E2C66F" }}>
+              Admin console
+            </p>
+            <h1 className="mt-2 text-4xl font-black tracking-[-0.045em] text-white">
+              Campaigns
+            </h1>
+            <p className="mt-2 text-sm text-white/70">
+              Group events under a named campaign (e.g. an open day or term) to schedule and organize them together.
+            </p>
+          </div>
+          <Link
+            href="/dashboard/admin"
+            className="skeuo-btn-secondary shrink-0 rounded-xl px-4 py-2 text-sm font-semibold"
+          >
+            ← Back to dashboard
+          </Link>
         </div>
-        <Link
-          href="/dashboard/admin"
-          className="rounded-xl border border-[#043673]/15 bg-white px-4 py-2 text-sm font-semibold text-[#043673] shadow-sm transition hover:bg-[#043673]/5"
-        >
-          ← Back to dashboard
-        </Link>
-      </header>
+      </div>
 
-      {message && <div className="rounded-xl bg-emerald-50 p-4 text-sm text-emerald-700">{message}</div>}
-      {error && <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">{error}</div>}
+      {message && (
+        <div className="rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-800 shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)]">
+          {message}
+        </div>
+      )}
+      {error && (
+        <div className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800 shadow-[inset_0_1px_3px_rgba(0,0,0,0.06)]">
+          {error}
+        </div>
+      )}
 
-      <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
+      {/* CREATE / EDIT FORM */}
+      <section className="skeuo-card rounded-2xl p-6">
         <div className="mb-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: WITS_GOLD }}>
+          <p className="text-xs font-bold uppercase tracking-[0.2em]" style={{ color: WITS_GOLD }}>
             {editingId ? "Edit campaign" : "Create campaign"}
           </p>
           <h2 className="mt-2 text-2xl font-black tracking-tight" style={{ color: WITS_BLUE }}>
@@ -191,32 +204,32 @@ export default function AdminCampaignsPage() {
 
         <form onSubmit={handleSubmit} className="space-y-5">
           <label className="block">
-            <span className="text-sm font-semibold text-slate-700">Campaign name</span>
+            <span className="text-sm font-bold text-slate-700 skeuo-text-emboss">Campaign name</span>
             <input
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="Open Day 2026"
-              className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none transition focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+              className="skeuo-input mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none"
             />
           </label>
 
           <div className="grid gap-4 md:grid-cols-2">
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700">Starts at</span>
+              <span className="text-sm font-bold text-slate-700 skeuo-text-emboss">Starts at</span>
               <input
                 type="datetime-local"
                 value={startsAt}
                 onChange={(e) => setStartsAt(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+                className="skeuo-input mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none"
               />
             </label>
             <label className="block">
-              <span className="text-sm font-semibold text-slate-700">Ends at</span>
+              <span className="text-sm font-bold text-slate-700 skeuo-text-emboss">Ends at</span>
               <input
                 type="datetime-local"
                 value={endsAt}
                 onChange={(e) => setEndsAt(e.target.value)}
-                className="mt-2 w-full rounded-xl border border-slate-200 px-4 py-3 text-sm outline-none focus:border-[#043673] focus:ring-2 focus:ring-[#043673]/10"
+                className="skeuo-input mt-2 w-full rounded-xl px-4 py-3 text-sm outline-none"
               />
             </label>
           </div>
@@ -225,8 +238,7 @@ export default function AdminCampaignsPage() {
             <button
               type="submit"
               disabled={saving}
-              className="rounded-xl px-5 py-3 text-sm font-semibold text-white transition hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-50"
-              style={{ background: WITS_BLUE }}
+              className="skeuo-btn-primary rounded-xl px-5 py-3 text-sm font-semibold disabled:cursor-not-allowed disabled:opacity-50"
             >
               {saving ? "Saving..." : editingId ? "Save changes" : "Create campaign"}
             </button>
@@ -234,7 +246,7 @@ export default function AdminCampaignsPage() {
               <button
                 type="button"
                 onClick={resetForm}
-                className="rounded-xl border border-slate-200 px-5 py-3 text-sm font-semibold text-slate-600 transition hover:bg-slate-50"
+                className="skeuo-btn-secondary rounded-xl px-5 py-3 text-sm font-semibold"
               >
                 Cancel edit
               </button>
@@ -243,12 +255,13 @@ export default function AdminCampaignsPage() {
         </form>
       </section>
 
-      <section className="rounded-2xl border border-[#043673]/12 bg-white p-6">
+      {/* CAMPAIGNS LIST */}
+      <section className="skeuo-card rounded-2xl p-6">
         <div className="mb-6 flex items-center justify-between gap-4">
           <h2 className="text-2xl font-black tracking-tight" style={{ color: WITS_BLUE }}>
             Existing campaigns
           </h2>
-          <span className="rounded-full bg-[#043673]/5 px-3 py-1 text-xs font-semibold text-[#043673]">
+          <span className="skeuo-badge-blue">
             {campaigns.length} campaigns
           </span>
         </div>
@@ -256,14 +269,14 @@ export default function AdminCampaignsPage() {
         {loading ? (
           <div className="py-10 text-center text-sm text-slate-500">Loading campaigns...</div>
         ) : campaigns.length === 0 ? (
-          <div className="rounded-2xl bg-slate-50 p-8 text-center">
+          <div className="skeuo-well rounded-2xl p-8 text-center">
             <p className="text-lg font-black tracking-tight" style={{ color: WITS_BLUE }}>No campaigns yet</p>
             <p className="mt-1 text-sm text-slate-500">Create your first campaign above.</p>
           </div>
         ) : (
           <div className="space-y-4">
             {campaigns.map((campaign) => (
-              <div key={campaign.id} className="rounded-2xl border border-slate-200 bg-slate-50 p-5">
+              <div key={campaign.id} className="skeuo-card rounded-2xl p-5">
                 <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
                   <div>
                     <h3 className="text-xl font-black tracking-tight" style={{ color: WITS_BLUE }}>{campaign.name}</h3>
@@ -275,14 +288,14 @@ export default function AdminCampaignsPage() {
                     <button
                       type="button"
                       onClick={() => editCampaign(campaign)}
-                      className="rounded-lg border border-[#043673]/15 bg-white px-3 py-2 text-xs font-semibold text-[#043673] transition hover:bg-[#043673]/5"
+                      className="skeuo-btn-secondary rounded-lg px-3 py-2 text-xs font-semibold"
                     >
                       Edit
                     </button>
                     <button
                       type="button"
                       onClick={() => deleteCampaign(campaign.id)}
-                      className="rounded-lg border border-red-100 bg-white px-3 py-2 text-xs font-semibold text-red-500 transition hover:bg-red-50"
+                      className="rounded-lg border border-red-200 bg-white px-3 py-2 text-xs font-semibold text-red-600 shadow-[0_1px_3px_rgba(0,0,0,0.1),inset_0_1px_0_rgba(255,255,255,0.8)] transition hover:bg-red-50"
                     >
                       Delete
                     </button>

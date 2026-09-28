@@ -2,6 +2,7 @@ export type TrailStop = {
   event_id: string; position: number; event_title: string | null; available: boolean;
   active: boolean; completed: boolean; total_questions: number; completed_questions: number;
   starts_at: string | null; ends_at: string | null;
+  latitude: number | null; longitude: number | null; radius_meters: number | null;
 };
 export type Trail = {
   id: string; title: string; description: string | null; stops: TrailStop[];

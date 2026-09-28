@@ -1,59 +1,55 @@
-import { apiRequest } from "./api";
-import {
-  getUnsyncedAttempts,
-  markAttemptSynced,
-  deleteAttempt,
-  OfflineAttempt,
-} from "./offlineDb";
+import { apiRequest, type ApiError } from "./api";
+import { deleteAttempt, getUnsyncedAttempts, type OfflineAttempt } from "./offlineDb";
+import { supabase } from "./supabaseClient";
 
 export type SyncResult = {
   attempt: OfflineAttempt;
-  success: boolean;
-  message?: string;
+  status: "accepted" | "rejected" | "retry";
+  message: string;
 };
 
-/**
- * Sends every queued offline attempt to the backend, in the order they
- * were made. Each attempt includes the original attemptedAt timestamp
- * and the location recorded at the time, so the backend can validate
- * it as though it happened then rather than now.
- *
- * Successful attempts are removed from the local queue. Failed ones
- * are left in place (still marked unsynced) so a later sync can retry
- * them — e.g. if the failure was a transient network issue.
- */
-export async function syncOfflineAttempts(): Promise<SyncResult[]> {
-  const pending = await getUnsyncedAttempts();
-  if (pending.length === 0) return [];
+let syncInFlight: Promise<SyncResult[]> | null = null;
+const permanentStatuses = new Set([400, 403, 404, 409, 410, 422]);
 
-  // Sort oldest-first, so attempts are validated in the order they
-  // actually happened.
+function rejectionMessage(error: ApiError) {
+  return error.message || "This offline answer could not be accepted.";
+}
+
+async function runSync(): Promise<SyncResult[]> {
+  const { data, error } = await supabase.auth.getSession();
+  if (error || !data.session) return [];
+  const ownerId = data.session.user.id;
+  const pending = await getUnsyncedAttempts(ownerId);
   pending.sort((a, b) => a.attemptedAt.localeCompare(b.attemptedAt));
-
   const results: SyncResult[] = [];
 
   for (const attempt of pending) {
-    const { error } = await apiRequest(
+    const response = await apiRequest(
       `/events/${encodeURIComponent(attempt.eventId)}/submit-answer`,
       "POST",
       {
         challengeId: attempt.challengeId,
         answer: attempt.answer,
         attemptedAt: attempt.attemptedAt,
-        latitude: attempt.latitude,
-        longitude: attempt.longitude,
-      }
+        offlineToken: attempt.offlineToken,
+        clientAttemptId: attempt.id,
+      },
     );
 
-    if (error) {
-      results.push({ attempt, success: false, message: error.message });
-      continue;
+    if (!response.error) {
+      await deleteAttempt(attempt.id);
+      results.push({ attempt, status: "accepted", message: "Your offline answer was checked and recorded." });
+    } else if (response.error.status && permanentStatuses.has(response.error.status)) {
+      await deleteAttempt(attempt.id);
+      results.push({ attempt, status: "rejected", message: rejectionMessage(response.error) });
+    } else {
+      results.push({ attempt, status: "retry", message: "Sync was interrupted. The answer remains safely queued." });
     }
-
-    await markAttemptSynced(attempt.id);
-    await deleteAttempt(attempt.id); // clean up now that it's confirmed on the server
-    results.push({ attempt, success: true });
   }
-
   return results;
+}
+
+export function syncOfflineAttempts(): Promise<SyncResult[]> {
+  if (!syncInFlight) syncInFlight = runSync().finally(() => { syncInFlight = null; });
+  return syncInFlight;
 }
