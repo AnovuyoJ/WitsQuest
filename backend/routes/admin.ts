@@ -184,6 +184,85 @@ router.get("/challenges/stats", async (req, res) => {
   res.json(rows);
 });
 
+router.get("/analytics", async (_req, res) => {
+  try{
+  const [locationResult, questionResult, cardResult] = await Promise.all([
+    database.query(`
+      SELECT
+        e.id,
+        e.title,
+        COUNT(lv.id)::int AS total_verifications,
+        COUNT(DISTINCT lv.player_id)::int AS unique_players
+      FROM public.events e
+      LEFT JOIN public.location_verifications lv ON lv.event_id = e.id
+      GROUP BY e.id, e.title
+      ORDER BY total_verifications DESC, e.title
+    `),
+
+    database.query(`
+      SELECT
+        c.id,
+        c.question_text,
+        c.event_id,
+        COUNT(a.id)::int AS total_attempts,
+        COUNT(DISTINCT a.player_id)::int AS unique_players,
+        COUNT(a.id) FILTER (WHERE a.correct = true)::int AS correct_attempts,
+        COUNT(a.id) FILTER (WHERE a.correct = false)::int AS wrong_attempts,
+        CASE WHEN COUNT(a.id) > 0
+          THEN ROUND(
+            COUNT(a.id) FILTER (WHERE a.correct = true)::numeric
+            / COUNT(a.id) * 100,
+            1
+          )
+          ELSE 0
+        END AS success_percentage
+      FROM public.challenges c
+      LEFT JOIN public.challenge_attempts a ON a.challenge_id = c.id
+      GROUP BY c.id, c.question_text, c.event_id
+      ORDER BY total_attempts DESC, c.question_text
+    `),
+
+    database.query(`
+      SELECT
+        c.id,
+        c.title,
+        c.rarity,
+        c.event_id,
+        COUNT(pc.id)::int AS total_awards,
+        COUNT(DISTINCT pc.player_id)::int AS unique_players
+      FROM public.cards c
+      LEFT JOIN public.player_cards pc ON pc.card_id = c.id
+      GROUP BY c.id, c.title, c.rarity, c.event_id
+      ORDER BY total_awards DESC, c.title
+    `),
+  ]);
+
+  const totalCardAwards = cardResult.rows.reduce(
+    (total, card) => total + card.total_awards,
+    0
+  );
+
+  const cards = cardResult.rows.map((card) => ({
+    ...card,
+    award_percentage:
+      totalCardAwards > 0
+        ? Number(((card.total_awards / totalCardAwards) * 100).toFixed(1))
+        : 0,
+  }));
+
+  res.json({
+    locations: locationResult.rows,
+    questions: questionResult.rows,
+    cards,
+  });
+  } catch (error) {
+    console.error("ANALYTICS ERROR:", error);
+    res.status(500).json({
+      message: "Analytics query failed."
+    });
+  }
+});
+
 router.post("/events", async (req, res) => {
   const values = eventValues(req.body);
   await requireLandmark(req.body.latitude, req.body.longitude);
