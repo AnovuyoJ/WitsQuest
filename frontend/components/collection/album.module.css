@@ -50,47 +50,48 @@
 .cover .art { transition: transform .35s ease; }
 @media (hover: hover) { .cover:hover .art { transform: scale(1.035); } }
 .card {
-  --frame: #2976b4;
+  --frame: #7a4b2a;
+  --card-text: #fef7db;
+  --card-muted: #f7e7b6;
+  --card-accent: #ffffff;
   position: relative;
   isolation: isolate;
   width: 100%;
   height: auto;
   overflow: hidden;
   padding: 8px;
-  border: 1px solid #80bbdf;
+  border: 1px solid rgba(255,255,255,0.26);
   border-radius: 18px;
-  background: linear-gradient(145deg, #a3d0ed, var(--frame) 35%, #123253);
-  color: #f4f8fc;
+  background: transparent;
+  color: var(--card-text);
   box-shadow:
-    inset 0 1px 1px rgba(255, 255, 255, 0.6),
-    inset 0 -1px 2px rgba(0, 0, 0, 0.3),
-    0 4px 8px rgba(4, 54, 115, 0.15),
-    0 16px 36px -12px rgba(4, 54, 115, 0.5);
+    inset 0 1px 1px rgba(255, 255, 255, 0.3),
+    inset 0 -1px 2px rgba(0, 0, 0, 0.15),
+    0 4px 8px rgba(78, 42, 18, 0.12),
+    0 16px 36px -12px rgba(58, 31, 15, 0.35);
   text-align: left;
   transition: transform .2s ease, box-shadow .2s ease;
 }
-.black {
-  --frame: #343d4b;
-  border-color: #9aa8bc;
-  background: linear-gradient(145deg, #a4b2c4, #29313e 30%, #0d1723 70%, #616e81);
-}
+.black,
 .gold {
-  --frame: #9e7324;
-  border-color: #edd18a;
-  background: linear-gradient(130deg, #fff0ba, #ae802d 28%, #f7df99 52%, #7a5416 78%, #edcf83);
-  color: #ffecc0;
+  --frame: #7a4b2a;
+  border-color: rgba(255,255,255,0.26);
+  background: transparent;
+  color: var(--card-text);
 }
+.black { --card-text: #edf5ff; --card-muted: #dfeeff; --card-accent: #f8fbff; }
+.gold { --card-text: #fff7d8; --card-muted: #ffe9a6; --card-accent: #fffaf0; }
 .cardInner {
   position: relative;
   height: 100%;
   overflow: hidden;
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 12px;
-  background: #123759;
-  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.4);
+  background: transparent;
+  box-shadow: inset 0 2px 5px rgba(0, 0, 0, 0.15);
 }
-.black .cardInner { background: #1c2634; }
-.gold .cardInner { background: #332816; }
+.black .cardInner,
+.gold .cardInner { background: transparent; }
 .emblem {
   position: relative;
   display: grid;
@@ -99,28 +100,66 @@
   overflow: hidden;
   border-block: 1px solid rgba(255, 255, 255, 0.22);
   color: #bde5ff;
-  background: radial-gradient(ellipse at 50% 40%, #4c9bc64d, transparent 68%), repeating-linear-gradient(45deg, transparent 0 17px, #ffffff05 17px 18px);
+  background: transparent;
 }
-.black .emblem { color: #d6dfef; background-color: #121c29; }
-.gold .emblem { color: #ffe2a0; background-color: #392a13; }
+.black .emblem { color: #d6dfef; background: transparent; }
+.gold .emblem { color: #ffe2a0; background: transparent; }
 .emblemOrbit { position: absolute; width: 84%; aspect-ratio: 1; border: 1px solid currentColor; border-radius: 50%; opacity: .22; }
 .emblemOrbit::after { content: ""; position: absolute; inset: 12px; border: 1px dashed currentColor; border-radius: inherit; }
 .medallion {
   display: grid;
   place-items: center;
-  width: 61%;
+  width: 72%;
   aspect-ratio: 1;
   border: 1px solid currentColor;
   border-radius: 50%;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.25), rgba(0, 0, 0, 0.35));
-  box-shadow:
-    0 12px 24px rgba(0, 0, 0, 0.35),
-    inset 0 0 0 4px rgba(255, 255, 255, 0.1),
-    inset 0 0 0 6px rgba(255, 255, 255, 0.25);
+  background: transparent;
+  box-shadow: inset 0 0 0 4px rgba(255, 255, 255, 0.05);
 }
-.medallion svg { width: 65%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
+.medallion svg { width: 78%; height: 78%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.8)); }
 .emblemLabel { position: absolute; bottom: 8%; font-size: 8px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; opacity: .8; text-shadow: 0 1px 1px rgba(0,0,0,0.5); }
-.cardTitle { font-size: 1.1rem; font-weight: 850; line-height: 1.3; overflow-wrap: anywhere; }
+.cardEyebrow,
+.cardTag,
+.cardMeta,
+.cardPointsLabel {
+  color: var(--card-muted);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+}
+.cardTag {
+  margin-bottom: 0.5rem;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+}
+.cardTitle {
+  font-size: 1.1rem;
+  font-weight: 850;
+  line-height: 1.3;
+  overflow-wrap: anywhere;
+  color: var(--card-text);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.35);
+}
+.cardMeta {
+  font-size: 0.75rem;
+  color: var(--card-muted);
+}
+.cardValue {
+  font-size: 1.875rem;
+  line-height: 1;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  color: var(--card-accent);
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.35);
+}
+.cardPointsLabel {
+  display: block;
+  margin-top: 0.25rem;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+}
 .gold::after {
   content: "";
   position: absolute;

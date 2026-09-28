@@ -11,7 +11,11 @@ function symbolFor(text: string) {
 
 export default function CardEmblem({ title, category, questTitle }: { title: string; category?: string | null; questTitle: string }) {
   const symbol = symbolFor(title) || symbolFor(category || "") || symbolFor(questTitle) || "compass";
-  return <div className={styles.emblem} aria-hidden="true">
+
+  return <div
+    className={styles.emblem}
+    aria-hidden="true"
+  >
     <span className={styles.emblemOrbit} />
     <div className={styles.medallion}>
       <svg viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
