@@ -819,6 +819,244 @@ test("admin can add multiple locations to the same zone", async () => {
   ]);
 });
 
+test("admin can get a zone with its locations", async () => {
+  const second = (
+    await request(
+      "/admin/events",
+      "admin",
+      "POST",
+      {
+        title: "Solomon Mahlangu House",
+        description: "Second test location",
+        latitude: -26.1924,
+        longitude: 28.0308,
+        radius_meters: 50,
+        starts_at: new Date(Date.now() - 3600000).toISOString(),
+        ends_at: new Date(Date.now() + 3600000).toISOString(),
+      }
+    )
+  ).data;
+
+  await publish("events", second);
+
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: event.id }
+  );
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: second.id }
+  );
+
+  const result = await request(
+    `/admin/zones/${zone.id}`,
+    "admin"
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.data.name).toBe("East Campus");
+  expect(result.data.description).toBe(
+    "Historic East Campus locations"
+  );
+  expect(result.data.locations).toEqual([
+    expect.objectContaining({
+      id: event.id,
+      title: "Campus event",
+    }),
+    expect.objectContaining({
+      id: second.id,
+      title: "Solomon Mahlangu House",
+    }),
+  ]);
+});
+
+test("admin can remove a location from a zone", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    { event_id: event.id }
+  );
+
+  const result = await request(
+    `/admin/zones/${zone.id}/locations/${event.id}`,
+    "admin",
+    "DELETE"
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.data).toEqual({ success: true });
+
+  const links = (
+    await mockPg.query(
+      `SELECT zone_id, event_id
+       FROM public.zone_locations
+       WHERE zone_id=$1 AND event_id=$2`,
+      [zone.id, event.id]
+    )
+  ).rows;
+
+  expect(links).toHaveLength(0);
+});
+
+test("admin cannot remove a location that is not part of a zone", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  const result = await request(
+    `/admin/zones/${zone.id}/locations/${event.id}`,
+    "admin",
+    "DELETE"
+  );
+
+  expect(result.status).toBe(404);
+  expect(result.data.message).toBe(
+    "Location is not part of this zone."
+  );
+});
+
+test("admin can delete a zone", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  const result = await request(
+    `/admin/zones/${zone.id}`,
+    "admin",
+    "DELETE"
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.data).toEqual({ success: true });
+
+  const deletedZone = (
+    await mockPg.query(
+      `SELECT id
+       FROM public.zones
+       WHERE id=$1`,
+      [zone.id]
+    )
+  ).rows;
+
+  expect(deletedZone).toHaveLength(0);
+});
+
+test("deleting a zone removes its location assignments but keeps the location", async () => {
+  const zone = (
+    await request(
+      "/admin/zones",
+      "admin",
+      "POST",
+      {
+        name: "East Campus",
+        description: "Historic East Campus locations",
+      }
+    )
+  ).data;
+
+  await request(
+    `/admin/zones/${zone.id}/locations`,
+    "admin",
+    "POST",
+    {
+      event_id: event.id,
+    }
+  );
+
+  const result = await request(
+    `/admin/zones/${zone.id}`,
+    "admin",
+    "DELETE"
+  );
+
+  expect(result.status).toBe(200);
+  expect(result.data).toEqual({ success: true });
+
+  const links = (
+    await mockPg.query(
+      `SELECT zone_id, event_id
+       FROM public.zone_locations
+       WHERE zone_id=$1`,
+      [zone.id]
+    )
+  ).rows;
+
+  expect(links).toHaveLength(0);
+
+  const location = (
+    await mockPg.query(
+      `SELECT id, title
+       FROM public.events
+       WHERE id=$1`,
+      [event.id]
+    )
+  ).rows;
+
+  expect(location).toEqual([
+    {
+      id: event.id,
+      title: "Campus event",
+    },
+  ]);
+});
+
+test("admin cannot delete a zone that does not exist", async () => {
+  const result = await request(
+    "/admin/zones/00000000-0000-4000-8000-999999999999",
+    "admin",
+    "DELETE"
+  );
+
+  expect(result.status).toBe(404);
+  expect(result.data.message).toBe("Zone not found.");
+});
+
 test("zone can contain multiple content-author-defined locations", async () => {
   const second = (
     await request(

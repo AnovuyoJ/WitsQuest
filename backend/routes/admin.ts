@@ -111,6 +111,47 @@ router.get("/zones", async (_req, res) => {
   res.json(rows);
 });
 
+router.get("/zones/:id", async (req, res) => {
+  const zoneId = id(req.params.id);
+
+  const { rows } = await database.query(
+    `
+      SELECT
+        z.id,
+        z.name,
+        z.description,
+        z.created_at,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', e.id,
+              'title', e.title,
+              'description', e.description,
+              'latitude', e.latitude,
+              'longitude', e.longitude
+            )
+            ORDER BY e.title
+          ) FILTER (WHERE e.id IS NOT NULL),
+          '[]'
+        ) AS locations
+      FROM public.zones z
+      LEFT JOIN public.zone_locations zl
+        ON zl.zone_id = z.id
+      LEFT JOIN public.events e
+        ON e.id = zl.event_id
+      WHERE z.id = $1
+      GROUP BY z.id, z.name, z.description, z.created_at
+    `,
+    [zoneId]
+  );
+
+  if (!rows.length) {
+    throw new HttpError(404, "Zone not found.");
+  }
+
+  res.json(rows[0]);
+});
+
 router.post("/zones", async (req, res) => {
   const { rows } = await database.query(
     `INSERT INTO public.zones (name, description)
@@ -154,6 +195,41 @@ router.post("/zones/:id/locations", async (req, res) => {
   }
 
   res.status(201).json({ success: true });
+});
+
+router.delete("/zones/:id/locations/:eventId", async (req, res) => {
+  const zoneId = id(req.params.id);
+  const eventId = id(req.params.eventId);
+
+  const result = await database.query(
+    `DELETE FROM public.zone_locations
+     WHERE zone_id = $1 AND event_id = $2
+     RETURNING zone_id, event_id`,
+    [zoneId, eventId]
+  );
+
+  if (!result.rowCount) {
+    throw new HttpError(404, "Location is not part of this zone.");
+  }
+
+  res.json({ success: true });
+});
+
+router.delete("/zones/:id", async (req, res) => {
+  const zoneId = id(req.params.id);
+
+  const result = await database.query(
+    `DELETE FROM public.zones
+     WHERE id = $1
+     RETURNING id`,
+    [zoneId]
+  );
+
+  if (!result.rowCount) {
+    throw new HttpError(404, "Zone not found.");
+  }
+
+  res.json({ success: true });
 });
 
 router.get("/campaigns", async (_req, res) => {
