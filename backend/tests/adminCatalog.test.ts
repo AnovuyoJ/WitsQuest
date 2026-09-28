@@ -1,18 +1,4 @@
-// tests/adminCatalogGaps.test.ts
-//
-// Fills the remaining coverage gaps in routes/admin.ts and routes/catalog.ts
-// that are not exercised by api.test.ts, adminRoutes.test.ts or the
-// adminRoutesMissing.test.ts file.
-//
-// Covered here:
-//   admin.ts  10        non-integer revision
-//   admin.ts  45-57     challenge review (200/409/404) + challenge publish 404
-//   admin.ts  93        invalid question_type
-//   admin.ts  96        multiple_choice option list bounds
-//   admin.ts  100-104   true_false answer check + reward card ownership lookup
-//   admin.ts  132-137   PUT /events/:id 404 + DELETE /events/:id 404
-//   admin.ts  166       DELETE /challenges/:id 404
-//   catalog.ts 56-60    GET /cards (ids string / missing / >100)
+
 
 import { describe, expect, it, jest, beforeEach } from "@jest/globals";
 import express, { Request, Response, NextFunction } from "express";
