@@ -21,6 +21,29 @@ const mockCards = [
   { id: "invalid-1", rarity: "Blue", title: "Invalid Card", points: 150, event_id: "e1", tag: "General" },
 ];
 
+const mockPlayers = [
+  { id: "player-a", name: "Thandi M.", email: "thandi@wits.ac.za" },
+  { id: "player-b", name: "Sipho K.",  email: "sipho@wits.ac.za"  },
+];
+
+const mockTrades = [
+  {
+    id: "trade-1",
+    sender_id: "player-a",
+    recipient_id: "me",
+    sender_name: "Thandi M.",
+    recipient_name: "Me",
+    offered_title: "Gold Card 1",
+    offered_rarity: "Gold",
+    offered_points: 90,
+    requested_title: "Black Card 1",
+    requested_rarity: "Black",
+    requested_points: 70,
+    status: "pending" as const,
+    created_at: "2025-01-01T00:00:00Z",
+  },
+];
+
 beforeEach(() => {
   request.mockReset();
   push.mockReset();
@@ -214,4 +237,178 @@ test("flags cards with invalid point ranges", async () => {
   renderGamesPage();
 
   expect(await screen.findByText("Needs an admin point correction before use.")).not.toBeNull();
+});
+
+test("renders the incoming trades list with counterparty and status", async () => {
+  request.mockImplementation(async (url) => {
+    const u = String(url);
+    if (u.endsWith("/me/cards"))           return response([]);
+    if (u.endsWith("/trades/players/list")) return response(mockPlayers);
+    if (u.endsWith("/trades"))              return response(mockTrades);
+    return response([]);
+  });
+
+  renderGamesPage();
+
+  expect(await screen.findByText("Thandi M. → Me")).not.toBeNull();
+  expect(
+    screen.getByText(/Offering Gold Card 1 for Black Card 1 · Status: pending/)
+  ).not.toBeNull();
+});
+
+test("accepts a pending trade when the recipient clicks Accept", async () => {
+  const acceptCalls: string[] = [];
+
+  request.mockImplementation(async (url, init) => {
+    const u = String(url);
+    if (u.endsWith("/me/cards"))           return response([]);
+    if (u.endsWith("/trades/players/list")) return response(mockPlayers);
+    if (u.endsWith("/trades/trade-1/accept") && init?.method === "POST") {
+      acceptCalls.push(u);
+      return response({ success: true });
+    }
+    if (u.endsWith("/trades")) return response(mockTrades);
+    return response([]);
+  });
+
+  renderGamesPage();
+  await screen.findByText("Thandi M. → Me");
+
+  fireEvent.click(screen.getByRole("button", { name: "Accept" }));
+
+  await waitFor(() => expect(acceptCalls).toHaveLength(1));
+});
+
+test("cancels a pending trade", async () => {
+  const cancelCalls: string[] = [];
+
+  request.mockImplementation(async (url, init) => {
+    const u = String(url);
+    if (u.endsWith("/me/cards"))           return response([]);
+    if (u.endsWith("/trades/players/list")) return response(mockPlayers);
+    if (u.endsWith("/trades/trade-1/cancel") && init?.method === "POST") {
+      cancelCalls.push(u);
+      return response({ success: true });
+    }
+    if (u.endsWith("/trades")) return response(mockTrades);
+    return response([]);
+  });
+
+  renderGamesPage();
+  await screen.findByText("Thandi M. → Me");
+
+  // Two "Cancel" buttons can exist if a game row also renders one; scope to the trade row.
+  const cancelButtons = screen.getAllByRole("button", { name: "Cancel" });
+  fireEvent.click(cancelButtons[0]);
+
+  await waitFor(() => expect(cancelCalls).toHaveLength(1));
+});
+
+test("proposes a trade with recipient and both card ids", async () => {
+  const posted: { url: string; body: unknown }[] = [];
+
+  request.mockImplementation(async (url, init) => {
+    const u = String(url);
+    if (u.endsWith("/me/cards")) {
+      return response([
+        { id: "usr-gold-1",  card_id: "gold-1",  cards: mockCards[0] },
+        { id: "usr-black-1", card_id: "black-1", cards: mockCards[2] },
+      ]);
+    }
+    if (u.endsWith("/trades/players/list")) return response(mockPlayers);
+    if (u.endsWith("/trades/players/player-a/cards")) {
+      return response([
+        { id: "black-3", title: "Black Card 3", rarity: "Black", points: 60 },
+        { id: "blue-1",  title: "Blue Card 1",  rarity: "Blue",  points: 50 },
+      ]);
+    }
+    if (u.endsWith("/trades")) {
+      if (init?.method === "POST") {
+        posted.push({ url: u, body: JSON.parse(String(init.body)) });
+        return response({ success: true });
+      }
+      return response([]);
+    }
+    return response([]);
+  });
+
+  renderGamesPage();
+  await screen.findByText("Player trades");
+
+  // Pick a recipient -> triggers /trades/players/:id/cards
+  fireEvent.change(screen.getByLabelText("Trade recipient"), {
+    target: { value: "player-a" },
+  });
+
+  // Wait for their cards to appear as options in the requested-card select
+  await waitFor(() =>
+    expect(
+      screen.getByRole("option", { name: /Black Card 3/ })
+    ).not.toBeNull()
+  );
+
+  // Choose the card you'll give
+  fireEvent.change(screen.getByLabelText("Offered card"), {
+    target: { value: "gold-1" },
+  });
+
+  // Choose the card you want
+  fireEvent.change(screen.getByLabelText("Requested card"), {
+    target: { value: "black-3" },
+  });
+
+  fireEvent.click(screen.getByRole("button", { name: "Propose trade" }));
+
+  await waitFor(() => expect(posted).toHaveLength(1));
+  expect(posted[0].body).toEqual({
+    recipientId: "player-a",
+    offeredCardId: "gold-1",
+    requestedCardId: "black-3",
+  });
+});
+
+test("shows an error when proposing a trade fails", async () => {
+  request.mockImplementation(async (url, init) => {
+    const u = String(url);
+    if (u.endsWith("/me/cards")) {
+      return response([
+        { id: "usr-gold-1", card_id: "gold-1", cards: mockCards[0] },
+      ]);
+    }
+    if (u.endsWith("/trades/players/list")) return response(mockPlayers);
+    if (u.endsWith("/trades/players/player-a/cards")) {
+      return response([
+        { id: "black-3", title: "Black Card 3", rarity: "Black", points: 60 },
+      ]);
+    }
+    if (u.endsWith("/trades")) {
+      if (init?.method === "POST") {
+        return response({ message: "Recipient already has a pending trade" }, 409);
+      }
+      return response([]);
+    }
+    return response([]);
+  });
+
+  renderGamesPage();
+  await screen.findByText("Player trades");
+
+  fireEvent.change(screen.getByLabelText("Trade recipient"), {
+    target: { value: "player-a" },
+  });
+  await waitFor(() =>
+    expect(
+      screen.getByRole("option", { name: /Black Card 3/ })
+    ).not.toBeNull()
+  );
+  fireEvent.change(screen.getByLabelText("Offered card"), {
+    target: { value: "gold-1" },
+  });
+  fireEvent.change(screen.getByLabelText("Requested card"), {
+    target: { value: "black-3" },
+  });
+  fireEvent.click(screen.getByRole("button", { name: "Propose trade" }));
+
+  const alert = await screen.findByRole("alert");
+  expect(alert.textContent).toContain("Recipient already has a pending trade");
 });
