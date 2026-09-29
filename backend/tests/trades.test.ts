@@ -35,11 +35,7 @@ jest.mock("../services/validation", () => {
   return { id: (value: unknown) => value, HttpError };
 });
 
-// ---- import the router AFTER the mocks ----------------------------------
-
 import tradesRouter from "../routes/trades";
-
-// ---- test app -----------------------------------------------------------
 
 const app = express();
 app.use(express.json());
@@ -59,6 +55,28 @@ beforeEach(() => {
   mockQuery.mockReset();
   mockClientQuery.mockReset();
 });
+
+// -------------------------------------------------------------------------
+// Happy-path propose mock — 5 queries in the order the handler runs them:
+//   1. card metadata    (SELECT id, rarity FROM cards WHERE id = ANY(...))
+//   2. daily cap        (SELECT COUNT(*)::int AS n FROM card_trades ...)
+//   3. sender owns      (SELECT 1 FROM player_cards ... cooldown-aware)
+//   4. recipient owns   (SELECT 1 FROM player_cards ...)
+//   5. INSERT           (INSERT INTO card_trades ...)
+// -------------------------------------------------------------------------
+function queueProposeHappyPath() {
+  mockClientQuery
+    .mockResolvedValueOnce({
+      rows: [
+        { id: "a", rarity: "Gold" },
+        { id: "b", rarity: "Gold" },
+      ],
+    })
+    .mockResolvedValueOnce({ rows: [{ n: 0 }] })
+    .mockResolvedValueOnce({ rowCount: 1 })
+    .mockResolvedValueOnce({ rowCount: 1 })
+    .mockResolvedValueOnce({});
+}
 
 // =========================================================================
 // GET /trades
@@ -156,12 +174,58 @@ describe("POST /trades", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/cannot trade with yourself/i);
+    expect(mockClientQuery).not.toHaveBeenCalled();
+  });
+
+  it("rejects a cross-rarity trade", async () => {
+    mockClientQuery.mockResolvedValueOnce({
+      rows: [
+        { id: "a", rarity: "Gold" },
+        { id: "b", rarity: "Black" },
+      ],
+    });
+
+    const res = await request(app).post("/trades").send({
+      recipientId: "p2",
+      offeredCardId: "a",
+      requestedCardId: "b",
+    });
+
+    expect(res.status).toBe(400);
+    expect(res.body.message).toMatch(/same rarity/i);
+  });
+
+  it("rejects when the daily cap has been reached", async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({
+        rows: [
+          { id: "a", rarity: "Gold" },
+          { id: "b", rarity: "Gold" },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ n: 2 }] });
+
+    const res = await request(app).post("/trades").send({
+      recipientId: "p2",
+      offeredCardId: "a",
+      requestedCardId: "b",
+    });
+
+    expect(res.status).toBe(429);
+    expect(res.body.message).toMatch(/limit/i);
   });
 
   it("rejects when the sender does not own the offered card", async () => {
     mockClientQuery
-      .mockResolvedValueOnce({ rowCount: 0 })
-      .mockResolvedValueOnce({ rowCount: 1 });
+      .mockResolvedValueOnce({
+        rows: [
+          { id: "a", rarity: "Gold" },
+          { id: "b", rarity: "Gold" },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ n: 0 }] })
+      .mockResolvedValueOnce({ rowCount: 0 }) // cooldown-filtered ownership
+      .mockResolvedValueOnce({ rowCount: 0 }); // fallback: no copy either
 
     const res = await request(app).post("/trades").send({
       recipientId: "p2",
@@ -173,8 +237,37 @@ describe("POST /trades", () => {
     expect(res.body.message).toMatch(/do not own the offered card/i);
   });
 
+  it("rejects when the offered card is on cooldown", async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({
+        rows: [
+          { id: "a", rarity: "Gold" },
+          { id: "b", rarity: "Gold" },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ n: 0 }] })
+      .mockResolvedValueOnce({ rowCount: 0 }) // filtered out by cooldown
+      .mockResolvedValueOnce({ rowCount: 1 }); // but the player owns a copy
+
+    const res = await request(app).post("/trades").send({
+      recipientId: "p2",
+      offeredCardId: "a",
+      requestedCardId: "b",
+    });
+
+    expect(res.status).toBe(429);
+    expect(res.body.message).toMatch(/locked/i);
+  });
+
   it("rejects when the recipient does not own the requested card", async () => {
     mockClientQuery
+      .mockResolvedValueOnce({
+        rows: [
+          { id: "a", rarity: "Gold" },
+          { id: "b", rarity: "Gold" },
+        ],
+      })
+      .mockResolvedValueOnce({ rows: [{ n: 0 }] })
       .mockResolvedValueOnce({ rowCount: 1 })
       .mockResolvedValueOnce({ rowCount: 0 });
 
@@ -188,11 +281,8 @@ describe("POST /trades", () => {
     expect(res.body.message).toMatch(/recipient does not own the requested card/i);
   });
 
-  it("inserts a pending trade when both sides own their cards", async () => {
-    mockClientQuery
-      .mockResolvedValueOnce({ rowCount: 1 })
-      .mockResolvedValueOnce({ rowCount: 1 })
-      .mockResolvedValueOnce({});
+  it("inserts a pending trade when all checks pass", async () => {
+    queueProposeHappyPath();
 
     const res = await request(app).post("/trades").send({
       recipientId: "p2",
@@ -203,9 +293,9 @@ describe("POST /trades", () => {
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ success: true });
 
-    const insertCall = mockClientQuery.mock.calls[2];
-    expect(String(insertCall[0])).toMatch(/INSERT INTO public\.card_trades/);
-    expect(insertCall[1]).toEqual(["me", "p2", "a", "b"]);
+    const insertCall = mockClientQuery.mock.calls.at(-1);
+    expect(String(insertCall![0])).toMatch(/INSERT INTO public\.card_trades/);
+    expect(insertCall![1]).toEqual(["me", "p2", "a", "b"]);
   });
 });
 
@@ -286,9 +376,9 @@ describe("POST /trades/:id/accept", () => {
           },
         ],
       })
-      .mockResolvedValueOnce({ rowCount: 1 }) // sender owns offered
-      .mockResolvedValueOnce({ rowCount: 1 }) // recipient owns requested
-      .mockResolvedValue({});                 // DELETEs, INSERTs, UPDATE
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValueOnce({ rowCount: 1 })
+      .mockResolvedValue({});
 
     const res = await request(app).post("/trades/trade-1/accept");
 
@@ -298,29 +388,84 @@ describe("POST /trades/:id/accept", () => {
     const calls = mockClientQuery.mock.calls;
     const sqls = calls.map((c) => String(c[0]));
 
-    // Two DELETEs: sender loses offered, recipient loses requested.
     const deleteParams = calls
       .filter((c) => /DELETE FROM public\.player_cards/.test(String(c[0])))
       .map((c) => c[1]);
     expect(deleteParams).toContainEqual(["p2", "a"]);
     expect(deleteParams).toContainEqual(["me", "b"]);
 
-    // Two INSERTs: recipient gains offered, sender gains requested.
     const insertParams = calls
       .filter((c) => /INSERT INTO public\.player_cards/.test(String(c[0])))
       .map((c) => c[1]);
     expect(insertParams).toContainEqual(["me", "a"]);
     expect(insertParams).toContainEqual(["p2", "b"]);
 
-    // Final status is 'accepted'.
     const acceptUpdate = calls.find((c) =>
       /SET status = 'accepted'/.test(String(c[0]))
     );
     expect(acceptUpdate).toBeDefined();
     expect(acceptUpdate![1]).toEqual(["trade-1"]);
 
-    // The happy path never marks the trade declined.
     expect(sqls.some((s) => /SET status = 'declined'/.test(s))).toBe(false);
+  });
+});
+
+// =========================================================================
+// POST /trades/:id/reject
+// =========================================================================
+
+describe("POST /trades/:id/reject", () => {
+  it("404s when the trade is missing", async () => {
+    mockClientQuery.mockResolvedValueOnce({ rows: [] });
+
+    const res = await request(app).post("/trades/trade-1/reject");
+
+    expect(res.status).toBe(404);
+  });
+
+  it("403s when the current user is not the recipient", async () => {
+    mockClientQuery.mockResolvedValueOnce({
+      rows: [
+        {
+          id: "trade-1",
+          sender_id: "p2",
+          recipient_id: "someone-else",
+          offered_card_id: "a",
+          requested_card_id: "b",
+          status: "pending",
+        },
+      ],
+    });
+
+    const res = await request(app).post("/trades/trade-1/reject");
+
+    expect(res.status).toBe(403);
+    expect(res.body.message).toMatch(/recipient/i);
+  });
+
+  it("marks the trade declined when the recipient rejects", async () => {
+    mockClientQuery
+      .mockResolvedValueOnce({
+        rows: [
+          {
+            id: "trade-1",
+            sender_id: "p2",
+            recipient_id: "me",
+            offered_card_id: "a",
+            requested_card_id: "b",
+            status: "pending",
+          },
+        ],
+      })
+      .mockResolvedValueOnce({});
+
+    const res = await request(app).post("/trades/trade-1/reject");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ success: true });
+
+    const updateCall = mockClientQuery.mock.calls.at(-1);
+    expect(String(updateCall![0])).toMatch(/SET status = 'declined'/);
   });
 });
 

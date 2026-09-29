@@ -52,6 +52,10 @@ beforeEach(() => {
     data: { session: { access_token: "token" } },
     error: null,
   } as never);
+  jest.spyOn(supabase.auth, "getUser").mockResolvedValue({
+    data: { user: { id: "me" } },
+    error: null,
+  } as never);
 });
 
 afterEach(() => {
