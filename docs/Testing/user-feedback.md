@@ -73,9 +73,24 @@ Participant follow-up summarises relevant changes through the agreed communicati
 
 ## User Feedback
 
+### Slow Lovation Verification
+
 A user reported that verifying their location felt slow. The cause was that every time a player tapped "Verify arrival," the app asked the phone's GPS for a brand new, fresh location reading from scratch — even if it already had an accurate one from a few seconds earlier (since the map was already tracking their position in the background). Getting a fresh GPS fix can take several seconds, especially indoors or with a weak signal, which is what the user experienced as lag.
 
 The fix tells the browser it's fine to reuse a location reading if it's less than 10 seconds old, instead of always requiring a brand new one. Since players are usually already on the map (and already being tracked) before they tap "Verify arrival," this means most verification attempts can reuse an already-available location instantly, rather than waiting for a new GPS fix every single time.
+
+### Card organisation on the Games page
+
+A tester reported that the cards on the Games page would be easier to browse if they were grouped into collections rather than shown as a flat list. Scrolling through every owned card individually made it harder to get a quick sense of what had been collected.
+
+The fix introduced a dedicated collection view for cards, grouping them together instead of listing them all in one undifferentiated block. This gives players a clearer, more organised way to see their collection at a glance, rather than scanning through everything one card at a time.
+
+### No redirect after sign-up
+
+A tester reported that after completing sign-up, the app didn't take them anywhere afterward — they were left on the sign-up page rather than being moved on to sign in and start using the app. This left new users unsure whether their account had actually been created, or what to do next.
+
+The fix redirects a player to the sign-in page immediately after a successful sign-up, so the flow from creating an account to actually logging in feels continuous, rather than leaving the player stranded on a form they'd already completed.
+
 
 The link to the Google Form we used to collect this feedback can be found below : 
 https://forms.gle/XzmZ4AFmEmPRy37i8
