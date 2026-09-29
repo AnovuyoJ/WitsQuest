@@ -8,6 +8,7 @@ import { deckCounts, validDeck } from "@/lib/battle";
 import BattleCard from "@/components/BattleCard";
 import ForwardArrowIcon from "@/components/ForwardArrowIcon";
 import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
+import { supabase } from "@/lib/supabaseClient";
 import styles from "./games.module.css";
 
 type PendingGame = { id: string; status: string; is_cpu: boolean; rules_version: number; stakes_enabled?: boolean };
@@ -45,6 +46,7 @@ export default function GamesPage() {
   const [trades, setTrades] = useState<TradeRecord[]>([]);
   const [players, setPlayers] = useState<Player[]>([]);
   const [recipientCards, setRecipientCards] = useState<RecipientCard[]>([]);
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null);
   const [loadingRecipientCards, setLoadingRecipientCards] = useState(false);
   const [tradeRecipient, setTradeRecipient] = useState("");
   const [tradeOfferedCard, setTradeOfferedCard] = useState("");
@@ -102,6 +104,12 @@ export default function GamesPage() {
     });
     return () => { cancelled = true; };
   }, [tradeRecipient]);
+
+  useEffect(() => {
+    void supabase.auth.getUser().then(({ data }) => {
+      setCurrentUserId(data.user?.id ?? null);
+    });
+  }, []);
 
   const chosen = cards.filter((card) => selected.includes(card.id));
   const counts = deckCounts(chosen);
@@ -191,7 +199,7 @@ export default function GamesPage() {
     setBusy(false);
   }
 
-  async function handleTradeAction(id: string, action: "accept" | "cancel") {
+  async function handleTradeAction(id: string, action: "accept" | "cancel"| "reject") {
     setBusy(true);
     setError("");
     const res = await apiRequest(`/trades/${id}/${action}`, "POST");
@@ -319,6 +327,7 @@ export default function GamesPage() {
             </div>
 
             {/* ---- Trade builder ---- */}
+            
             <form onSubmit={proposeTrade} className={styles.tradeForm}>
               <div className={styles.tradeRecipientRow}>
                 <label htmlFor="trade-recipient">Trade with</label>
@@ -438,8 +447,14 @@ export default function GamesPage() {
                       <strong>{recipientCards.find((c) => c.id === tradeRequestedCard)?.title}</strong>.
                     </>
                   ) : (
-                    "Pick a player, one of your cards, and one of theirs."
-                  )}
+                    <>Pick a player, one of your cards, and one of theirs.</>
+                  )}{" "}
+                  <Link
+                    href="/dashboard/settings/rulebook#trades"
+                    className={styles.tradePolicyLink}
+                  >
+                    Read trade rules
+                  </Link>
                 </p>
                 <button
                   type="submit"
@@ -470,11 +485,18 @@ export default function GamesPage() {
                     {trade.status === "pending" && (
                       <div className={styles.battleActions}>
                         <button
-                          disabled={busy}
+                          disabled={busy || trade.recipient_id !== currentUserId}
                           onClick={() => handleTradeAction(trade.id, "accept")}
                           className={styles.resumeButton}
                         >
                           Accept
+                        </button>
+                        <button
+                          disabled={busy || trade.recipient_id !== currentUserId}
+                          onClick={() => handleTradeAction(trade.id, "reject")}
+                          className={`${styles.resumeButton} ${styles.rejectButton}`}
+                        >
+                          Reject
                         </button>
                         <button
                           disabled={busy}

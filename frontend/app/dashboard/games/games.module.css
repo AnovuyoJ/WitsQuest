@@ -236,3 +236,28 @@
   .tradeSubmit { width: 100%; }
 }
 
+.tradePolicy {
+  .tradePolicyHeading {
+  margin: 0 0 6px;
+  font-size: 15px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: #6b7280;
+    }
+}
+
+
+
+.rejectButton {
+  background: #f10707;
+  border-color: rgba(239, 4, 4, 0.35);
+  color: #fdfafa;
+
+}
+
+.rejectButton:hover:not(:disabled) {
+  background: rgb(240, 17, 17);
+  border-color: #f97e7e;
+  color: #b91c1c;
+}

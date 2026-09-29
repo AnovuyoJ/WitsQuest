@@ -6,6 +6,11 @@ import { id, HttpError } from "../services/validation";
 const router = Router();
 router.use(requireAuth);
 
+// ---- trade policy constants --------------------------------------------
+const DAILY_TRADE_LIMIT = 2;          // max outgoing trades per rolling 24h
+const COOLDOWN_HOURS = 24;            // hours a received card can't be re-traded
+const COOLDOWN_ELIGIBLE = `(acquired_at IS NULL OR acquired_at < now() - interval '${COOLDOWN_HOURS} hours')`;
+
 // List trades for the current user (sent and received)
 router.get("/", async (req, res) => {
   const userId = req.user!.id;
@@ -75,12 +80,61 @@ router.post("/", async (req, res) => {
   if (senderId === recipientId) throw new HttpError(400, "You cannot trade with yourself.");
 
   await transaction(async (client) => {
+    // ---- Rule: same-rarity only ----------------------------------------
+    const { rows: cardMeta } = await client.query(
+      `SELECT id, rarity FROM public.cards WHERE id = ANY($1::uuid[])`,
+      [[offeredCardId, requestedCardId]]
+    );
+    const offered = cardMeta.find((c) => c.id === offeredCardId);
+    const requested = cardMeta.find((c) => c.id === requestedCardId);
+
+    if (!offered || !requested) {
+      throw new HttpError(404, "One of the selected cards no longer exists.");
+    }
+    if (offered.rarity !== requested.rarity) {
+      throw new HttpError(400, "Trades must be between cards of the same rarity.");
+    }
+
+    // ---- Rule: daily trade cap -----------------------------------------
+    const { rows: capRows } = await client.query(
+      `SELECT COUNT(*)::int AS n
+         FROM public.card_trades
+        WHERE sender_id = $1
+          AND status IN ('pending', 'accepted')
+          AND created_at > now() - interval '24 hours'`,
+      [senderId]
+    );
+    if (capRows[0].n >= DAILY_TRADE_LIMIT) {
+      throw new HttpError(
+        429,
+        `Trade limit reached — you can send at most ${DAILY_TRADE_LIMIT} trades per 24 hours.`
+      );
+    }
+
+    // ---- Ownership + cooldown check on offered card --------------------
     const senderHas = await client.query(
-      "SELECT 1 FROM public.player_cards WHERE player_id = $1 AND card_id = $2 LIMIT 1",
+      `SELECT 1 FROM public.player_cards
+        WHERE player_id = $1 AND card_id = $2
+          AND ${COOLDOWN_ELIGIBLE}
+        LIMIT 1`,
       [senderId, offeredCardId]
     );
-    if (senderHas.rowCount === 0) throw new HttpError(403, "You do not own the offered card.");
+    if (senderHas.rowCount === 0) {
+      // Distinguish "doesn't own at all" from "owns but on cooldown".
+      const anyCopy = await client.query(
+        "SELECT 1 FROM public.player_cards WHERE player_id = $1 AND card_id = $2 LIMIT 1",
+        [senderId, offeredCardId]
+      );
+      if (anyCopy.rowCount === 0) {
+        throw new HttpError(403, "You do not own the offered card.");
+      }
+      throw new HttpError(
+        429,
+        `That card can't be traded yet — cards received from a trade are locked for ${COOLDOWN_HOURS} hours.`
+      );
+    }
 
+    // ---- Ownership on requested card -----------------------------------
     const recipientHas = await client.query(
       "SELECT 1 FROM public.player_cards WHERE player_id = $1 AND card_id = $2 LIMIT 1",
       [recipientId, requestedCardId]
@@ -89,11 +143,22 @@ router.post("/", async (req, res) => {
       throw new HttpError(403, "The recipient does not own the requested card.");
     }
 
-    await client.query(
-      `INSERT INTO public.card_trades (sender_id, recipient_id, offered_card_id, requested_card_id, status)
-       VALUES ($1, $2, $3, $4, 'pending')`,
-      [senderId, recipientId, offeredCardId, requestedCardId]
-    );
+    // ---- Rule: one pending trade per pair ------------------------------
+    // The partial unique index enforces this atomically; catch its error
+    // and surface a friendly 409.
+    try {
+      await client.query(
+        `INSERT INTO public.card_trades (sender_id, recipient_id, offered_card_id, requested_card_id, status)
+         VALUES ($1, $2, $3, $4, 'pending')`,
+        [senderId, recipientId, offeredCardId, requestedCardId]
+      );
+    } catch (err: unknown) {
+      const code = (err as { code?: string }).code;
+      if (code === "23505") {
+        throw new HttpError(409, "There's already a pending trade between you and this player.");
+      }
+      throw err;
+    }
   });
 
   res.json({ success: true });
@@ -113,12 +178,16 @@ router.post("/:id/accept", async (req, res) => {
     if (!trade) throw new HttpError(404, "Trade not found or already processed.");
     if (trade.recipient_id !== userId) throw new HttpError(403, "Only the recipient can accept this trade.");
 
+    // Sender must still own an eligible (off-cooldown) copy of the offered card.
     const senderOwns = await client.query(
-      "SELECT 1 FROM public.player_cards WHERE player_id = $1 AND card_id = $2",
+      `SELECT 1 FROM public.player_cards
+        WHERE player_id = $1 AND card_id = $2
+          AND ${COOLDOWN_ELIGIBLE}
+        LIMIT 1`,
       [trade.sender_id, trade.offered_card_id]
     );
     const recipientOwns = await client.query(
-      "SELECT 1 FROM public.player_cards WHERE player_id = $1 AND card_id = $2",
+      "SELECT 1 FROM public.player_cards WHERE player_id = $1 AND card_id = $2 LIMIT 1",
       [trade.recipient_id, trade.requested_card_id]
     );
 
@@ -130,25 +199,37 @@ router.post("/:id/accept", async (req, res) => {
       throw new HttpError(409, "Trade failed because one of the players no longer owns the card.");
     }
 
-    // Sender gives up the offered card
+    // Delete exactly ONE eligible copy from each side (ctid targets a single row).
     await client.query(
-      "DELETE FROM public.player_cards WHERE player_id = $1 AND card_id = $2",
+      `DELETE FROM public.player_cards
+        WHERE ctid IN (
+          SELECT ctid FROM public.player_cards
+           WHERE player_id = $1 AND card_id = $2
+             AND ${COOLDOWN_ELIGIBLE}
+           LIMIT 1
+        )`,
       [trade.sender_id, trade.offered_card_id]
     );
-    // Recipient gives up the requested card
     await client.query(
-      "DELETE FROM public.player_cards WHERE player_id = $1 AND card_id = $2",
+      `DELETE FROM public.player_cards
+        WHERE ctid IN (
+          SELECT ctid FROM public.player_cards
+           WHERE player_id = $1 AND card_id = $2
+           LIMIT 1
+        )`,
       [trade.recipient_id, trade.requested_card_id]
     );
 
-    // Recipient receives the offered card
+    // Insert the received copies, marked with acquired_at = now() so the
+    // 24h cooldown applies before they can be traded again.
     await client.query(
-      "INSERT INTO public.player_cards (player_id, card_id) VALUES ($1, $2)",
+      `INSERT INTO public.player_cards (player_id, card_id, acquired_at)
+       VALUES ($1, $2, now())`,
       [trade.recipient_id, trade.offered_card_id]
     );
-    // Sender receives the requested card
     await client.query(
-      "INSERT INTO public.player_cards (player_id, card_id) VALUES ($1, $2)",
+      `INSERT INTO public.player_cards (player_id, card_id, acquired_at)
+       VALUES ($1, $2, now())`,
       [trade.sender_id, trade.requested_card_id]
     );
 
@@ -175,6 +256,31 @@ router.post("/:id/cancel", async (req, res) => {
     if (!trade) throw new HttpError(404, "Trade not found.");
     if (trade.sender_id !== userId && trade.recipient_id !== userId) {
       throw new HttpError(403, "Unauthorized.");
+    }
+
+    await client.query(
+      "UPDATE public.card_trades SET status = 'declined', updated_at = now() WHERE id = $1",
+      [tradeId]
+    );
+  });
+
+  res.json({ success: true });
+});
+
+// Reject a trade (recipient only)
+router.post("/:id/reject", async (req, res) => {
+  const userId = req.user!.id;
+  const tradeId = id(req.params.id);
+
+  await transaction(async (client) => {
+    const { rows } = await client.query(
+      "SELECT * FROM public.card_trades WHERE id = $1 AND status = 'pending'",
+      [tradeId]
+    );
+    const trade = rows[0];
+    if (!trade) throw new HttpError(404, "Trade not found.");
+    if (trade.recipient_id !== userId) {
+      throw new HttpError(403, "Only the recipient can reject this trade.");
     }
 
     await client.query(
