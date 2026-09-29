@@ -403,3 +403,26 @@ test("shows an error when proposing a trade fails", async () => {
   const alert = await screen.findByRole("alert");
   expect(alert.textContent).toContain("Recipient already has a pending trade");
 });
+
+test("recipient can reject a pending trade", async () => {
+  const rejectCalls: string[] = [];
+
+  request.mockImplementation(async (url, init) => {
+    const u = String(url);
+    if (u.endsWith("/me/cards"))            return response([]);
+    if (u.endsWith("/trades/players/list")) return response(mockPlayers);
+    if (u.endsWith("/trades/trade-1/reject") && init?.method === "POST") {
+      rejectCalls.push(u);
+      return response({ success: true });
+    }
+    if (u.endsWith("/trades")) return response(mockTrades);
+    return response([]);
+  });
+
+  renderGamesPage();
+  await screen.findByText("Thandi M. → Me");
+
+  fireEvent.click(screen.getByRole("button", { name: "Reject" }));
+
+  await waitFor(() => expect(rejectCalls).toHaveLength(1));
+});
