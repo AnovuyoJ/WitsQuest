@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import PhotoEditor from "@/components/PhotoEditor";
 import { supabase } from "@/lib/supabaseClient";
-import { apiRequest } from "@/lib/api";
+import { apiRequest, type PlayerProgress } from "@/lib/api";
 import styles from "./profile.module.css";
 
 function Icon({ kind }: { kind: "person" | "bell" | "cards" | "book" | "settings" | "exit" }) {
@@ -24,6 +24,9 @@ export default function ProfilePage() {
   const [editing, setEditing] = useState(false);
   const [error, setError] = useState("");
   const [signingOut, setSigningOut] = useState(false);
+  const [progress, setProgress] = useState<PlayerProgress | null>(null);
+  const [progressLoading, setProgressLoading] = useState(true);
+  const [progressError, setProgressError] = useState("");
   useEffect(() => {
     let active = true;
     supabase.auth.getUser().then(({ data, error }) => {
@@ -32,7 +35,14 @@ export default function ProfilePage() {
       else setUser({ name: data.user.user_metadata?.full_name || "Wits Quest User", email: data.user.email || "" });
     });
     const loadPhoto = () => { void apiRequest<{ avatar: string | null }>("/me/profile").then(result => { if (active && result.data) setAvatar(result.data.avatar); }); };
+    const loadProgress = () => { void apiRequest<PlayerProgress>("/me/progress").then(result => {
+      if (!active) return;
+      if (result.data) setProgress(result.data);
+      else setProgressError(result.error?.message || "Could not load your progress.");
+      setProgressLoading(false);
+    }); };
     loadPhoto();
+    loadProgress();
     window.addEventListener("profile-photo-updated", loadPhoto);
     return () => { active = false; window.removeEventListener("profile-photo-updated", loadPhoto); };
   }, []);
@@ -62,6 +72,37 @@ export default function ProfilePage() {
         {error && <p role="alert" className={styles.error}>{error}{!user && <> <Link href="/Login">Sign in</Link></>}</p>}
         {user && <>
           {editing && <section id="profile-photo-editor" className={styles.editor}><div className={styles.editorHeading}><h2>Profile picture</h2><button type="button" onClick={() => setEditing(false)}>Close</button></div><PhotoEditor endpoint="/me/profile" /></section>}
+          <section className={styles.progress} aria-labelledby="progress-heading">
+            <div className={styles.progressHeading}>
+              <div><p>PLAYER PROGRESS</p><h2 id="progress-heading">Your WitsQuest record</h2></div>
+              {progress && <span>{progress.achievements.filter(item => item.earned).length}/{progress.achievements.length} unlocked</span>}
+            </div>
+            {progressLoading ? (
+              <div className={styles.progressLoading} role="status"><span /><span /><span /><span className={styles.srOnly}>Loading player progress</span></div>
+            ) : progressError ? (
+              <p className={styles.progressError}>{progressError}</p>
+            ) : progress && (
+              <>
+                <div className={styles.metrics}>
+                  <article className={styles.primaryMetric}><span>Quest points</span><strong>{progress.points.toLocaleString()}</strong><small>Lifetime points earned</small></article>
+                  <article><span>Current streak</span><strong>{progress.currentStreak}</strong><small>{progress.currentStreak === 1 ? "day" : "days"}</small></article>
+                  <article><span>Correct answers</span><strong>{progress.correctAnswers}</strong><small>of {progress.attempts} attempts</small></article>
+                  <article><span>Battle wins</span><strong>{progress.battlesWon}</strong><small>of {progress.battlesCompleted} completed</small></article>
+                </div>
+                <div className={styles.achievements}>
+                  <h3>Achievements</h3>
+                  <div className={styles.achievementGrid}>
+                    {progress.achievements.map((achievement, index) => (
+                      <article key={achievement.id} className={achievement.earned ? styles.earned : styles.locked}>
+                        <span className={styles.achievementMark}>{achievement.earned ? "✓" : String(index + 1).padStart(2, "0")}</span>
+                        <div><h4>{achievement.title}</h4><p>{achievement.description}</p></div>
+                      </article>
+                    ))}
+                  </div>
+                </div>
+              </>
+            )}
+          </section>
           <section className={styles.group} aria-label="Profile and activity">
             <button type="button" className={styles.row} onClick={() => setEditing(value => !value)} aria-expanded={editing} aria-controls="profile-photo-editor"><Icon kind="person" /><span>Edit profile picture</span><span aria-hidden="true">›</span></button>
             <Link className={styles.row} href="/dashboard/notifications"><Icon kind="bell" /><span>Notifications</span><span aria-hidden="true">›</span></Link>

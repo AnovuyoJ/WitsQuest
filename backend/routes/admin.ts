@@ -78,6 +78,13 @@ router.post("/landmarks/lookup", async (req, res) => {
   res.json(await requireLandmark(req.body.latitude, req.body.longitude));
 });
 
+function zoneValues(body: Record<string, unknown>) {
+  return [
+    text(body.name, "Name", 200),
+    optionalText(body.description, "Description"),
+  ];
+}
+
 function campaignValues(body: Record<string, unknown>) {
   const start = text(body.starts_at, "Start time");
   const end = text(body.ends_at, "End time");
@@ -86,6 +93,144 @@ function campaignValues(body: Record<string, unknown>) {
   }
   return [text(body.name, "Name", 200), start, end];
 }
+
+router.get("/zones", async (_req, res) => {
+  const { rows } = await database.query(`
+    SELECT
+      z.id,
+      z.name,
+      z.description,
+      z.created_at,
+      COUNT(zl.event_id)::int AS location_count
+    FROM public.zones z
+    LEFT JOIN public.zone_locations zl ON zl.zone_id = z.id
+    GROUP BY z.id, z.name, z.description, z.created_at
+    ORDER BY z.created_at DESC
+  `);
+
+  res.json(rows);
+});
+
+router.get("/zones/:id", async (req, res) => {
+  const zoneId = id(req.params.id);
+
+  const { rows } = await database.query(
+    `
+      SELECT
+        z.id,
+        z.name,
+        z.description,
+        z.created_at,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'id', e.id,
+              'title', e.title,
+              'description', e.description,
+              'latitude', e.latitude,
+              'longitude', e.longitude
+            )
+            ORDER BY e.title
+          ) FILTER (WHERE e.id IS NOT NULL),
+          '[]'
+        ) AS locations
+      FROM public.zones z
+      LEFT JOIN public.zone_locations zl
+        ON zl.zone_id = z.id
+      LEFT JOIN public.events e
+        ON e.id = zl.event_id
+      WHERE z.id = $1
+      GROUP BY z.id, z.name, z.description, z.created_at
+    `,
+    [zoneId]
+  );
+
+  if (!rows.length) {
+    throw new HttpError(404, "Zone not found.");
+  }
+
+  res.json(rows[0]);
+});
+
+router.post("/zones", async (req, res) => {
+  const { rows } = await database.query(
+    `INSERT INTO public.zones (name, description)
+     VALUES ($1, $2)
+     RETURNING *`,
+    zoneValues(req.body)
+  );
+
+  res.status(201).json(rows[0]);
+});
+
+router.post("/zones/:id/locations", async (req, res) => {
+  const zoneId = id(req.params.id);
+  const eventId = id(req.body.event_id);
+
+  const zone = await database.query(
+    "SELECT id FROM public.zones WHERE id=$1",
+    [zoneId]
+  );
+
+  if (!zone.rowCount) throw new HttpError(404, "Zone not found.");
+
+  const event = await database.query(
+    "SELECT id FROM public.events WHERE id=$1",
+    [eventId]
+  );
+
+  if (!event.rowCount) throw new HttpError(404, "Location not found.");
+
+  try {
+    await database.query(
+      `INSERT INTO public.zone_locations (zone_id, event_id)
+       VALUES ($1, $2)`,
+      [zoneId, eventId]
+    );
+  } catch (error: any) {
+    if (error.code === "23505") {
+      throw new HttpError(409, "Location is already part of this zone.");
+    }
+    throw error;
+  }
+
+  res.status(201).json({ success: true });
+});
+
+router.delete("/zones/:id/locations/:eventId", async (req, res) => {
+  const zoneId = id(req.params.id);
+  const eventId = id(req.params.eventId);
+
+  const result = await database.query(
+    `DELETE FROM public.zone_locations
+     WHERE zone_id = $1 AND event_id = $2
+     RETURNING zone_id, event_id`,
+    [zoneId, eventId]
+  );
+
+  if (!result.rowCount) {
+    throw new HttpError(404, "Location is not part of this zone.");
+  }
+
+  res.json({ success: true });
+});
+
+router.delete("/zones/:id", async (req, res) => {
+  const zoneId = id(req.params.id);
+
+  const result = await database.query(
+    `DELETE FROM public.zones
+     WHERE id = $1
+     RETURNING id`,
+    [zoneId]
+  );
+
+  if (!result.rowCount) {
+    throw new HttpError(404, "Zone not found.");
+  }
+
+  res.json({ success: true });
+});
 
 router.get("/campaigns", async (_req, res) => {
   res.json((await database.query("SELECT * FROM public.campaigns ORDER BY starts_at")).rows);
@@ -182,6 +327,85 @@ router.get("/challenges/stats", async (req, res) => {
     ORDER BY wrong_percentage DESC, total_attempts DESC
   `, [eventId]);
   res.json(rows);
+});
+
+router.get("/analytics", async (_req, res) => {
+  try{
+  const [locationResult, questionResult, cardResult] = await Promise.all([
+    database.query(`
+      SELECT
+        e.id,
+        e.title,
+        COUNT(lv.id)::int AS total_verifications,
+        COUNT(DISTINCT lv.player_id)::int AS unique_players
+      FROM public.events e
+      LEFT JOIN public.location_verifications lv ON lv.event_id = e.id
+      GROUP BY e.id, e.title
+      ORDER BY total_verifications DESC, e.title
+    `),
+
+    database.query(`
+      SELECT
+        c.id,
+        c.question_text,
+        c.event_id,
+        COUNT(a.id)::int AS total_attempts,
+        COUNT(DISTINCT a.player_id)::int AS unique_players,
+        COUNT(a.id) FILTER (WHERE a.correct = true)::int AS correct_attempts,
+        COUNT(a.id) FILTER (WHERE a.correct = false)::int AS wrong_attempts,
+        CASE WHEN COUNT(a.id) > 0
+          THEN ROUND(
+            COUNT(a.id) FILTER (WHERE a.correct = true)::numeric
+            / COUNT(a.id) * 100,
+            1
+          )::float
+          ELSE 0
+        END AS success_percentage
+      FROM public.challenges c
+      LEFT JOIN public.challenge_attempts a ON a.challenge_id = c.id
+      GROUP BY c.id, c.question_text, c.event_id
+      ORDER BY total_attempts DESC, c.question_text
+    `),
+
+    database.query(`
+      SELECT
+        c.id,
+        c.title,
+        c.rarity,
+        c.event_id,
+        COUNT(pc.id)::int AS total_awards,
+        COUNT(DISTINCT pc.player_id)::int AS unique_players
+      FROM public.cards c
+      LEFT JOIN public.player_cards pc ON pc.card_id = c.id
+      GROUP BY c.id, c.title, c.rarity, c.event_id
+      ORDER BY total_awards DESC, c.title
+    `),
+  ]);
+
+  const totalCardAwards = cardResult.rows.reduce(
+    (total, card) => total + card.total_awards,
+    0
+  );
+
+  const cards = cardResult.rows.map((card) => ({
+    ...card,
+    award_percentage:
+      totalCardAwards > 0
+        ? Number(((card.total_awards / totalCardAwards) * 100).toFixed(1))
+        : 0,
+  }));
+
+  res.json({
+    locations: locationResult.rows,
+    questions: questionResult.rows,
+    cards,
+  });
+  } catch (error) {
+    console.error("ANALYTICS ERROR:", error);
+    res.status(500).json({
+      message: "Analytics query failed."
+    });
+  }
 });
 
 router.post("/events", async (req, res) => {

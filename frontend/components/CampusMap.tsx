@@ -1,12 +1,22 @@
 "use client";
 
-import { apiRequest, type EventRecord } from "@/lib/api";
+import {
+  apiRequest,
+  getZones,
+  getZone,
+  claimZone,
+  type EventRecord,
+  type ZoneRecord,
+} from "@/lib/api";
+
+
 import {
   MapContainer,
   TileLayer,
   Marker,
   Popup,
   Circle,
+  Polygon,
   useMap,
 } from "react-leaflet";
 
@@ -95,6 +105,11 @@ export default function CampusMap() {
   const [events, setEvents] =
     useState<Event[]>([]);
 
+  const [zones, setZones] = useState<ZoneRecord[]>([]);
+  const [selectedZone, setSelectedZone] = useState<ZoneRecord | null>(null);
+  const [zoneError, setZoneError] = useState<string | null>(null);
+  const [claimingZone, setClaimingZone] = useState(false);
+
   const [error, setError] =
     useState<string | null>(null);
   const [locating, setLocating] = useState(true);
@@ -139,6 +154,25 @@ export default function CampusMap() {
     }
 
     loadEvents();
+  }, []);
+
+  useEffect(() => {
+    async function loadZones() {
+      if (!navigator.onLine) {
+        return;
+      }
+  
+      const { data, error } = await getZones();
+  
+      if (error) {
+        console.error("Error loading zones:", error);
+        return;
+      }
+  
+      setZones(data ?? []);
+    }
+  
+    loadZones();
   }, []);
 
   /*
@@ -286,6 +320,41 @@ export default function CampusMap() {
     return `${(distance / 1000).toFixed(1)}km away`;
   }
 
+  async function handleClaimZone() {
+    if (!selectedZone || claimingZone) {
+      return;
+    }
+  
+    setClaimingZone(true);
+    setZoneError(null);
+  
+    const { data, error } = await claimZone(selectedZone.id);
+  
+    if (error) {
+      setZoneError(error.message);
+      setClaimingZone(false);
+      return;
+    }
+  
+    if (data?.claimed || data?.alreadyClaimed) {
+      const { data: updatedZone } = await getZone(selectedZone.id);
+  
+      if (updatedZone) {
+        setSelectedZone(updatedZone);
+  
+        setZones((currentZones) =>
+          currentZones.map((zone) =>
+            zone.id === updatedZone.id
+              ? updatedZone
+              : zone
+          )
+        );
+      }
+    }
+  
+    setClaimingZone(false);
+  }
+
   // Only show one status banner at a time: offline takes priority
   // over "locating", since knowing you're offline matters more than
   // a GPS spinner, and showing both would stack awkwardly.
@@ -404,7 +473,277 @@ export default function CampusMap() {
             </Circle>
           );
         })}
+
+        {/* SELECTED ZONE TERRITORY */}
+      {selectedZone && selectedZone.locations.length >= 3 && (
+        <Polygon
+          positions={selectedZone.locations.map((location) => [
+            location.latitude,
+            location.longitude,
+          ])}
+          pathOptions={{
+            color: selectedZone.claimed_by_me
+              ? "#16a34a"
+              : selectedZone.claimed_by
+              ? "#dc2626"
+              : "#043673",
+            fillColor: selectedZone.claimed_by_me
+              ? "#16a34a"
+              : selectedZone.claimed_by
+              ? "#dc2626"
+              : "#043673",
+            fillOpacity: 0.12,
+            weight: 3,
+            dashArray: selectedZone.claimed_by ? undefined : "8 6",
+          }}
+        >
+          <Popup>
+            <div className="min-w-[160px]">
+              <strong>{selectedZone.name}</strong>
+              <br />
+              <span>
+                {selectedZone.claimed_by_me
+                  ? "You control this zone."
+                  : selectedZone.claimed_by
+                  ? "This zone is controlled."
+                  : "Zone available to claim."}
+              </span>
+            </div>
+          </Popup>
+        </Polygon>
+      )}
       </MapContainer>
+
+      {/* ZONE CONTROL */}
+      <div className="absolute right-4 top-4 z-[1000] w-[min(360px,calc(100%-2rem))]">
+        <div className="rounded-2xl border border-[#043673]/10 bg-white/95 shadow-xl backdrop-blur">
+          <div className="border-b border-slate-100 px-4 py-4">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-[#C9A24B]">
+                  Zone Control
+                </p>
+                <h2 className="mt-1 text-lg font-bold text-[#043673]">
+                  Campus territories
+                </h2>
+              </div>
+
+              <span className="rounded-full bg-[#EEF2FA] px-2.5 py-1 text-xs font-semibold text-[#043673]">
+                {zones.length} {zones.length === 1 ? "zone" : "zones"}
+              </span>
+            </div>
+          </div>
+
+          <div className="max-h-[60vh] overflow-y-auto p-3">
+            {zones.length === 0 ? (
+              <div className="rounded-xl bg-slate-50 p-4 text-center">
+                <p className="text-sm font-semibold text-slate-600">
+                  No zones available yet.
+                </p>
+                <p className="mt-1 text-xs leading-5 text-slate-400">
+                  Check back once campus territories have been created.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {zones.map((zone) => (
+                  <button
+                    key={zone.id}
+                    type="button"
+                    onClick={async () => {
+                      setZoneError(null);
+
+                      const { data, error } = await getZone(zone.id);
+
+                      if (error) {
+                        setZoneError(error.message);
+                        return;
+                      }
+
+                      setSelectedZone(data);
+                    }}
+                    className={`w-full rounded-xl border p-3 text-left transition ${
+                      selectedZone?.id === zone.id
+                        ? "border-[#043673] bg-[#EEF2FA]"
+                        : "border-slate-200 bg-white hover:border-[#043673]/30 hover:bg-slate-50"
+                    }`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="font-bold text-[#043673]">
+                          {zone.name}
+                        </p>
+
+                        {zone.description && (
+                          <p className="mt-1 line-clamp-2 text-xs leading-5 text-slate-500">
+                            {zone.description}
+                          </p>
+                        )}
+                      </div>
+
+                      {zone.claimed_by_me && (
+                        <span className="shrink-0 rounded-full bg-green-100 px-2 py-1 text-[10px] font-bold text-green-700">
+                          Yours
+                        </span>
+                      )}
+
+                      {!zone.claimed_by_me && zone.claimed_by && (
+                        <span className="shrink-0 rounded-full bg-red-100 px-2 py-1 text-[10px] font-bold text-red-700">
+                          Claimed
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-3">
+                      <div className="mb-1 flex items-center justify-between text-[11px]">
+                        <span className="font-medium text-slate-500">
+                          Progress
+                        </span>
+
+                        <span className="font-bold text-[#043673]">
+                          {zone.completed_location_count}/
+                          {zone.location_count}
+                        </span>
+                      </div>
+
+                      <div className="h-1.5 overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-full rounded-full bg-[#C9A24B] transition-all"
+                          style={{
+                            width:
+                              zone.location_count === 0
+                                ? "0%"
+                                : `${Math.min(
+                                    100,
+                                    (zone.completed_location_count /
+                                      zone.location_count) *
+                                      100
+                                  )}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {selectedZone && (
+      <div className="absolute bottom-20 right-4 z-[1000] w-[min(360px,calc(100%-2rem))]">
+        <div className="rounded-2xl border border-[#043673]/10 bg-white/95 p-4 shadow-xl backdrop-blur">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-[#C9A24B]">
+                Territory
+              </p>
+
+              <h3 className="mt-1 text-lg font-bold text-[#043673]">
+                {selectedZone.name}
+              </h3>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedZone(null);
+                setZoneError(null);
+              }}
+              className="rounded-lg px-2 py-1 text-lg text-slate-400 hover:bg-slate-100 hover:text-slate-600"
+              aria-label="Close zone details"
+            >
+              ×
+            </button>
+          </div>
+
+          {selectedZone.description && (
+            <p className="mt-2 text-sm leading-5 text-slate-600">
+              {selectedZone.description}
+            </p>
+          )}
+
+          <div className="mt-4 space-y-2">
+            {selectedZone.locations.map((location) => (
+              <div
+                key={location.id}
+                className="flex items-center gap-3 rounded-xl bg-slate-50 p-3"
+              >
+                <span
+                  className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full text-xs font-bold ${
+                    location.completed
+                      ? "bg-green-100 text-green-700"
+                      : "bg-slate-200 text-slate-500"
+                  }`}
+                >
+                  {location.completed ? "✓" : "•"}
+                </span>
+
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-semibold text-slate-700">
+                    {location.title}
+                  </p>
+
+                  <p className="text-xs text-slate-400">
+                    {location.completed
+                      ? "Challenge completed"
+                      : "Challenge still needed"}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {zoneError && (
+            <div className="mt-3 rounded-xl border border-red-200 bg-red-50 p-3">
+              <p className="text-xs leading-5 text-red-700">
+                {zoneError}
+              </p>
+            </div>
+          )}
+
+          <div className="mt-4">
+            {selectedZone.claimed_by_me ? (
+              <div className="rounded-xl bg-green-50 p-3 text-center">
+                <p className="text-sm font-bold text-green-700">
+                  🏴 You control this zone
+                </p>
+              </div>
+            ) : selectedZone.claimed_by ? (
+              <div className="rounded-xl bg-red-50 p-3 text-center">
+                <p className="text-sm font-bold text-red-700">
+                  This zone is already controlled
+                </p>
+              </div>
+            ) : selectedZone.eligible ? (
+              <button
+                type="button"
+                onClick={handleClaimZone}
+                disabled={claimingZone}
+                className="w-full rounded-xl bg-[#043673] px-4 py-3 text-sm font-bold text-white transition hover:bg-[#032b5c] disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {claimingZone
+                  ? "Claiming zone..."
+                  : "🏴 Claim Zone"}
+              </button>
+            ) : (
+              <div className="rounded-xl bg-[#FFF7E8] p-3 text-center">
+                <p className="text-sm font-bold text-[#8A6518]">
+                  Complete every location to claim
+                </p>
+
+                <p className="mt-1 text-xs leading-5 text-[#9A7A36]">
+                  You have completed{" "}
+                  {selectedZone.completed_location_count} of{" "}
+                  {selectedZone.location_count} locations.
+                </p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
 
       {/* MAP LEGEND */}
       <div className="absolute bottom-4 left-4 z-[1000] rounded-xl border border-[#043673]/10 bg-white/95 p-3 text-xs shadow-lg backdrop-blur">

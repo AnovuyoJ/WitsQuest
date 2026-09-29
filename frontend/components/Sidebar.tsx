@@ -65,6 +65,11 @@ const navItems: NavItem[] = [
     icon: <GameIcon />,
     href: "/dashboard/games",
   },
+  {
+    label: "Leaderboard",
+    icon: <span aria-hidden="true" className="text-base font-black leading-none">#</span>,
+    href: "/dashboard/leaderboard",
+  },
 ];
 const WOODEN_PLANKS_TEXTURE = `
   /* Vertical grain streaks (subtle) */

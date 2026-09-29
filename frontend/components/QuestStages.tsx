@@ -1,4 +1,5 @@
 import Link from "next/link";
+import ForwardArrowIcon from "@/components/ForwardArrowIcon";
 
 export default function QuestStages({ active, nearby, verified, total, completed, hasRewards }: {
   active: boolean; nearby: boolean; verified: boolean; total: number; completed: number; hasRewards: boolean;
@@ -16,9 +17,7 @@ export default function QuestStages({ active, nearby, verified, total, completed
             className="flex items-center"
           >
             {index > 0 && (
-              <span aria-hidden="true" className="mx-2 font-bold text-slate-400">
-                →
-              </span>
+              <ForwardArrowIcon className="mx-2 text-slate-400" />
             )}
             <span
               className={`rounded-lg px-2.5 py-1 text-[11px] font-bold transition-all ${
@@ -52,7 +51,7 @@ export default function QuestStages({ active, nearby, verified, total, completed
           href="/dashboard/cards"
           className="mt-2.5 inline-block text-xs font-black text-[#775718] underline underline-offset-4 hover:text-[#043673]"
         >
-          View my collection →
+          <span className="inline-flex items-center gap-1">View my collection <ForwardArrowIcon /></span>
         </Link>
       )}
     </section>

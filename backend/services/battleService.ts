@@ -55,6 +55,8 @@ export async function startBattle(playerId: string, input: unknown, cpu: boolean
         await saveDeck(client,waiting.id,2,cards);
         if (stakeId) await reserveStake(client,waiting.id,2,playerId,stakeId);
         await client.query("UPDATE public.card_games SET player_two_id=$1,status='active',started_at=now() WHERE id=$2", [playerId,waiting.id]);
+        if (!stakeId) await client.query(`UPDATE public.game_rounds SET turn_deadline=now()+interval '30 seconds'
+          WHERE game_id=$1 AND status='waiting'`, [waiting.id]);
         return waiting;
       }
     }
@@ -79,21 +81,67 @@ export async function startBattle(playerId: string, input: unknown, cpu: boolean
       }
       await saveDeck(client,game.id,2,shuffle(chosen));
     }
-    await createRound(client,game.id,1,cpu);
+    await createRound(client,game.id,1,cpu,cpu);
     return game;
   });
 }
 
-async function createRound(client: PoolClient, gameId: string, number: number, cpu: boolean) {
+async function createRound(client: PoolClient, gameId: string, number: number, cpu: boolean, startTimer = true) {
   const cpuCard = cpu ? (await client.query("SELECT card_id FROM public.battle_decks WHERE game_id=$1 AND side=2 AND position=$2", [gameId,number])).rows[0].card_id : null;
-  return (await client.query(`INSERT INTO public.game_rounds (game_id,round_number,status,player_two_card_id)
-    VALUES ($1,$2,'waiting',$3) RETURNING id`, [gameId,number,cpuCard])).rows[0];
+  return (await client.query(`INSERT INTO public.game_rounds (game_id,round_number,status,player_two_card_id,turn_deadline)
+    VALUES ($1,$2,'waiting',$3,CASE WHEN $4 THEN now()+interval '30 seconds' ELSE NULL END) RETURNING id`, [gameId,number,cpuCard,startTimer])).rows[0];
+}
+
+async function finishRound(client: PoolClient, game: any, round: any) {
+  const decks = (await client.query("SELECT side,card_id,snapshot FROM public.battle_decks WHERE game_id=$1", [game.id])).rows;
+  const one = decks.find(d => d.side === 1 && d.card_id === round.player_one_card_id)?.snapshot.points;
+  const two = decks.find(d => d.side === 2 && d.card_id === round.player_two_card_id)?.snapshot.points;
+  if (!Number.isFinite(one) || !Number.isFinite(two)) throw new HttpError(409, "The round could not select a valid card.");
+  const winner = one === two ? null : one > two ? 1 : 2;
+  await client.query(`UPDATE public.game_rounds SET player_one_points=$1,player_two_points=$2,winner_side=$3,
+    winner_id=$4,status='finished',finished_at=now() WHERE id=$5`, [one,two,winner,winner === 1 ? game.player_one_id : winner === 2 ? game.player_two_id : null,round.id]);
+  if (round.round_number === 5) {
+    const scores = (await client.query(`SELECT count(*) FILTER (WHERE winner_side=1)::int AS one,
+      count(*) FILTER (WHERE winner_side=2)::int AS two FROM public.game_rounds WHERE game_id=$1`, [game.id])).rows[0];
+    const matchWinner = scores.one === scores.two ? null : scores.one > scores.two ? 1 : 2;
+    await settleStakes(client,game,matchWinner);
+    await client.query(`UPDATE public.card_games SET status='finished',finished_at=now(),winner_side=$1,winner_id=$2 WHERE id=$3`,
+      [matchWinner,matchWinner === 1 ? game.player_one_id : matchWinner === 2 ? game.player_two_id : null,game.id]);
+    game.status = "finished";
+    game.winner_side = matchWinner;
+    game.winner_id = matchWinner === 1 ? game.player_one_id : matchWinner === 2 ? game.player_two_id : null;
+  }
+}
+
+async function expireRound(client: PoolClient, game: any) {
+  if (game.status !== "active") return;
+  if (game.stakes_enabled && !await stakesReady(client,game.id)) return;
+  const round = (await client.query(`SELECT * FROM public.game_rounds WHERE game_id=$1
+    ORDER BY round_number DESC LIMIT 1 FOR UPDATE`, [game.id])).rows[0];
+  if (!round || round.status === "finished" || !round.turn_deadline || new Date(round.turn_deadline).getTime() > Date.now()) return;
+
+  for (const side of [1,2]) {
+    const column = side === 1 ? "player_one_card_id" : "player_two_card_id";
+    if (round[column]) continue;
+    const available = (await client.query(`SELECT deck.card_id FROM public.battle_decks deck
+      WHERE deck.game_id=$1 AND deck.side=$2 AND NOT EXISTS (
+        SELECT 1 FROM public.game_rounds used WHERE used.game_id=$1
+        AND CASE WHEN $2=1 THEN used.player_one_card_id ELSE used.player_two_card_id END=deck.card_id
+      ) ORDER BY deck.position LIMIT 1`, [game.id,side])).rows[0];
+    if (!available) throw new HttpError(409, "No unused card is available for the timed turn.");
+    const timedOutColumn = side === 1 ? "player_one_timed_out" : "player_two_timed_out";
+    await client.query(`UPDATE public.game_rounds SET ${column}=$1,${timedOutColumn}=true WHERE id=$2`, [available.card_id,round.id]);
+    round[column] = available.card_id;
+    round[timedOutColumn] = true;
+  }
+  await finishRound(client,game,round);
 }
 
 export async function battleState(playerId: string, gameId: string) {
   return transaction(async client => {
     const game = await lockGame(client,gameId,playerId);
     if (game.rules_version !== 2) throw new HttpError(409, "This is a legacy battle. Finish or cancel it from Your battles before starting a five-card match.");
+    await expireRound(client,game);
     const side = game.player_one_id === playerId ? 1 : 2;
     const rounds = (await client.query("SELECT * FROM public.game_rounds WHERE game_id=$1 ORDER BY round_number", [gameId])).rows;
     const decks = (await client.query("SELECT side,card_id,snapshot FROM public.battle_decks WHERE game_id=$1 ORDER BY position", [gameId])).rows;
@@ -104,6 +152,7 @@ export async function battleState(playerId: string, gameId: string) {
         return finished || side === s ? decks.find(d => d.side === s && d.card_id === cardId)?.snapshot ?? null : null;
       };
       return { id: round.id, round_number: round.round_number, status: round.status, winner_side: round.winner_side,
+        turn_deadline: round.turn_deadline, player_one_timed_out: Boolean(round.player_one_timed_out), player_two_timed_out: Boolean(round.player_two_timed_out),
         player_one_submitted: Boolean(round.player_one_card_id), player_two_submitted: Boolean(round.player_two_card_id),
         player_one_card: card(1), player_two_card: card(2) };
     });
@@ -119,6 +168,7 @@ export async function battleMove(playerId: string, gameId: string, roundId: stri
     const game = await lockGame(client,gameId,playerId);
     if (game.rules_version !== 2 || game.status !== "active") throw new HttpError(409, "Battle is not active.");
     if (game.stakes_enabled && !await stakesReady(client,gameId)) throw new HttpError(409,"Both players must accept the stakes first.");
+    await expireRound(client,game);
     const round = (await client.query("SELECT * FROM public.game_rounds WHERE game_id=$1 ORDER BY round_number DESC LIMIT 1 FOR UPDATE", [gameId])).rows[0];
     if (round.id !== roundId || round.status === "finished") throw new HttpError(409, "This round is no longer accepting cards.");
     const side = game.player_one_id === playerId ? 1 : 2;
@@ -131,20 +181,7 @@ export async function battleMove(playerId: string, gameId: string, roundId: stri
     await client.query(`UPDATE public.game_rounds SET ${column}=$1 WHERE id=$2`, [cardId,roundId]);
     round[column] = cardId;
     if (round.player_one_card_id && round.player_two_card_id) {
-      const decks = (await client.query("SELECT side,card_id,snapshot FROM public.battle_decks WHERE game_id=$1", [gameId])).rows;
-      const one = decks.find(d => d.side === 1 && d.card_id === round.player_one_card_id).snapshot.points;
-      const two = decks.find(d => d.side === 2 && d.card_id === round.player_two_card_id).snapshot.points;
-      const winner = one === two ? null : one > two ? 1 : 2;
-      await client.query(`UPDATE public.game_rounds SET player_one_points=$1,player_two_points=$2,winner_side=$3,
-        winner_id=$4,status='finished',finished_at=now() WHERE id=$5`, [one,two,winner,winner === 1 ? game.player_one_id : winner === 2 ? game.player_two_id : null,roundId]);
-      if (round.round_number === 5) {
-        const scores = (await client.query(`SELECT count(*) FILTER (WHERE winner_side=1)::int AS one,
-          count(*) FILTER (WHERE winner_side=2)::int AS two FROM public.game_rounds WHERE game_id=$1`, [gameId])).rows[0];
-        const matchWinner = scores.one === scores.two ? null : scores.one > scores.two ? 1 : 2;
-        await settleStakes(client,game,matchWinner);
-        await client.query(`UPDATE public.card_games SET status='finished',finished_at=now(),winner_side=$1,winner_id=$2 WHERE id=$3`,
-          [matchWinner,matchWinner === 1 ? game.player_one_id : matchWinner === 2 ? game.player_two_id : null,gameId]);
-      }
+      await finishRound(client,game,round);
     }
     return { success: true };
   });
@@ -157,6 +194,6 @@ export async function advanceBattle(playerId: string, gameId: string, roundId: s
     const previous = (await client.query("SELECT * FROM public.game_rounds WHERE game_id=$1 AND id=$2", [gameId,roundId])).rows[0];
     if (!previous || previous.status !== "finished" || previous.round_number >= 5) throw new HttpError(409, "Finish the current round first.");
     const existing = (await client.query("SELECT id FROM public.game_rounds WHERE game_id=$1 AND round_number=$2", [gameId,previous.round_number+1])).rows[0];
-    return existing ?? createRound(client,gameId,previous.round_number+1,game.is_cpu);
+    return existing ?? createRound(client,gameId,previous.round_number+1,game.is_cpu,true);
   });
 }

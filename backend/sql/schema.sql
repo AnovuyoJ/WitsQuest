@@ -62,7 +62,21 @@ CREATE TABLE IF NOT EXISTS public.game_rounds (
   player_one_card_id uuid REFERENCES public.cards(id), player_two_card_id uuid REFERENCES public.cards(id),
   player_one_points integer, player_two_points integer, winner_id uuid REFERENCES auth.users(id),
   status text NOT NULL CHECK (status IN ('waiting','ready','finished')),
-  created_at timestamptz DEFAULT now(), finished_at timestamptz, UNIQUE(game_id,round_number)
+  created_at timestamptz DEFAULT now(), finished_at timestamptz,
+  turn_deadline timestamptz, player_one_timed_out boolean NOT NULL DEFAULT false,
+  player_two_timed_out boolean NOT NULL DEFAULT false, UNIQUE(game_id,round_number)
+);
+CREATE TABLE IF NOT EXISTS public.offline_attempt_sessions (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  player_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  event_id uuid NOT NULL REFERENCES public.events(id) ON DELETE CASCADE,
+  challenge_id uuid NOT NULL REFERENCES public.challenges(id) ON DELETE CASCADE,
+  verification_id uuid NOT NULL REFERENCES public.location_verifications(id) ON DELETE CASCADE,
+  challenge_revision integer, correct_answer_snapshot text NOT NULL,
+  card_id_snapshot uuid REFERENCES public.cards(id),
+  issued_at timestamptz NOT NULL DEFAULT now(), expires_at timestamptz NOT NULL,
+  sync_deadline timestamptz NOT NULL, consumed_at timestamptz, client_attempt_id uuid UNIQUE,
+  CHECK (expires_at > issued_at), CHECK (sync_deadline >= expires_at)
 );
 CREATE TABLE IF NOT EXISTS public.notifications (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), user_id uuid NOT NULL REFERENCES auth.users(id),
