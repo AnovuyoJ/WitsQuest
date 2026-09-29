@@ -25,13 +25,23 @@ jest.mock("../services/landmarkService", () => ({
   requireLandmark: jest.fn(async () => ({ name: "Landmark", osmUrl: "u" })),
 }));
 
+jest.mock("../services/proceduralEventService", () => ({
+  rotateProceduralEvents: jest.fn(),
+}));
+
 import { database } from "../services/database";
 import { requireLandmark } from "../services/landmarkService";
+import { rotateProceduralEvents } from "../services/proceduralEventService";
 import adminRouter from "../routes/admin";
 import catalogRouter from "../routes/catalog";
 
 const db = database as any;
 const landmark = requireLandmark as jest.MockedFunction<typeof requireLandmark>;
+
+const rotateEvents =
+  rotateProceduralEvents as jest.MockedFunction<
+    typeof rotateProceduralEvents
+  >;
 
 const VALID_UUID = "00000000-0000-4000-8000-000000000001";
 const CARD_UUID = "00000000-0000-4000-8000-000000000002";
@@ -312,5 +322,62 @@ describe("catalog.ts GET /cards", () => {
     expect(res.status).toBe(400);
     expect(res.body.message).toMatch(/Too many card IDs/i);
     expect(db.query).not.toHaveBeenCalled();
+  });
+});
+
+describe("catalog.ts procedural event rotation", () => {
+  it("rotates expired procedural events before returning live events", async () => {
+    const rotatedEvents = [
+      {
+        id: "replacement-1",
+        title: "Campus Discovery: Great Hall",
+        description: "Explore the Great Hall.",
+        latitude: -26.1929,
+        longitude: 28.0305,
+        radius_meters: 30,
+        starts_at: "2026-09-29T07:00:00.000Z",
+        ends_at: "2026-09-30T07:00:00.000Z",
+        is_procedural: true,
+      },
+    ];
+
+    rotateEvents.mockResolvedValueOnce(rotatedEvents);
+
+    db.query.mockResolvedValueOnce({
+      rows: rotatedEvents,
+    });
+
+    const res = await request(app).get("/api/events");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(rotatedEvents);
+    expect(rotateEvents).toHaveBeenCalledTimes(1);
+  });
+
+  it("still returns events when there is nothing to rotate", async () => {
+    rotateEvents.mockResolvedValueOnce([]);
+
+    const existingEvents = [
+      {
+        id: "existing-1",
+        title: "Existing Event",
+        description: "An existing event.",
+        latitude: -26.193,
+        longitude: 28.031,
+        radius_meters: 30,
+        starts_at: "2026-09-29T07:00:00.000Z",
+        ends_at: "2026-09-30T07:00:00.000Z",
+      },
+    ];
+
+    db.query.mockResolvedValueOnce({
+      rows: existingEvents,
+    });
+
+    const res = await request(app).get("/api/events");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual(existingEvents);
+    expect(rotateEvents).toHaveBeenCalledTimes(1);
   });
 });

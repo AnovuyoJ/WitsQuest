@@ -34,6 +34,10 @@ jest.mock("../services/landmarkService", () => ({
   requireLandmark: jest.fn(),
 }));
 
+jest.mock("../services/proceduralEventService", () => ({
+  generateProceduralEvents: jest.fn(),
+}));
+
 jest.mock("../middleware/requireAuth", () => ({
   requireAuth: (req: any, _res: any, next: any) => {
     req.user = { id: "admin-1" };
@@ -49,6 +53,7 @@ jest.mock("../middleware/requireAdmin", () => ({
 
 import { database } from "../services/database";
 import { requireLandmark } from "../services/landmarkService";
+import { generateProceduralEvents } from "../services/proceduralEventService";
 
 // Importing the router registers its handlers on the mocked Router().
 import "../routes/admin"; // <-- adjust to your real path
@@ -62,6 +67,7 @@ const routes = expressMock.__routes;
 
 const query = database.query as unknown as jest.Mock;
 const landmark = requireLandmark as unknown as jest.Mock;
+const generateEvents = generateProceduralEvents as unknown as jest.Mock;
 
 interface MockReq {
   params: Record<string, string>;
@@ -295,6 +301,72 @@ test("POST /landmarks/lookup forwards to requireLandmark", async () => {
 
   expect(res.json).toHaveBeenCalledWith({ id: "lm-1", name: "Hall" });
   expect(landmark).toHaveBeenCalledWith(1.5, 2.5);
+});
+
+// POST /events/procedural
+test("POST /events/procedural generates the requested number of events", async () => {
+  const generatedEvents = [
+    {
+      id: "event-1",
+      title: "Campus Discovery: Great Hall",
+      latitude: -26.1929,
+      longitude: 28.0305,
+      radius_meters: 30,
+      starts_at: "2026-09-28T10:00:00.000Z",
+      ends_at: "2026-09-29T10:00:00.000Z",
+      is_procedural: true,
+    },
+    {
+      id: "event-2",
+      title: "Campus Discovery: Origins Centre",
+      latitude: -26.1950,
+      longitude: 28.0320,
+      radius_meters: 30,
+      starts_at: "2026-09-28T10:00:00.000Z",
+      ends_at: "2026-09-29T10:00:00.000Z",
+      is_procedural: true,
+    },
+  ];
+
+  generateEvents.mockResolvedValueOnce(generatedEvents);
+
+  const { res } = await callRoute(
+    "POST",
+    "/events/procedural",
+    makeReq({
+      body: { count: 2 },
+    }),
+  );
+
+  expect(res.status).toHaveBeenCalledWith(201);
+  expect(res.json).toHaveBeenCalledWith(generatedEvents);
+  expect(generateEvents).toHaveBeenCalledWith(2);
+});
+
+test("POST /events/procedural rejects an invalid event count", async () => {
+  const { error } = await callRoute(
+    "POST",
+    "/events/procedural",
+    makeReq({
+      body: { count: 0 },
+    }),
+  );
+
+  expect(error).toMatchObject({ status: 400 });
+  expect(generateEvents).not.toHaveBeenCalled();
+});
+
+test("POST /events/procedural rejects more than 100 events", async () => {
+  const { error } = await callRoute(
+    "POST",
+    "/events/procedural",
+    makeReq({
+      body: { count: 101 },
+    }),
+  );
+
+  expect(error).toMatchObject({ status: 400 });
+  expect(generateEvents).not.toHaveBeenCalled();
 });
 
 // POST /events

@@ -2,8 +2,75 @@ import { HttpError, number } from "./validation";
 import { haversineDistanceMeters } from "./locationService";
 
 type Landmark = { name: string; osmUrl: string };
+export type CampusLandmark = { name: string; latitude: number; longitude: number; osmUrl: string; };
 type Element = { type: string; id: number; tags?: { name?: string }; lat?: number; lon?: number; center?: { lat: number; lon: number } };
 const cache = new Map<string, { expires: number; value: Landmark | null }>();
+
+export async function getCampusLandmarks(): Promise<CampusLandmark[]> {
+  const query = `[out:json][timeout:15];
+    area["name"="University of the Witwatersrand"]["boundary"="administrative"]->.campus;
+    (
+      nwr(area.campus)[building][building!="no"][name];
+      nwr(area.campus)[historic][name];
+      nwr(area.campus)[tourism~"^(artwork|museum)$"][name];
+    );
+    out center;`;
+
+  let elements: Element[];
+
+  try {
+    const response = await fetch("https://overpass-api.de/api/interpreter", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "User-Agent":
+          "WitsQuest/1.0 (procedural event location generation)",
+      },
+      body: new URLSearchParams({ data: query }),
+      signal: AbortSignal.timeout(20000),
+    });
+
+    if (!response.ok) {
+      throw new Error("Overpass unavailable");
+    }
+
+    const payload = await response.json();
+
+    if (!Array.isArray(payload.elements) || payload.remark) {
+      throw new Error("Incomplete Overpass response");
+    }
+
+    elements = payload.elements;
+  } catch {
+    throw new HttpError(
+      503,
+      "Campus landmark lookup is temporarily unavailable. Please try again."
+    );
+  }
+
+  return elements
+    .filter(
+      (element) =>
+        element &&
+        ["node", "way", "relation"].includes(element.type) &&
+        Number.isSafeInteger(element.id) &&
+        typeof element.tags?.name === "string" &&
+        element.tags.name.trim() &&
+        Number.isFinite(element.lat ?? element.center?.lat) &&
+        Number.isFinite(element.lon ?? element.center?.lon)
+    )
+    .map((element) => {
+      const latitude = (element.lat ?? element.center?.lat)!;
+      const longitude = (element.lon ?? element.center?.lon)!;
+
+      return {
+        name: element.tags!.name!.trim(),
+        latitude,
+        longitude,
+        osmUrl: `https://www.openstreetmap.org/${element.type}/${element.id}`,
+      };
+    });
+}
 
 export async function lookupLandmark(latitude: unknown, longitude: unknown): Promise<Landmark | null> {
   const lat = number(latitude, "Latitude", -90, 90);

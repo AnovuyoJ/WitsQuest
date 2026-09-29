@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { requireLandmark } from "../services/landmarkService";
+import { generateProceduralEvents } from "../services/proceduralEventService";
 import { database } from "../services/database";
 import { requireAuth } from "../middleware/requireAuth";
 import { requireAdmin } from "../middleware/requireAdmin";
@@ -406,6 +407,22 @@ router.get("/analytics", async (_req, res) => {
       message: "Analytics query failed."
     });
   }
+});
+
+router.post("/events/procedural", async (req, res) => {
+  const count = number(req.body.count, "Event count", 1, 100);
+
+  const events = await generateProceduralEvents(count);
+
+  res.status(201).json(events);
+});
+
+router.post("/events/procedural", async (req, res) => {
+  const count = number(req.body.count, "Event count", 1, 100);
+
+  const events = await generateProceduralEvents(count);
+
+  res.status(201).json(events);
 });
 
 router.post("/events", async (req, res) => {

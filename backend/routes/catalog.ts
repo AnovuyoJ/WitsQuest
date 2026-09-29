@@ -5,6 +5,7 @@ import { isAdministrator } from "../middleware/requireAdmin";
 import { id, HttpError } from "../services/validation";
 import { exchangeCards, exchangeOptions } from "../services/exchangeService";
 import { deleteAccount } from "../services/accountService";
+import { rotateProceduralEvents } from "../services/proceduralEventService";
 import { imageValue } from "../services/imageValidation";
 import { buildAchievements, calculateCurrentStreak, type ProgressStats } from "../services/progressService";
 
@@ -148,8 +149,11 @@ router.get("/leaderboard", async (req, res) => {
 });
 
 router.get("/events", async (_req, res) => {
+  await rotateProceduralEvents();
+
   const { rows } = await database.query(`SELECT id, title, description, latitude, longitude,
     radius_meters, starts_at, ends_at, created_at FROM public.live_events ORDER BY starts_at`);
+
   res.json(rows);
 });
 
