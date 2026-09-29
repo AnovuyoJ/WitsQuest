@@ -42,6 +42,11 @@ const navItems: NavItem[] = [
     icon: <CardIcon />,
   },
   {
+    label: "Moderation",
+    href: "/dashboard/admin/moderation",
+    icon: <ShieldIcon />,
+  },
+  {
     label: "Zones",
     href: "/dashboard/admin/zones",
     icon: <ZoneIcon />
@@ -400,6 +405,24 @@ function CardIcon() {
       />
       <path d="M10 8h4" />
       <path d="M10 12h4" />
+    </svg>
+  );
+}
+
+function ShieldIcon() {
+  return (
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
     </svg>
   );
 }

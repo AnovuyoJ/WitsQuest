@@ -3,7 +3,17 @@
 import { useCallback, useEffect, useState } from "react";
 import { apiRequest, type Leaderboard, type LeaderboardEntry } from "@/lib/api";
 import { ScreenHeader } from "@/components/WitsScreen";
+import { createClient } from "@supabase/supabase-js";
 import styles from "./leaderboard.module.css";
+
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
+const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
+const supabase = createClient(supabaseUrl, supabaseAnonKey);
+
+type TrustData = {
+  score: number;
+  status: "good_standing" | "warning" | "restricted" | "banned";
+};
 
 function initials(name: string) {
   return name.split(/\s+/).filter(Boolean).slice(0, 2).map((part) => part[0]?.toUpperCase()).join("") || "WQ";
@@ -24,17 +34,115 @@ function PlayerDetails({ entry }: { entry: LeaderboardEntry }) {
   );
 }
 
+function TrustBadge({ trust }: { trust: TrustData }) {
+  const getStatusDetails = () => {
+    switch (trust.status) {
+      case "good_standing":
+        return {
+          bg: "rgba(16, 185, 129, 0.12)",
+          border: "rgba(16, 185, 129, 0.3)",
+          color: "#10B981",
+          
+          label: "Good Standing",
+        };
+      case "warning":
+        return {
+          bg: "rgba(245, 158, 11, 0.12)",
+          border: "rgba(245, 158, 11, 0.3)",
+          color: "#F59E0B",
+          icon: "⚠️",
+          label: "Warning",
+        };
+      case "restricted":
+      case "banned":
+        return {
+          bg: "rgba(239, 68, 68, 0.12)",
+          border: "rgba(239, 68, 68, 0.3)",
+          color: "#EF4444",
+          icon: "🚫",
+          label: "Restricted",
+        };
+      default:
+        return {
+          bg: "rgba(100, 116, 139, 0.12)",
+          border: "rgba(100, 116, 139, 0.3)",
+          color: "#94A3B8",
+          icon: "🛡️",
+          label: "Verified",
+        };
+    }
+  };
+
+  const style = getStatusDetails();
+
+  return (
+    <div
+      title={`Trust Score: ${trust.score}/100 (${style.label})`}
+      style={{
+        display: "inline-flex",
+        alignItems: "center",
+        gap: "6px",
+        padding: "4px 10px",
+        borderRadius: "9999px",
+        backgroundColor: style.bg,
+        border: `1px solid ${style.border}`,
+        color: style.color,
+        fontSize: "0.75rem",
+        fontWeight: "600",
+        whiteSpace: "nowrap",
+      }}
+    >
+      <span>{style.icon}</span>
+      <span>{trust.score} Trust</span>
+    </div>
+  );
+}
+
 export default function LeaderboardPage() {
   const [leaderboard, setLeaderboard] = useState<Leaderboard | null>(null);
+  const [trustData, setTrustData] = useState<TrustData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
     setError("");
+
+    // 1. Fetch Leaderboard Standings
     const result = await apiRequest<Leaderboard>("/leaderboard");
-    if (result.data) setLeaderboard(result.data);
-    else setError(result.error?.message ?? "Could not load the standings.");
+    if (result.data) {
+      setLeaderboard(result.data);
+    } else {
+      setError(result.error?.message ?? "Could not load the standings.");
+    }
+
+    // 2. Fetch or fallback trust score
+    try {
+      const { data: authData } = await supabase.auth.getUser();
+      const activePlayerId = authData?.user?.id || result.data?.currentPlayer?.playerId;
+
+      if (activePlayerId) {
+        let currentTrust: TrustData = { score: 100, status: "good_standing" };
+
+        const { data: dbTrust } = await supabase
+          .from("player_trust_score")
+          .select("score, status")
+          .eq("player_id", activePlayerId)
+          .maybeSingle();
+
+        if (dbTrust) {
+          currentTrust = {
+            score: dbTrust.score ?? 100,
+            status: dbTrust.status ?? "good_standing",
+          };
+        }
+
+        setTrustData(currentTrust);
+      }
+    } catch (err) {
+      console.error("Trust score fetch error:", err);
+    }
+
     setLoading(false);
   }, []);
 
@@ -54,10 +162,16 @@ export default function LeaderboardPage() {
       />
 
       <section className={styles.board} aria-labelledby="standings-heading">
-        <div className={styles.boardHeader}>
-          <span className={styles.headerSeal} aria-hidden="true">WQ</span>
-          <div><p>Official field board</p><h2 id="standings-heading">Leaderboard</h2></div>
-          <span className={styles.liveLabel}>Live totals</span>
+        <div className={styles.boardHeader} style={{ display: "flex", alignItems: "center", justifyContent: "space-between", flexWrap: "wrap", gap: "12px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <span className={styles.headerSeal} aria-hidden="true">WQ</span>
+            <div><p>Official field board</p><h2 id="standings-heading">Leaderboard</h2></div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: "6px" }}>
+            {trustData && <TrustBadge trust={trustData} />}
+            <span className={styles.liveLabel}>Live totals</span>
+          </div>
         </div>
 
         {loading ? (
