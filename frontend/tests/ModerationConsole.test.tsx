@@ -13,10 +13,10 @@ jest.mock("@supabase/supabase-js", () => ({
       select: () => ({
         order: mockSelect,
       }),
-      update: (data: any) => {
-        mockUpdate(data);
-        return { eq: mockEq };
-      },
+      update: (data: Record<string, unknown>) => {
+  mockUpdate(data);
+  return { eq: mockEq };
+},
     }),
   }),
 }));
