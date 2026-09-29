@@ -17,7 +17,8 @@ CREATE TABLE IF NOT EXISTS public.events (
   starts_at timestamptz NOT NULL, ends_at timestamptz NOT NULL,
   campaign_id uuid REFERENCES public.campaigns(id),
   retired_at timestamptz,
-  created_at timestamptz DEFAULT now(), CHECK (ends_at > starts_at)
+  created_at timestamptz DEFAULT now(), CHECK (ends_at > starts_at),
+  is_procedural boolean NOT NULL DEFAULT false
 );
 CREATE TABLE IF NOT EXISTS public.cards (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(), event_id uuid REFERENCES public.events(id),
