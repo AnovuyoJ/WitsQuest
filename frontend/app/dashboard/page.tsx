@@ -9,6 +9,7 @@ import { ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 import { supabase } from "@/lib/supabaseClient";
 import profileStyles from "../profile/profile.module.css";
 import ForwardArrowIcon from "@/components/ForwardArrowIcon";
+import TrustAndRatingBadge from "@/components/TrustAndRatingBadge";
 
 type ActiveEvent = { id: string; title: string; description: string | null; ends_at: string };
 
@@ -64,7 +65,10 @@ export default function DashboardPage() {
             Pick up an active challenge, scan the campus map or check the cards you have earned.
           </p>
         </div>
-        <ProfileMenuContainer />
+        <div className="flex items-center gap-3">
+          <TrustAndRatingBadge />
+          <ProfileMenuContainer />
+        </div>
       </header>
 
       {/* Hero Quick Action Panels */}
