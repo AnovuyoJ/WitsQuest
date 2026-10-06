@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
 import OfflineSyncProvider from "@/components/OfflineSyncProvider";
+import PageTitleManager from "@/components/PageTitleManager";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="campus-background min-h-full flex flex-col">
+        <PageTitleManager />
         <OfflineSyncProvider>{children}</OfflineSyncProvider>
       </body>
     </html>
