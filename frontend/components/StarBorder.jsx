@@ -12,7 +12,7 @@ export default function StarBorder({
   textColor = '#ffffff',
   borderColor = '#222222',
   children,
-  style,
+  style = {},
   ...rest
 }) {
   return (
