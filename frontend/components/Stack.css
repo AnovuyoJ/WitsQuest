@@ -1,0 +1,55 @@
+.stack {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  outline: none;
+}
+
+.stack:focus-visible .stack-card[data-top] .stack-card-face {
+  outline: 2px solid currentColor;
+  outline-offset: 4px;
+}
+
+.stack-card {
+  position: absolute;
+  inset: 0;
+  will-change: transform;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.stack-card-face {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  will-change: transform;
+}
+
+.stack-card-content {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.stack-card-content img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.stack-card-shade {
+  position: absolute;
+  inset: 0;
+  background: #000;
+  pointer-events: none;
+}
+
+
+.stack-next { position: absolute; top: calc(100% + 22px); left: 50%; transform: translateX(-50%); padding: 8px 18px; border: 1px solid var(--line); border-radius: 999px; background: var(--surface); color: var(--heading); font-size: 13px; font-weight: 700; white-space: nowrap; }
+.stack-next:focus-visible { outline: 2px solid var(--heading); outline-offset: 3px; }
+.stack-next:disabled { opacity: .5; }

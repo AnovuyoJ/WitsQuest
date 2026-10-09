@@ -6,7 +6,7 @@ import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
 import { ScreenSkeleton } from "@/components/WitsScreen";
 
-const WITS_BLUE = "#043673";
+const WITS_BLUE = "var(--brand)";
 
 type GameStatus =
   | "waiting"

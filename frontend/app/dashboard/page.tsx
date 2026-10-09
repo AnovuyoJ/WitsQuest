@@ -4,7 +4,6 @@ import { apiRequest, type EventRecord, type Leaderboard, type PlayerProgress } f
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import ProfileMenuContainer from "@/components/ProfileMenuContainer";
 import { ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 import { supabase } from "@/lib/supabaseClient";
 import profileStyles from "../profile/profile.module.css";
@@ -64,7 +63,6 @@ export default function DashboardPage() {
             Pick up an active challenge, scan the campus map or check the cards you have earned.
           </p>
         </div>
-        <ProfileMenuContainer />
       </header>
 
       {/* Hero Quick Action Panels */}
@@ -221,16 +219,16 @@ export default function DashboardPage() {
       </section>
 
       <section className="mt-8 mb-4" aria-labelledby="dashboard-standing-heading">
-        <div className="relative overflow-hidden rounded-2xl border border-[#8A6A25] bg-[linear-gradient(110deg,#F6DA7B,#C9A24B_62%,#A7781D)] p-4 shadow-[inset_0_1px_0_#FFF1B5,inset_0_-3px_5px_rgba(116,80,15,.25),0_5px_0_#765517,0_14px_28px_rgba(25,58,101,.16)] sm:p-5">
-          <span className="absolute left-2 top-2 h-2 w-2 rounded-full bg-[radial-gradient(circle_at_35%_30%,#FFF6C9,#8D681D_65%)] shadow-sm" aria-hidden="true" />
-          <span className="absolute bottom-2 right-2 h-2 w-2 rounded-full bg-[radial-gradient(circle_at_35%_30%,#FFF6C9,#8D681D_65%)] shadow-sm" aria-hidden="true" />
+        <div className="dashboard-standing-panel relative overflow-hidden rounded-2xl border border-[#8A6A25] bg-[linear-gradient(110deg,#F6DA7B,#C9A24B_62%,#A7781D)] p-4 shadow-[inset_0_1px_0_#FFF1B5,inset_0_-3px_5px_rgba(116,80,15,.25),0_5px_0_#765517,0_14px_28px_rgba(25,58,101,.16)] sm:p-5">
+          <span className="dashboard-standing-pin absolute left-2 top-2 h-2 w-2 rounded-full bg-[radial-gradient(circle_at_35%_30%,#FFF6C9,#8D681D_65%)] shadow-sm" aria-hidden="true" />
+          <span className="dashboard-standing-pin absolute bottom-2 right-2 h-2 w-2 rounded-full bg-[radial-gradient(circle_at_35%_30%,#FFF6C9,#8D681D_65%)] shadow-sm" aria-hidden="true" />
           <div className="flex flex-col gap-5 lg:flex-row lg:items-center lg:justify-between">
             <div className="flex items-center gap-4">
-              <div className="grid h-[72px] w-[72px] shrink-0 place-content-center rounded-full border border-[#061D3A] bg-[radial-gradient(circle_at_35%_28%,#315C8E,#092B55_65%,#041B36)] text-center text-white shadow-[inset_0_2px_2px_rgba(255,255,255,.22),inset_0_-3px_4px_rgba(0,0,0,.4),0_4px_7px_rgba(81,59,22,.3)]">
+              <div className="dashboard-standing-rank grid h-[72px] w-[72px] shrink-0 place-content-center rounded-full border border-[#061D3A] bg-[radial-gradient(circle_at_35%_28%,#315C8E,#092B55_65%,#041B36)] text-center text-white shadow-[inset_0_2px_2px_rgba(255,255,255,.22),inset_0_-3px_4px_rgba(0,0,0,.4),0_4px_7px_rgba(81,59,22,.3)]">
                 <span className="text-[9px] font-black uppercase tracking-[.13em]">Rank</span>
                 <strong className="text-2xl leading-none text-[#F5CF68]">{leaderboard?.currentPlayer?.rank ? `#${leaderboard.currentPlayer.rank}` : "NR"}</strong>
               </div>
-              <div>
+              <div className="dashboard-standing-copy">
                 <p className="text-[10px] font-black uppercase tracking-[.15em] text-[#604916]">Your standing</p>
                 <h2 id="dashboard-standing-heading" className="mt-1 text-xl font-black tracking-tight text-[#082C58] skeuo-text-emboss">
                   {leaderboard?.currentPlayer?.rank ? "You are on the board" : "Your first rank is waiting"}
@@ -245,13 +243,13 @@ export default function DashboardPage() {
               {leaderboard?.entries.length ? (
                 <ol className="overflow-hidden rounded-xl border border-[#0B294F] bg-[#153963] shadow-[inset_0_2px_5px_rgba(2,14,32,.35),0_1px_0_#FFE69D]">
                   {leaderboard.entries.slice(0, 3).map((entry) => (
-                    <li key={entry.playerId} className={`grid grid-cols-[2.2rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 text-xs ${entry.isCurrentPlayer ? "bg-[#F4D36D] text-[#082C58]" : "text-white"} [&+li]:border-t [&+li]:border-white/10`}>
+                    <li key={entry.playerId} className={`grid grid-cols-[2.2rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2 text-xs ${entry.isCurrentPlayer ? "dashboard-standing-current bg-[#F4D36D] text-[#082C58]" : "text-white"} [&+li]:border-t [&+li]:border-white/10`}>
                       <strong>#{entry.rank}</strong><span className="truncate font-bold">{entry.playerName}</span><span className="font-black">{entry.points.toLocaleString()} pts</span>
                     </li>
                   ))}
                 </ol>
               ) : null}
-              <Link href="/dashboard/leaderboard" className="mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#0B294F] bg-[linear-gradient(#285684,#0F315B)] px-4 py-2 text-xs font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_3px_0_#061B36] transition hover:brightness-110 active:translate-y-0.5 active:shadow-[inset_0_2px_4px_rgba(0,0,0,.4),0_1px_0_#061B36] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#082C58]">
+              <Link href="/dashboard/leaderboard" className="dashboard-standing-link mt-3 inline-flex min-h-10 items-center gap-1.5 rounded-lg border border-[#0B294F] bg-[linear-gradient(#285684,#0F315B)] px-4 py-2 text-xs font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,.22),0_3px_0_#061B36] transition hover:brightness-110 active:translate-y-0.5 active:shadow-[inset_0_2px_4px_rgba(0,0,0,.4),0_1px_0_#061B36] focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-[#082C58]">
                 View full leaderboard <ForwardArrowIcon />
               </Link>
             </div>

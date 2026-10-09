@@ -1,0 +1,42 @@
+.star-border-container {
+  display: inline-block;
+  position: relative;
+  isolation: isolate;
+  border-radius: 20px;
+  overflow: hidden;
+  background: transparent;
+}
+.star-border-gradient-bottom, .star-border-gradient-top {
+  position: absolute;
+  width: 300%;
+  height: 50%;
+  opacity: .7;
+  border-radius: 50%;
+  z-index: 0;
+  pointer-events: none;
+}
+.star-border-gradient-bottom { bottom: -12px; right: -250%; animation: star-movement-bottom linear infinite alternate; }
+.star-border-gradient-top { top: -12px; left: -250%; animation: star-movement-top linear infinite alternate; }
+.star-border-inner-content {
+  display: block;
+  position: relative;
+  z-index: 1;
+  border: 1px solid;
+  padding: 14px 26px;
+  border-radius: inherit;
+  text-align: center;
+}
+.star-border-container:focus-visible { outline: 2px solid var(--heading); outline-offset: 3px; }
+.star-border-container:disabled .star-border-gradient-bottom,
+.star-border-container:disabled .star-border-gradient-top { animation-play-state: paused; }
+@keyframes star-movement-bottom {
+  from { transform: translate(0, 0); opacity: 1; }
+  to { transform: translate(-100%, 0); opacity: 0; }
+}
+@keyframes star-movement-top {
+  from { transform: translate(0, 0); opacity: 1; }
+  to { transform: translate(100%, 0); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .star-border-gradient-bottom, .star-border-gradient-top { animation: none; }
+}

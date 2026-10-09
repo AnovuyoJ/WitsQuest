@@ -3,10 +3,9 @@
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import { apiRequest } from "@/lib/api";
 import { FormEvent, useEffect, useState } from "react";
-import Link from "next/link";
 
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_GOLD = "var(--accent)";
 
 type Campaign = {
   id: string;
@@ -171,12 +170,6 @@ export default function AdminCampaignsPage() {
               Group events under a named campaign (e.g. an open day or term) to schedule and organize them together.
             </p>
           </div>
-          <Link
-            href="/dashboard/admin"
-            className="skeuo-btn-secondary shrink-0 rounded-xl px-4 py-2 text-sm font-semibold"
-          >
-            ← Back to dashboard
-          </Link>
         </div>
       </div>
 

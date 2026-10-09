@@ -1,5 +1,9 @@
 "use client";
 
+import AuthBrandBadge from "./AuthBrandBadge";
+import StarBorder from "./StarBorder";
+import Link from "next/link";
+
 import { useState, FormEvent } from "react";
 // 1. Importing our shiny social auth functions alongside signUp
 import { signUp, signInWithGithub, signInWithGoogle } from "@/lib/authService";
@@ -11,8 +15,8 @@ type FormError = {
   confirmPassword?: string;
 };
 
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_GOLD = "var(--accent)";
 
 export default function SignUpForm() {
   const [fullName, setFullName] = useState("");
@@ -100,7 +104,7 @@ export default function SignUpForm() {
   if (submitted) {
     return (
       <div className="skeuo-card w-full max-w-sm p-10 text-center">
-        <Monogram />
+        <AuthBrandBadge />
         <h2 className="mt-5 text-2xl font-black tracking-tight text-[#043673]">Check your email</h2>
         <p className="mt-2 text-sm leading-relaxed text-gray-500">
           We&apos;ve sent a confirmation link to{" "}
@@ -125,7 +129,7 @@ export default function SignUpForm() {
 
       <div className="px-9 pb-9 pt-8">
         <div className="mb-7 flex flex-col items-center text-center">
-          <Monogram />
+          <AuthBrandBadge />
           <h1 className="mt-4 text-[28px] font-black leading-tight tracking-[-.04em] text-[#043673] skeuo-text-emboss">
             Join Wits Quest
           </h1>
@@ -197,42 +201,32 @@ export default function SignUpForm() {
           last
         />
 
-        <button
+        <StarBorder
           type="submit"
           disabled={isSubmitting}
-          style={{ background: WITS_BLUE }}
-          className="mt-1 w-full rounded-xl py-3.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[.99] disabled:cursor-wait disabled:opacity-60"
+          aria-busy={isSubmitting}
+          color="var(--accent-light)"
+          speed="5s"
+          thickness={2}
+          backgroundColor={WITS_BLUE}
+          textColor="#ffffff"
+          borderColor="var(--brand-dark)"
+          className="mt-1 w-full text-sm font-bold text-white transition hover:brightness-110 active:scale-[.99] disabled:cursor-wait disabled:opacity-60"
         >
           {isSubmitting ? "Creating account…" : "Create account"}
-        </button>
+        </StarBorder>
 
         <p className="mt-5 text-center text-sm text-gray-500">
           Already have an account?{" "}
-          <a href="/Login" className="font-medium" style={{ color: WITS_BLUE }}>
+          <Link href="/Login" className="font-medium" style={{ color: WITS_BLUE }}>
             Sign in
-          </a>
+          </Link>
         </p>
       </div>
     </form>
   );
 }
 
-// --- Monogram badge ---
-function Monogram() {
-  return (
-    <div
-      className="flex h-14 w-14 items-center justify-center rounded-2xl"
-      style={{
-        background: `linear-gradient(155deg, ${WITS_BLUE} 0%, #0A1F3D 100%)`,
-        boxShadow: `0 0 0 3px ${WITS_GOLD}33`,
-      }}
-    >
-      <span className="text-lg font-black tracking-wide" style={{ color: WITS_GOLD }}>
-        WQ
-      </span>
-    </div>
-  );
-}
 
 function Field({
   id,

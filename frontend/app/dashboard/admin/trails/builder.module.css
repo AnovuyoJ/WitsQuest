@@ -1,0 +1,30 @@
+.page { max-width: 1200px; margin: 0 auto; padding: 32px; color: var(--foreground); }
+.form, .savedTrail { background: var(--surface); border: 1px solid var(--line); border-radius: 20px; box-shadow: inset 0 1px 0 #ffffff80, 0 8px 24px color-mix(in srgb, var(--forest-tone-2, #043673) 3.92%, transparent); }
+.form { display: grid; gap: 20px; padding: 28px; margin: 24px 0 32px; }
+.formHeading, .routeHeading { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+.formHeading { padding-bottom: 18px; border-bottom: 1px solid var(--line); }
+.formHeading h2 { font-size: 20px; font-weight: 800; letter-spacing: -.025em; }
+.formHeading > span { padding: 4px 10px; border: 1px solid color-mix(in srgb, var(--forest-tone-5, #c9a24b) 43.92%, transparent); border-radius: 999px; background: color-mix(in srgb, var(--forest-tone-5, #c9a24b) 9.41%, transparent); color: var(--forest-tone-3, #795716); font-size: 11px; font-weight: 800; }
+.form label { font-size: 13px; font-weight: 700; color: var(--foreground); }
+.input { display: block; width: 100%; margin-top: 8px; min-height: 46px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface-soft); color: var(--foreground); font: inherit; font-weight: 500; transition: border-color .15s, box-shadow .15s; }
+textarea.input { resize: vertical; line-height: 1.6; }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--forest-tone-5, #c9a24b) 14.90%, transparent); }
+.routeHeading { padding-top: 20px; border-top: 1px solid var(--line); }
+.routeHeading h3 { font-size: 15px; font-weight: 800; }
+.routeHeading span { color: var(--muted); font-size: 12px; }
+.empty { margin: 0; padding: 18px; border: 1px dashed var(--line); border-radius: 10px; color: var(--muted); font-size: 13px; line-height: 1.6; background: var(--surface-soft); }
+.stops { display: grid; gap: 10px; list-style: none; padding: 0; margin: 0; }
+.stops:empty { display: none; }
+.stops li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; border: 1px solid var(--line); border-radius: 10px; padding: 14px; background: var(--surface-soft); font-size: 13px; }
+.actions { display: flex; flex-wrap: wrap; align-items: center; gap: 18px; padding-top: 20px; border-top: 1px solid var(--line); }
+.actions button:disabled { cursor: not-allowed; }
+.cancel { color: var(--muted); font-size: 13px; font-weight: 600; padding: 8px 0; cursor: pointer; }
+.cancel:hover { color: var(--foreground); text-decoration: underline; }
+.savedTrail { padding: 22px; }
+:global(html[data-theme="dark"]) :is(.form, .savedTrail) { background: linear-gradient(145deg, var(--surface), var(--surface-soft)); box-shadow: inset 0 1px 0 #ffffff18, 0 8px 24px #00000026; }
+:global(html[data-theme="dark"]) .formHeading > span { color: var(--accent-light); }
+:global(html[data-theme="dark"]) .page > p[role="alert"] { color: #fda4af; }
+:global(html[data-theme="dark"]) .page > p[role="status"] { color: #a7f3d0; }
+:global(html[data-theme="dark"]) .stops button[class*="text-red"],
+:global(html[data-theme="dark"]) .savedTrail button[class*="text-red"] { color: #fda4af; }
+@media (max-width: 640px) { .page { padding: 64px 16px 24px; } .form { padding: 20px; } }

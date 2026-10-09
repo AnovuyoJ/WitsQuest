@@ -3,8 +3,8 @@
 import { useState, FormEvent } from "react";
 import { updatePassword } from "@/lib/authService";
 
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_GOLD = "var(--accent)";
 
 export default function ResetPasswordPage() {
   const [password, setPassword] = useState("");

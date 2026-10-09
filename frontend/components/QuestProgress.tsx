@@ -43,6 +43,7 @@ export default function QuestProgress({ summary }: { summary: QuestSummary }) {
                   className="skeuo-card flex items-center gap-3.5 p-3.5 border-[#043673]/12"
                 >
                   <span
+                    data-card-rarity={reward.rarity}
                     aria-hidden="true"
                     className={`h-12 w-9 shrink-0 rotate-[-6deg] rounded-md border-2 shadow-[0_4px_8px_rgba(0,0,0,0.15)] ${
                       reward.rarity === "Gold"
