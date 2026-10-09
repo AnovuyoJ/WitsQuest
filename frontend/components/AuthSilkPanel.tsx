@@ -6,7 +6,7 @@ import { useTheme } from "./ThemeProvider";
 import styles from "./AuthSilkPanel.module.css";
 
 const Silk = dynamic(() => import("./Silk"), { ssr: false });
-const colours = { wits: "#043673", forest: "#164b36", ocean: "#004671", plum: "#69306d", blush: "#70494e" };
+const colours = { wits: "#043673", forest: "#164b36", ocean: "#003153", plum: "#69306d", blush: "#70494e", buttermilk: "#43302e", graphite: "#303030" };
 
 class AnimationBoundary extends Component<{ children: ReactNode }, { failed: boolean }> {
   state = { failed: false };

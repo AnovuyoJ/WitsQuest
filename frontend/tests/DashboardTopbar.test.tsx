@@ -9,7 +9,7 @@ beforeEach(() => {
   jest.spyOn(supabase.auth, "getSession").mockResolvedValue({ data: { session: null }, error: null } as never);
   jest.spyOn(supabase.auth, "onAuthStateChange").mockReturnValue({ data: { subscription: { unsubscribe: jest.fn() } } } as never);
 });
-afterEach(() => jest.restoreAllMocks());
+afterEach(() => { jest.restoreAllMocks(); });
 const renderBar = (pathname = "/dashboard") => render(<PathnameContext.Provider value={pathname}><DashboardTopbar /></PathnameContext.Provider>);
 
 test("searches player pages and offers their actual routes", async () => {

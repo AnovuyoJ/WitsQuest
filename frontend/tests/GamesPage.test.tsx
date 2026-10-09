@@ -446,10 +446,10 @@ test("sorts the locker and preserves deck selection in Stack view", async () => 
   fireEvent.change(screen.getByRole("combobox", { name: "Sort cards" }), { target: { value: "rarity" } });
   expect(cardNames().slice(0, 3)).toEqual(["Blue Card 1", "Blue Card 2", "Invalid Card"]);
   fireEvent.change(screen.getByRole("combobox", { name: "Sort cards" }), { target: { value: "points-asc" } });
-  fireEvent.click(screen.getByRole("button", { name: "Stack", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Stack" }));
   expect(locker().getByRole("button", { name: /Blue Card 2/ }).getAttribute("aria-pressed")).toBe("true");
   fireEvent.click(screen.getByRole("button", { name: "Next card" }));
   await waitFor(() => expect(locker().getByText(/2 of 8.*Blue Card 1/)).not.toBeNull());
-  fireEvent.click(screen.getByRole("button", { name: "Grid", exact: true }));
+  fireEvent.click(screen.getByRole("button", { name: "Grid" }));
   expect(locker().getByRole("button", { name: /Blue Card 2/ }).getAttribute("aria-pressed")).toBe("true");
 });
