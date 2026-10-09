@@ -1,11 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import RulebookButton from "@/components/RulebookButton";
 import { useCallback, useEffect, useState, type FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { apiRequest, type CardRecord, type PlayerCardRecord } from "@/lib/api";
 import { deckCounts, validDeck } from "@/lib/battle";
 import BattleCard from "@/components/BattleCard";
+import Stack from "@/components/Stack";
 import ForwardArrowIcon from "@/components/ForwardArrowIcon";
 import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 import { supabase } from "@/lib/supabaseClient";
@@ -39,6 +41,15 @@ const rarityOrder = { Blue: 0, Black: 1, Gold: 2 };
 export default function GamesPage() {
   const router = useRouter();
   const [cards, setCards] = useState<CardRecord[]>([]);
+  const [cardSort, setCardSort] = useState("rarity");
+  const [cardView, setCardView] = useState("grid");
+  const [stackIndex, setStackIndex] = useState(0);
+  const sortedCards = [...cards].sort((a, b) => {
+    const difference = cardSort === "points-asc" ? a.points - b.points
+      : cardSort === "points-desc" ? b.points - a.points
+      : rarityOrder[a.rarity] - rarityOrder[b.rarity];
+    return difference || a.title.localeCompare(b.title) || a.id.localeCompare(b.id);
+  });
   const [selected, setSelected] = useState<string[]>([]);
   const [stake, setStake] = useState("");
   const [games, setGames] = useState<PendingGame[]>([]);
@@ -215,9 +226,7 @@ export default function GamesPage() {
         title="Build your battle deck"
         description="Five cards. Five rounds. Choose 1 Gold, 2 Black and 2 Blue from any events. Each card can be played once."
         action={
-          <Link href="/dashboard/settings/rulebook" className={styles.rulebookLink}>
-            Rulebook <ForwardArrowIcon />
-          </Link>
+          <RulebookButton />
         }
       />
 
@@ -449,12 +458,7 @@ export default function GamesPage() {
                   ) : (
                     <>Pick a player, one of your cards, and one of theirs.</>
                   )}{" "}
-                  <Link
-                    href="/dashboard/settings/rulebook#trades"
-                    className={styles.tradePolicyLink}
-                  >
-                    Read trade rules
-                  </Link>
+                  <RulebookButton section="trades" label="Read trade rules" />
                 </p>
                 <button
                   type="submit"
@@ -638,10 +642,28 @@ export default function GamesPage() {
                     <p>Your collection</p>
                     <h2 id="card-locker-heading">Card locker</h2>
                   </div>
-                  <span>{cards.length} available</span>
+                  <div className={styles.lockerControls}>
+                    <span>{cards.length} available</span>
+                    <select aria-label="Sort cards" value={cardSort} onChange={event => { setCardSort(event.target.value); setStackIndex(0); }}>
+                      <option value="rarity">Rarity: Blue, Black, Gold</option>
+                      <option value="points-asc">Points: low to high</option>
+                      <option value="points-desc">Points: high to low</option>
+                    </select>
+                    <div className={styles.viewToggle} role="group" aria-label="Card view">
+                      <button type="button" aria-pressed={cardView === "grid"} onClick={() => setCardView("grid")}>Grid</button>
+                      <button type="button" aria-pressed={cardView === "stack"} onClick={() => { setCardView("stack"); setStackIndex(0); }}>Stack</button>
+                    </div>
+                  </div>
                 </div>
-                <div className={styles.cardGrid}>
-                  {cards.map((card) => (
+                {cardView === "stack" ? <div className={styles.stackArea}>
+                  <p className={styles.stackHint}>Swipe to browse. Select a card to add or remove it from your deck.</p>
+                  <div className={styles.stackFrame}>
+                    <Stack key={`${cardSort}:${sortedCards.map(card => card.id).join(",")}`} layout="fan" spread={0.35} visible={3} tilt={12} onChange={setStackIndex} showControls cards={sortedCards.map(card => <BattleCard key={card.id} card={card} selected={selected.includes(card.id)} disabled={busy || card.points < 0 || card.points > 100} onClick={() => toggle(card)} />)} />
+                  </div>
+                  <p className={styles.stackHint} aria-live="polite">{Math.min(stackIndex + 1, sortedCards.length)} of {sortedCards.length}{sortedCards[stackIndex] && ` · ${sortedCards[stackIndex].title}`}</p>
+                  {sortedCards[stackIndex] && (sortedCards[stackIndex].points < 0 || sortedCards[stackIndex].points > 100) && <p className={styles.invalidCard}>Needs an admin point correction before use.</p>}
+                </div> : <div className={styles.cardGrid}>
+                  {sortedCards.map((card) => (
                     <div
                       key={card.id}
                       className={`${styles.cardSlot} ${
@@ -661,7 +683,7 @@ export default function GamesPage() {
                       ) : null}
                     </div>
                   ))}
-                </div>
+                </div>}
               </section>
             </>
           )}

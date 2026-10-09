@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import RulebookButton from "@/components/RulebookButton";
 import { useCallback, useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { apiRequest } from "@/lib/api";
@@ -104,7 +105,7 @@ export default function GameRoomPage() {
         <p aria-live="polite" className="mr-auto text-lg font-black text-[#043673]">
           You <span className="text-[#C9A24B]">{myScore} – {opponentScore}</span> {game.is_cpu ? "CPU" : "Opponent"}
         </p>
-        <Link href="/dashboard/settings/rulebook" className="text-sm font-semibold text-[#043673] underline underline-offset-2">Rules</Link>
+        <RulebookButton />
         {["waiting", "active"].includes(game.status) && (
           <button 
             disabled={busy} 

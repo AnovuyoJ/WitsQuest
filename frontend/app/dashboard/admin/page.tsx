@@ -25,7 +25,7 @@ const workspaces = [
     action: "Build trail",
     icon: "🧭",
     detail: "Connect your quests into a journey.",
-    tone: "bg-[#EDF5EA] border-[#CDDFC5]",
+    tone: "bg-[#EDF5EA] border-[#CDDFC5] dark:border-slate-700",
   },
   {
     key: "challenges",
@@ -109,7 +109,7 @@ export default function AdminDashboardPage() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl p-5 text-stone-800 sm:p-8 lg:p-10">
+    <div className="mx-auto max-w-6xl p-5 text-stone-800 dark:text-slate-100 sm:p-8 lg:p-10">
       <header className="skeuo-plate-navy rounded-2xl p-6 sm:p-8">
         <p className="text-xs font-bold uppercase tracking-widest text-[#C9A24B]">
           Behind the adventure
@@ -144,7 +144,7 @@ export default function AdminDashboardPage() {
           Your next creation
         </h2>
 
-        <p className="mt-1 text-sm text-stone-600">
+        <p className="mt-1 text-sm text-stone-600 dark:text-slate-300">
           Choose a workspace to start something new or polish what&apos;s
           already there.
         </p>
@@ -180,7 +180,7 @@ export default function AdminDashboardPage() {
                 </span>
               </h3>
 
-              <p className="mt-2 text-sm leading-6 text-stone-600">
+              <p className="mt-2 text-sm leading-6 text-stone-600 dark:text-slate-300">
                 {workspace.detail}
               </p>
             </Link>
@@ -191,7 +191,7 @@ export default function AdminDashboardPage() {
       {error && (
         <p
           role="alert"
-          className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800"
+          className="mt-4 rounded-xl border border-red-200 bg-red-50 p-4 text-sm text-red-800 dark:border-red-900 dark:bg-red-950 dark:text-red-200"
         >
           Some content could not be loaded. {error}
         </p>
@@ -210,7 +210,7 @@ export default function AdminDashboardPage() {
             </Link>
           </div>
 
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="mt-2 text-sm text-stone-500 dark:text-slate-400">
             Your saved events and where they stand.
           </p>
 
@@ -228,7 +228,7 @@ export default function AdminDashboardPage() {
               Your next adventure starts here. Create your first event above.
             </p>
           ) : (
-            <ul className="mt-4 divide-y divide-stone-100">
+            <ul className="mt-4 divide-y divide-stone-100 dark:divide-slate-700">
               {events.map((event) => (
                 <li key={event.id} className="py-4">
                   <div className="flex flex-wrap items-center justify-between gap-2">
@@ -256,7 +256,7 @@ export default function AdminDashboardPage() {
                     </span>
                   </div>
 
-                  <p className="mt-2 text-xs text-stone-500">
+                  <p className="mt-2 text-xs text-stone-500 dark:text-slate-400">
                     {event.published_revision === null
                       ? "Only admins can see this. Review it when you're ready."
                       : event.published_revision === event.draft_revision
@@ -294,13 +294,13 @@ export default function AdminDashboardPage() {
 
                 <div>
                   <h3 className="font-semibold">{title}</h3>
-                  <p className="mt-1 leading-6 text-stone-600">{detail}</p>
+                  <p className="mt-1 leading-6 text-stone-600 dark:text-slate-300">{detail}</p>
                 </div>
               </li>
             ))}
           </ol>
 
-          <p className="mt-5 border-t border-[#CDDFC5] pt-4 text-xs leading-5 text-stone-600">
+          <p className="mt-5 border-t border-[#CDDFC5] dark:border-slate-700 pt-4 text-xs leading-5 text-stone-600 dark:text-slate-300">
             Published content stays live while you edit its next draft. Reward
             cards save directly.
           </p>

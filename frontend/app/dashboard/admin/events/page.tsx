@@ -7,8 +7,8 @@ import { useAdminAccess } from "@/lib/useAdminAccess";
 import { apiRequest, type EventRecord } from "@/lib/api";
 import { FormEvent, useEffect, useState } from "react";
 import Link from "next/link";
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_GOLD = "var(--accent)";
 
 
 type Event = {
@@ -465,13 +465,6 @@ export default function AdminEventsPage() {
               Create and manage campus quests and their locations.
             </p>
           </div>
-
-          <Link
-            href="/dashboard/admin"
-            className="skeuo-btn-secondary shrink-0 rounded-xl px-4 py-2 text-sm font-semibold"
-          >
-            ← Back to dashboard
-          </Link>
         </div>
       </div>
 

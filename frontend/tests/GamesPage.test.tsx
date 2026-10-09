@@ -430,3 +430,26 @@ test("recipient can reject a pending trade", async () => {
 
   await waitFor(() => expect(rejectCalls).toHaveLength(1));
 });
+
+test("sorts the locker and preserves deck selection in Stack view", async () => {
+  request.mockImplementation(async url => String(url).endsWith("/me/cards")
+    ? response(mockCards.map(card => ({ id: "usr-" + card.id, card_id: card.id, cards: card })))
+    : response([]));
+  renderGamesPage();
+  await waitFor(() => expect(locker().getByText("Gold Card 1")).not.toBeNull());
+  const cardNames = () => locker().getAllByRole("button").filter(button => button.querySelector("h3")).map(button => button.querySelector("h3")?.textContent);
+  fireEvent.change(screen.getByRole("combobox", { name: "Sort cards" }), { target: { value: "points-asc" } });
+  expect(cardNames()[0]).toBe("Blue Card 2");
+  fireEvent.click(locker().getByRole("button", { name: /Blue Card 2/ }));
+  fireEvent.change(screen.getByRole("combobox", { name: "Sort cards" }), { target: { value: "points-desc" } });
+  expect(cardNames()[0]).toBe("Invalid Card");
+  fireEvent.change(screen.getByRole("combobox", { name: "Sort cards" }), { target: { value: "rarity" } });
+  expect(cardNames().slice(0, 3)).toEqual(["Blue Card 1", "Blue Card 2", "Invalid Card"]);
+  fireEvent.change(screen.getByRole("combobox", { name: "Sort cards" }), { target: { value: "points-asc" } });
+  fireEvent.click(screen.getByRole("button", { name: "Stack", exact: true }));
+  expect(locker().getByRole("button", { name: /Blue Card 2/ }).getAttribute("aria-pressed")).toBe("true");
+  fireEvent.click(screen.getByRole("button", { name: "Next card" }));
+  await waitFor(() => expect(locker().getByText(/2 of 8.*Blue Card 1/)).not.toBeNull());
+  fireEvent.click(screen.getByRole("button", { name: "Grid", exact: true }));
+  expect(locker().getByRole("button", { name: /Blue Card 2/ }).getAttribute("aria-pressed")).toBe("true");
+});

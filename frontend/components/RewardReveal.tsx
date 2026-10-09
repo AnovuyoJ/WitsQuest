@@ -17,7 +17,7 @@ export default function RewardReveal({ cardId }: { cardId: string | null }) {
   const palette = card?.rarity === "Black" ? "border-slate-600 bg-slate-800 text-white" : card?.rarity === "Blue" ? "border-[#799ABD] bg-[#EDF3FA] text-[#043673]" : "border-[#C9A24B] bg-[#FFF8E5] text-[#604713]";
   return <section className="mt-5 rounded-2xl border border-[#E8D9B6] bg-[#FAF8F3] p-5 text-center" aria-label="Reward earned">
     <p role="status" className="text-sm font-bold text-[#775718]">New card earned!</p>
-    {card ? <div className={`${styles.reveal} mx-auto mt-4 max-w-60 rounded-xl border-2 p-5 shadow-lg ${palette}`}>
+    {card ? <div data-card-rarity={card.rarity} className={`${styles.reveal} mx-auto mt-4 max-w-60 rounded-xl border-2 p-5 shadow-lg ${palette}`}>
       <p className="text-[10px] font-bold uppercase tracking-widest">{card.rarity} rarity</p>
       <span aria-hidden="true" className="my-3 block text-3xl">✦</span>
       <h4 className="break-words text-xl font-black">{card.title}</h4>

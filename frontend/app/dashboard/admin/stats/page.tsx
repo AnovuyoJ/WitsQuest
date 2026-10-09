@@ -1,12 +1,13 @@
 "use client";
+import AdminPageHeader from "@/components/AdminPageHeader";
 
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import { apiRequest } from "@/lib/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_GOLD = "var(--accent)";
 
 type LocationStat = {
   id: string;
@@ -103,35 +104,7 @@ export default function AdminStatsPage() {
 
   return (
     <div className="space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p
-            className="text-xs font-semibold uppercase tracking-[0.28em]"
-            style={{ color: WITS_GOLD }}
-          >
-            Admin console
-          </p>
-
-          <h1
-            className="mt-2 text-4xl font-black tracking-[-0.045em]"
-            style={{ color: WITS_BLUE }}
-          >
-            Quest analytics
-          </h1>
-
-          <p className="mt-2 max-w-2xl text-sm text-slate-500">
-            Monitor player engagement with locations and questions, and track
-            which cards are being awarded.
-          </p>
-        </div>
-
-        <Link
-          href="/dashboard/admin"
-          className="rounded-xl border border-[#043673]/15 bg-white px-4 py-2 text-sm font-semibold text-[#043673] shadow-sm transition hover:bg-[#043673]/5"
-        >
-          ← Back to dashboard
-        </Link>
-      </header>
+      <AdminPageHeader title={"Quest analytics"} description="Monitor player engagement with locations and questions, and track which cards are being awarded." />
 
       {error && (
         <div className="rounded-xl bg-red-50 p-4 text-sm text-red-700">
