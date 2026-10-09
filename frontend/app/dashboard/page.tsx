@@ -8,6 +8,7 @@ import { ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 import { supabase } from "@/lib/supabaseClient";
 import profileStyles from "../profile/profile.module.css";
 import ForwardArrowIcon from "@/components/ForwardArrowIcon";
+import TrustAndRatingBadge from "@/components/TrustAndRatingBadge";
 
 type ActiveEvent = { id: string; title: string; description: string | null; ends_at: string };
 
@@ -62,6 +63,9 @@ export default function DashboardPage() {
           <p className="mt-3 max-w-xl text-sm leading-6 text-slate-600 font-medium">
             Pick up an active challenge, scan the campus map or check the cards you have earned.
           </p>
+        </div>
+        <div className="flex items-center gap-3">
+          <TrustAndRatingBadge />
         </div>
       </header>
 
