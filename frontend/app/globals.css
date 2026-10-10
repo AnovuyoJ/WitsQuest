@@ -10,7 +10,7 @@
   --accent-light: #e2c66f;
   --background: #f4f6f9;
   --foreground: #10233d;
-  color-scheme: light;
+  color-scheme: only light;
   --surface: #ffffff;
   --surface-soft: #f7f9fc;
   --surface-muted: #edf2f8;
