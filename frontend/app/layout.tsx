@@ -1,4 +1,4 @@
-import type { Metadata, Viewport } from "next"; // added Viewport
+import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import "leaflet/dist/leaflet.css";
@@ -20,10 +20,6 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "WitsQuest",
   description: "Explore Wits campus, complete quests, and collect cards.",
-};
-
-export const viewport: Viewport = {
-  colorScheme: "light dark", // tells phone browsers the page handles dark mode itself, so they don't force-darken it
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {
