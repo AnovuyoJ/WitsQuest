@@ -4,10 +4,11 @@ import { createContext, useContext, useLayoutEffect, useState, type ReactNode } 
 
 import { palettes, PALETTE_STORAGE_KEY, THEME_STORAGE_KEY, type Palette } from "@/lib/theme";
 
-const ThemeContext = createContext<{ darkMode: boolean; toggleDarkMode: () => void; palette: Palette; setPalette: (palette: Palette) => void }>({ darkMode: false, toggleDarkMode: () => {}, palette: "wits", setPalette: () => {} });
+const ThemeContext = createContext<{ darkMode: boolean; toggleDarkMode: () => void; followSystem: boolean; resetToSystemTheme: () => void; palette: Palette; setPalette: (palette: Palette) => void }>({ darkMode: false, toggleDarkMode: () => {}, followSystem: true, resetToSystemTheme: () => {}, palette: "wits", setPalette: () => {} }); // added followSystem and resetToSystemTheme
 
 export default function ThemeProvider({ children }: { children: ReactNode }) {
   const [darkMode, setDarkMode] = useState(false);
+  const [followSystem, setFollowSystem] = useState(true); // true until the user picks light or dark
   const [palette, updatePalette] = useState<Palette>("wits");
 
   useLayoutEffect(() => {
@@ -18,6 +19,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
       const dark = saved === "dark" || (saved !== "light" && media.matches);
       document.documentElement.dataset.theme = dark ? "dark" : "light";
       setDarkMode(dark);
+      setFollowSystem(saved !== "dark" && saved !== "light"); // no saved choice means follow the device
       let savedPalette: string | null = null;
       try { savedPalette = localStorage.getItem(PALETTE_STORAGE_KEY); } catch { /* Storage may be disabled. */ }
       if (savedPalette === "sage-rose" || savedPalette === "raspberry") savedPalette = "blush";
@@ -41,7 +43,17 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     const next = document.documentElement.dataset.theme !== "dark";
     document.documentElement.dataset.theme = next ? "dark" : "light";
     setDarkMode(next);
+    setFollowSystem(false); // the user has now made an explicit choice
     try { localStorage.setItem(THEME_STORAGE_KEY, next ? "dark" : "light"); } catch { /* Keep the in-memory choice. */ }
+  };
+
+  // Forget the saved choice and go back to matching the device.
+  const resetToSystemTheme = () => {
+    try { localStorage.removeItem(THEME_STORAGE_KEY); } catch { /* Storage may be disabled. */ }
+    const dark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+    setDarkMode(dark);
+    setFollowSystem(true);
   };
 
   const setPalette = (next: Palette) => {
@@ -50,7 +62,7 @@ export default function ThemeProvider({ children }: { children: ReactNode }) {
     try { localStorage.setItem(PALETTE_STORAGE_KEY, next); } catch { /* Keep the in-memory choice. */ }
   };
 
-  return <ThemeContext.Provider value={{ darkMode, toggleDarkMode, palette, setPalette }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ darkMode, toggleDarkMode, followSystem, resetToSystemTheme, palette, setPalette }}>{children}</ThemeContext.Provider>; // added the two new values
 }
 
 export const useTheme = () => useContext(ThemeContext);
