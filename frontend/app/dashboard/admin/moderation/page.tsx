@@ -2,11 +2,7 @@
 import AdminPageHeader from "@/components/AdminPageHeader";
 
 import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+import { apiRequest } from "@/lib/api";
 
 export type ModerationFlagStatus = "open" | "reviewed" | "resolved";
 export type ModerationActionTaken = "none" | "warning" | "throttle" | "restricted" | "banned";
@@ -25,16 +21,15 @@ export type ModerationFlag = {
 export default function ModerationConsolePage() {
   const [flags, setFlags] = useState<ModerationFlag[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState("");
 
   async function fetchFlags() {
     setLoading(true);
-    const { data, error } = await supabase
-      .from("moderation_flags")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    if (!error && data) {
-      setFlags(data as ModerationFlag[]);
+    const result = await apiRequest<ModerationFlag[]>("/admin/moderation/flags");
+    if (result.error) setError(result.error.message);
+    else {
+      setFlags(result.data ?? []);
+      setError("");
     }
     setLoading(false);
   }
@@ -43,32 +38,20 @@ export default function ModerationConsolePage() {
     fetchFlags();
   }, []);
 
-  async function applyAction(flagId: string, playerId: string, action: ModerationActionTaken) {
-    // 1. Update flag resolution status
-    await supabase
-      .from("moderation_flags")
-      .update({
-        status: "resolved",
-        action_taken: action,
-        resolved_at: new Date().toISOString(),
-      })
-      .eq("id", flagId);
-
-    // 2. Enforce safety penalty on player if restricted or banned
-    if (action === "restricted" || action === "banned") {
-      await supabase
-        .from("player_trust_score")
-        .update({ status: action, last_updated_at: new Date().toISOString() })
-        .eq("player_id", playerId);
+  async function applyAction(flagId: string, action: ModerationActionTaken) {
+    const result = await apiRequest(`/admin/moderation/flags/${flagId}/action`, "POST", { action });
+    if (result.error) {
+      setError(result.error.message);
+      return;
     }
-
-    fetchFlags();
+    await fetchFlags();
   }
 
   return (
     <div className="p-6 space-y-6">
       <AdminPageHeader title="Trust & Moderation Desk" description="Review flagged player accounts and enforce safety restrictions." />
 
+      {error && <p role="alert" className="rounded border border-red-300 bg-red-50 p-3 text-sm text-red-800">{error}</p>}
       {loading ? (
         <p className="text-sm text-slate-500">Loading safety flags...</p>
       ) : flags.length === 0 ? (
@@ -108,13 +91,13 @@ export default function ModerationConsolePage() {
                     {flag.status === "open" && (
                       <>
                         <button
-                          onClick={() => applyAction(flag.id, flag.player_id, "warning")}
+                          onClick={() => applyAction(flag.id, "warning")}
                           className="px-3 py-1 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded transition-colors"
                         >
                           Warn
                         </button>
                         <button
-                          onClick={() => applyAction(flag.id, flag.player_id, "restricted")}
+                          onClick={() => applyAction(flag.id, "restricted")}
                           className="px-3 py-1 bg-red-600 hover:bg-red-700 text-white text-xs font-bold rounded transition-colors"
                         >
                           Restrict

@@ -2,6 +2,7 @@ import { PoolClient } from "pg";
 import { transaction } from "./database";
 import { HttpError } from "./validation";
 import { notifyGamePlayers } from "./notifications";
+import { INITIAL_RATING, matchmakingTolerance, updateRatingsInTx } from "./ratingService";
 
 /**
  * Checks if a player's trust status allows them to perform competitive game actions.
@@ -20,60 +21,6 @@ async function checkPlayerTrust(client: PoolClient, playerId: string) {
       "Your account is currently restricted from matchmaking due to safety flags."
     );
   }
-}
-
-/**
- * Updates player Elo ratings inside an active transaction upon round win/loss.
- */
-async function updateRatingsInTx(client: PoolClient, winnerId: string, loserId: string) {
-  const K_FACTOR = 32;
-
-  const winnerRow = (
-    await client.query(
-      "SELECT rating FROM public.player_ratings WHERE player_id=$1 FOR UPDATE",
-      [winnerId]
-    )
-  ).rows[0];
-  const loserRow = (
-    await client.query(
-      "SELECT rating FROM public.player_ratings WHERE player_id=$1 FOR UPDATE",
-      [loserId]
-    )
-  ).rows[0];
-
-  const ratingA = winnerRow ? winnerRow.rating : 1200;
-  const ratingB = loserRow ? loserRow.rating : 1200;
-
-  const expectedA = 1 / (1 + Math.pow(10, (ratingB - ratingA) / 400));
-  const expectedB = 1 / (1 + Math.pow(10, (ratingA - ratingB) / 400));
-
-  const newRatingA = Math.round(ratingA + K_FACTOR * (1 - expectedA));
-  const newRatingB = Math.max(0, Math.round(ratingB + K_FACTOR * (0 - expectedB)));
-
-  const deltaA = newRatingA - ratingA;
-  const deltaB = newRatingB - ratingB;
-
-  await client.query(
-    `INSERT INTO public.player_ratings (player_id, rating, games_played, wins, losses, updated_at)
-     VALUES ($1, $2, 1, 1, 0, now())
-     ON CONFLICT (player_id) DO UPDATE SET
-       rating = public.player_ratings.rating + $3,
-       games_played = public.player_ratings.games_played + 1,
-       wins = public.player_ratings.wins + 1,
-       updated_at = now()`,
-    [winnerId, 1200 + deltaA, deltaA]
-  );
-
-  await client.query(
-    `INSERT INTO public.player_ratings (player_id, rating, games_played, wins, losses, updated_at)
-     VALUES ($1, $2, 1, 0, 1, now())
-     ON CONFLICT (player_id) DO UPDATE SET
-       rating = GREATEST(0, public.player_ratings.rating + $3),
-       games_played = public.player_ratings.games_played + 1,
-       losses = public.player_ratings.losses + 1,
-       updated_at = now()`,
-    [loserId, 1200 + deltaB, deltaB]
-  );
 }
 
 export async function lockGame(client: PoolClient, gameId: string, playerId: string) {
@@ -125,6 +72,7 @@ export async function matchmake(playerId: string, cardId: string, category: stri
 
     // Serialize matchmaking to avoid two simultaneous requests creating separate empty lobbies.
     await client.query("SELECT pg_advisory_xact_lock(74192001)");
+    await client.query("SELECT pg_advisory_xact_lock(74192002)");
     await ownedCard(client, playerId, cardId, category);
     const pending = (await client.query(`SELECT id FROM public.card_games WHERE
       (player_one_id=$1 OR player_two_id=$1) AND status IN ('waiting','active') ORDER BY created_at LIMIT 1`, [playerId])).rows[0];
@@ -132,18 +80,18 @@ export async function matchmake(playerId: string, cardId: string, category: stri
 
     // Fetch player Elo rating for rating-bracket matchmaking
     const pRatingRow = (await client.query("SELECT rating FROM public.player_ratings WHERE player_id=$1", [playerId])).rows[0];
-    const pRating = pRatingRow ? pRatingRow.rating : 1200;
-    const RATING_TOLERANCE = 150;
+    const pRating = pRatingRow ? pRatingRow.rating : INITIAL_RATING;
 
-    const waitingCandidates = (await client.query(`SELECT g.*, COALESCE(pr.rating, 1200) as host_rating
+    const waitingCandidates = (await client.query(`SELECT g.*, COALESCE(g.player_one_rating,pr.rating,$3) as host_rating,
+      EXTRACT(EPOCH FROM (now()-g.created_at))::float8 AS queue_seconds
       FROM public.card_games g
       LEFT JOIN public.player_ratings pr ON pr.player_id = g.player_one_id
       WHERE g.category=$1 AND g.status='waiting' AND g.player_one_id<>$2
-      ORDER BY g.created_at`, [category, playerId])).rows;
+      ORDER BY g.created_at`, [category, playerId,INITIAL_RATING])).rows;
 
     let waiting = null;
     for (const candidate of waitingCandidates) {
-      if (Math.abs(candidate.host_rating - pRating) <= RATING_TOLERANCE) {
+      if (Math.abs(candidate.host_rating - pRating) <= matchmakingTolerance(candidate.queue_seconds)) {
         const locked = (await client.query("SELECT * FROM public.card_games WHERE id=$1 FOR UPDATE", [candidate.id])).rows[0];
         if (locked && locked.status === 'waiting') {
           waiting = locked;
@@ -153,12 +101,12 @@ export async function matchmake(playerId: string, cardId: string, category: stri
     }
 
     if (waiting) {
-      await client.query(`UPDATE public.card_games SET player_two_id=$1,status='active',started_at=now() WHERE id=$2`, [playerId,waiting.id]);
+      await client.query(`UPDATE public.card_games SET player_two_id=$1,player_two_rating=$3,status='active',started_at=now() WHERE id=$2`, [playerId,waiting.id,pRating]);
       await client.query(`UPDATE public.game_rounds SET player_two_card_id=$1 WHERE game_id=$2 AND round_number=1`, [cardId,waiting.id]);
       return { id: waiting.id };
     }
-    const game = (await client.query(`INSERT INTO public.card_games (player_one_id,category,status)
-      VALUES ($1,$2,'waiting') RETURNING id`, [playerId,category])).rows[0];
+    const game = (await client.query(`INSERT INTO public.card_games (player_one_id,category,status,player_one_rating)
+      VALUES ($1,$2,'waiting',$3) RETURNING id`, [playerId,category,pRating])).rows[0];
     await client.query(`INSERT INTO public.game_rounds (game_id,round_number,player_one_card_id,status)
       VALUES ($1,1,$2,'waiting')`, [game.id,cardId]);
     return game;
@@ -205,8 +153,10 @@ export async function resolveRound(playerId: string, gameId: string, roundId: st
       await client.query("UPDATE public.player_cards SET player_id=$1 WHERE id=$2", [winner,losing.id]);
 
       const loserId = winner === game.player_one_id ? game.player_two_id : game.player_one_id;
-      await updateRatingsInTx(client, winner, loserId);
     }
+    await updateRatingsInTx(client, game.player_one_id, game.player_two_id,
+      winner === null ? 0.5 : winner === game.player_one_id ? 1 : 0,
+      game.player_one_rating ?? undefined,game.player_two_rating ?? undefined);
     const resolved = (await client.query(`UPDATE public.game_rounds SET player_one_points=$1,player_two_points=$2,
       winner_id=$3,status='finished',finished_at=now() WHERE id=$4 RETURNING *`, [one.points,two.points,winner,roundId])).rows[0];
     await notifyGamePlayers(client,game,"Round completed",`Round ${round.round_number} ${winner ? "has a winner. Open the match to see the result." : "ended in a draw. Both players keep their cards."}`);

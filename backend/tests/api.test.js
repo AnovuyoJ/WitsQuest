@@ -99,6 +99,84 @@ test("different-rarity stakes require mutual acceptance and transfer exactly one
   expect((await request("/me/cards","two")).data).toHaveLength(4);
   expect((await request(`/games/${game.id}/forfeit`,"two","POST")).status).toBe(409);
   expect((await request("/me/cards","one")).data).toHaveLength(7);
+  const ratings = (await mockPg.query("SELECT player_id,rating,games_played,wins,losses FROM public.player_ratings ORDER BY player_id")).rows;
+  expect(ratings).toHaveLength(2);
+  expect(ratings.find(row => row.player_id === oneId)).toMatchObject({ rating: 1216, games_played: 1, wins: 1, losses: 0 });
+  expect(ratings.find(row => row.player_id === twoId)).toMatchObject({ rating: 1184, games_played: 1, wins: 0, losses: 1 });
+});
+
+test("rating matchmaking widens the acceptable range for players waiting longer", async () => {
+  const one = await makeDeck(oneId,20), two = await makeDeck(twoId,0);
+  await mockPg.query(`INSERT INTO public.player_ratings (player_id,rating,games_played,wins,losses,draws)
+    VALUES ($1,1200,0,0,0,0),($2,1400,0,0,0,0)`, [oneId,twoId]);
+  const waiting = (await request("/games/matchmake","one","POST",{cardIds:one.map(card => card.id)})).data;
+  await mockPg.query("UPDATE public.card_games SET created_at=now()-interval '30 seconds' WHERE id=$1", [waiting.id]);
+  const joined = await request("/games/matchmake","two","POST",{cardIds:two.map(card => card.id)});
+  expect(joined.data.id).toBe(waiting.id);
+  expect((await mockPg.query("SELECT player_one_rating,player_two_rating FROM public.card_games WHERE id=$1",[waiting.id])).rows[0])
+    .toMatchObject({ player_one_rating: 1200, player_two_rating: 1400 });
+});
+
+test("draws keep equal ratings and forfeits rate the human opponent", async () => {
+  const one = await makeDeck(oneId,0), two = await makeDeck(twoId,0);
+  const game = (await request("/games/matchmake","one","POST",{cardIds:one.map(card => card.id)})).data;
+  await request("/games/matchmake","two","POST",{cardIds:two.map(card => card.id)});
+  for (let index=0;index<5;index++) {
+    const round = (await request(`/games/${game.id}/battle`,"one")).data.rounds.at(-1);
+    await request(`/games/${game.id}/battle/card`,"one","POST",{roundId:round.id,cardId:one[index].id});
+    await request(`/games/${game.id}/battle/card`,"two","POST",{roundId:round.id,cardId:two[index].id});
+    if (index<4) await request(`/games/${game.id}/battle/next`,"one","POST",{roundId:round.id});
+  }
+  expect((await mockPg.query("SELECT rating,games_played,draws FROM public.player_ratings ORDER BY player_id")).rows)
+    .toEqual([{ rating: 1200, games_played: 1, draws: 1 },{ rating: 1200, games_played: 1, draws: 1 }]);
+
+  const next = (await request("/games/matchmake","one","POST",{cardIds:one.map(card => card.id)})).data;
+  await request("/games/matchmake","two","POST",{cardIds:two.map(card => card.id)});
+  expect((await request(`/games/${next.id}/forfeit`,"one","POST")).status).toBe(200);
+  const ratings = (await mockPg.query("SELECT player_id,rating,games_played,wins,losses,draws FROM public.player_ratings ORDER BY player_id")).rows;
+  expect(ratings.find(row => row.player_id===oneId)).toMatchObject({ rating: 1184, games_played: 2, wins: 0, losses: 1, draws: 1 });
+  expect(ratings.find(row => row.player_id===twoId)).toMatchObject({ rating: 1216, games_played: 2, wins: 1, losses: 0, draws: 1 });
+});
+
+test("season reset archives ratings and waits until player battles are resolved", async () => {
+  const deck = await makeDeck();
+  await mockPg.query(`INSERT INTO public.player_ratings (player_id,rating,games_played,wins,losses,draws)
+    VALUES ($1,1340,2,1,1,0)`, [oneId]);
+  const oldSeason = (await mockPg.query("SELECT id,name FROM public.rating_seasons WHERE ends_at IS NULL")).rows[0];
+  const waiting = (await request("/games/matchmake","one","POST",{cardIds:deck.map(card => card.id)})).data;
+  const seasonName = `Test Season ${Date.now()}`;
+  expect((await request("/admin/ratings/seasons/reset","one","POST",{name:seasonName})).status).toBe(403);
+  expect((await request("/admin/ratings/seasons/reset","admin","POST",{name:seasonName})).status).toBe(409);
+  await request(`/games/${waiting.id}/cancel`,"one","POST");
+
+  const reset = await request("/admin/ratings/seasons/reset","admin","POST",{name:seasonName});
+  expect(reset.status).toBe(200);
+  expect(reset.data.name).toBe(seasonName);
+  expect((await mockPg.query("SELECT rating,games_played,wins,losses,draws FROM public.player_ratings WHERE player_id=$1",[oneId])).rows[0])
+    .toMatchObject({ rating: 1200, games_played: 0, wins: 0, losses: 0, draws: 0 });
+  expect((await mockPg.query(`SELECT season_id,rating,games_played,wins,losses,draws FROM public.player_rating_history
+    WHERE player_id=$1`,[oneId])).rows[0]).toMatchObject({ season_id: oldSeason.id, rating: 1340, games_played: 2, wins: 1, losses: 1, draws: 0 });
+  expect((await mockPg.query("SELECT rating,games_played FROM public.player_rating_history WHERE player_id=$1",[twoId])).rows[0])
+    .toMatchObject({ rating: 1200, games_played: 0 });
+  expect((await request("/me/stats","one")).data).toMatchObject({
+    season: seasonName, rating: 1200,
+    ratingHistory: [expect.objectContaining({ season_name: oldSeason.name, rating: 1340, games_played: 2 })],
+  });
+});
+
+test("historical rating backfill replays completed human matches and rejects a second run", async () => {
+  const game = (await mockPg.query(`INSERT INTO public.card_games
+    (player_one_id,player_two_id,category,status,winner_id,rules_version,is_cpu,started_at,finished_at)
+    VALUES ($1,$2,'Mixed','finished',$1,2,false,now()-interval '1 minute',now()) RETURNING id`, [oneId,twoId])).rows[0];
+  const backfill = readFileSync(path.join(__dirname,"../sql/backfill-ratings.sql"),"utf8");
+  await mockPg.exec(backfill);
+  const ratings = (await mockPg.query("SELECT player_id,rating,games_played,wins,losses FROM public.player_ratings ORDER BY player_id")).rows;
+  expect(ratings.find(row => row.player_id===oneId)).toMatchObject({ rating:1216,games_played:1,wins:1,losses:0 });
+  expect(ratings.find(row => row.player_id===twoId)).toMatchObject({ rating:1184,games_played:1,wins:0,losses:1 });
+  expect((await mockPg.query("SELECT starts_at FROM public.rating_seasons WHERE ends_at IS NULL")).rows[0].starts_at)
+    .toEqual((await mockPg.query("SELECT finished_at FROM public.card_games WHERE id=$1",[game.id])).rows[0].finished_at);
+  await expect(mockPg.exec(backfill)).rejects.toThrow(/untouched default ratings/i);
+  await mockPg.exec("ROLLBACK");
 });
 
 test("declining a duel releases stakes without loss; accepted forfeits transfer the stake", async () => {
@@ -355,12 +433,20 @@ beforeAll(async () => {
   process.env.ADMIN_USER_IDS = adminId;
   await mockPg.exec("CREATE SCHEMA auth; CREATE TABLE auth.users (id uuid PRIMARY KEY, raw_user_meta_data jsonb DEFAULT '{}');");
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/schema.sql"), "utf8"));
+  await mockPg.exec("DROP TABLE public.player_trust_score, public.trust_events, public.moderation_flags");
+  const trustMigration = readFileSync(path.join(__dirname, "../sql/trust-moderation.sql"), "utf8");
+  await mockPg.exec(trustMigration);
+  await mockPg.exec(trustMigration);
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/content-publication.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/zones.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/zone-claims.sql"),"utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/trails.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/card-battles.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/battle-stakes.sql"), "utf8"));
+  await mockPg.exec("DROP TABLE public.player_ratings");
+  const ratingMigration = readFileSync(path.join(__dirname, "../sql/rating-seasons.sql"), "utf8");
+  await mockPg.exec(ratingMigration);
+  await mockPg.exec(ratingMigration);
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/profile-images.sql"), "utf8"));
   await mockPg.exec(readFileSync(path.join(__dirname, "../sql/offline-attempts.sql"), "utf8"));
   await mockPg.query("INSERT INTO auth.users (id) VALUES ($1),($2),($3)", [adminId,oneId,twoId]);
@@ -371,6 +457,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await mockPg.exec("TRUNCATE public.player_profiles");
+  await mockPg.exec("TRUNCATE public.player_ratings, public.player_rating_history");
+  await mockPg.exec("TRUNCATE public.rating_seasons RESTART IDENTITY CASCADE; INSERT INTO public.rating_seasons (name) VALUES ('Season 1')");
   await mockPg.query("INSERT INTO auth.users (id) VALUES ($1),($2),($3) ON CONFLICT DO NOTHING", [adminId,oneId,twoId]);
   await mockPg.exec("TRUNCATE public.trails;");
   require("../services/landmarkService").requireLandmark.mockResolvedValue({ name: "Great Hall", osmUrl: "https://www.openstreetmap.org/way/123" });
@@ -387,6 +475,21 @@ test("account deletion requires authentication and explicit confirmation", async
   expect((await request("/me", "", "DELETE", { confirmation: "DELETE" })).status).toBe(401);
   expect((await request("/me", "one", "DELETE", {})).status).toBe(400);
   expect((await mockPg.query("SELECT id FROM auth.users WHERE id=$1", [oneId])).rows).toHaveLength(1);
+});
+
+test("moderation flags are admin-only and restriction actions update trust status", async () => {
+  const flag = (await mockPg.query(`INSERT INTO public.moderation_flags (player_id,reason)
+    VALUES ($1,'Repeated suspicious game activity') RETURNING id`, [oneId])).rows[0];
+  const route = `/admin/moderation/flags/${flag.id}/action`;
+  expect((await request("/admin/moderation/flags","one")).status).toBe(403);
+  expect((await request("/admin/moderation/flags","admin")).data).toHaveLength(1);
+  expect((await request(route,"one","POST",{action:"restricted"})).status).toBe(403);
+  expect((await request(route,"admin","POST",{action:"invalid"})).status).toBe(400);
+  expect((await request(route,"admin","POST",{action:"restricted"})).status).toBe(200);
+  expect((await mockPg.query("SELECT status,action_taken,reviewer_id FROM public.moderation_flags WHERE id=$1",[flag.id])).rows[0])
+    .toMatchObject({ status:"resolved",action_taken:"restricted",reviewer_id:adminId });
+  expect((await mockPg.query("SELECT score,status FROM public.player_trust_score WHERE player_id=$1",[oneId])).rows[0])
+    .toMatchObject({ score:100,status:"restricted" });
 });
 
 test("profile photos persist for the authenticated player only and are removed with the account", async () => {
