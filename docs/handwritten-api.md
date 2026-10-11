@@ -209,9 +209,6 @@ Status is `waiting`, `ready`, or `finished`. Card IDs, integer points, winner, a
 | --- | --- | --- |
 | `GET /` | Public; no parameters | `{"message":"Campus Quest backend is running."}` |
 | `GET /api/me` | Signed-in user; no parameters | `{"id":"aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa","isAdmin":false}` |
-| `GET /api/me/stats` | Signed-in user; no parameters | Current Elo rating and season, prior-season results, and trust status/score |
-
-`/api/me/stats` initializes an unrated player at 1200. Completed human five-card battles adjust Elo once per match; draws update the game and draw counts without favoring either player. The dashboard rating opens the player's archived season results.
 
 ### Events and challenges
 
@@ -397,17 +394,8 @@ Admin event/challenge records additionally contain `draft_revision` (integer sta
 | `POST /api/admin/challenges/:id/review` | `{"revision":1}` | 200 admin Challenge record with review recorded for this admin/revision |
 | `POST /api/admin/events/:id/publish` | `{"revision":1}` | 200 admin Event record with the reviewed revision copied to its published snapshot |
 | `POST /api/admin/challenges/:id/publish` | `{"revision":1}` | 200 admin Challenge record with the reviewed revision copied to its published snapshot |
-| `POST /api/admin/ratings/seasons/reset` | `{"name":"Season 2"}` | 200 new active season; previous player ratings and records are archived |
-| `GET /api/admin/moderation/flags` | No body/query | 200 moderation flags, newest first |
-| `POST /api/admin/moderation/flags/:flagId/action` | `{"action":"restricted"}` | 200 `{ "success": true }`; resolves the flag and updates trust status for restrictions/bans |
 
-All seven draft-workflow endpoints require administrator access (401/403 otherwise). Revision is a required positive integer. Preview/publish returns 404 for missing records. Review returns 409 if the draft changed or disappeared. Publish returns 409 `{"message":"Review the latest saved draft before publishing."}` unless the same admin has reviewed the current revision. Reload the preview and review again after a conflict. Event publication rechecks coordinates through Overpass (422/503 on failure); challenge publication revalidates question fields and the reward/event association (400 on failure). A challenge may be published before its event, but players cannot access it until the event is also published and active.
-
-Season reset requires a nonblank name of at most 80 characters and is administrator-only. It returns 409 if the name already exists or any human battle is waiting/active; complete or cancel those matches, then retry. This guard preserves unresolved matches and their results. Matchmaking starts within 150 rating points and widens by 50 points every 15 seconds a candidate waits, up to 600 points.
-
-Moderation endpoints require administrator access. Actions are `clear`, `warning`, `throttle`, `restricted`, or `banned`; invalid actions return 400 and an unknown flag returns 404. `throttle` blocks gameplay for 15 minutes; automated trust signals apply a 5-minute throttle at score 69 or below, and a 60-minute restriction below 30. Restrictions expire automatically; admins can clear a resolved restriction from the console. Bans remain until an administrator clears them.
-
-Trust signals include implausible movement, a challenge being resubmitted at least three times, three human forfeits within 30 days, and at least five completed human matches where 80% or more were against one opponent. Repeated-pair signals are recorded once per player/opponent pair. Flags include recent signal types, maximum severity, and current trust score, and are sorted by open status and severity. The moderation page uses authenticated Express endpoints; browser roles have no direct access to trust or moderation tables.
+All seven endpoints require administrator access (401/403 otherwise). Revision is a required positive integer. Preview/publish returns 404 for missing records. Review returns 409 if the draft changed or disappeared. Publish returns 409 `{"message":"Review the latest saved draft before publishing."}` unless the same admin has reviewed the current revision. Reload the preview and review again after a conflict. Event publication rechecks coordinates through Overpass (422/503 on failure); challenge publication revalidates question fields and the reward/event association (400 on failure). A challenge may be published before its event, but players cannot access it until the event is also published and active.
 
 In the admin UI, save the form, choose **Review saved draft**, inspect its contents, choose **I have reviewed this draft**, then **Publish reviewed content**. The preview uses server-saved content, not unsaved form edits. Self-review is supported; a second administrator is not required. These checks prevent stale or unreviewed revisions from being published but cannot judge the editorial correctness of content.
 

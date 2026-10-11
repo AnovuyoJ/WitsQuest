@@ -8,7 +8,7 @@ import { deleteAccount } from "../services/accountService";
 import { rotateProceduralEvents } from "../services/proceduralEventService";
 import { imageValue } from "../services/imageValidation";
 import { buildAchievements, calculateCurrentStreak, type ProgressStats } from "../services/progressService";
-import { getPlayerRatingSummary } from "../services/ratingService";
+import { getPlayerRating } from "../services/ratingService";
 import { getPlayerTrustStatus } from "../services/moderationService";
 
 const router = Router();
@@ -73,11 +73,11 @@ router.get("/me/progress", async (req, res) => {
 
 router.get("/me/stats", async (req, res) => {
   const userId = req.user!.id;
-  const [ratingSummary, trust] = await Promise.all([
-    getPlayerRatingSummary(userId),
+  const [rating, trust] = await Promise.all([
+    getPlayerRating(userId),
     getPlayerTrustStatus(userId),
   ]);
-  res.json({ ...ratingSummary, trustScore: trust.score, trustStatus: trust.status });
+  res.json({ rating, trustScore: trust.score, trustStatus: trust.status });
 });
 
 router.get("/leaderboard", async (req, res) => {

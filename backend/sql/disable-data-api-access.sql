@@ -3,8 +3,7 @@
 BEGIN;
 REVOKE ALL ON public.events, public.cards, public.challenges, public.location_verifications,
   public.challenge_attempts, public.player_cards, public.card_games, public.game_rounds,
-  public.notifications, public.player_trust_score, public.trust_events, public.moderation_flags,
-  public.player_ratings, public.rating_seasons, public.player_rating_history FROM PUBLIC, anon, authenticated;
+  public.notifications FROM PUBLIC, anon, authenticated;
 ALTER TABLE public.events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.challenges ENABLE ROW LEVEL SECURITY;
@@ -14,12 +13,6 @@ ALTER TABLE public.player_cards ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.card_games ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.game_rounds ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.player_trust_score ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.trust_events ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.moderation_flags ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.player_ratings ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.rating_seasons ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.player_rating_history ENABLE ROW LEVEL SECURITY;
 -- Old RPCs may use SECURITY DEFINER and bypass table grants. Remove their public execution paths.
 DO $$ DECLARE fn record; BEGIN
   FOR fn IN SELECT p.oid::regprocedure AS signature FROM pg_proc p

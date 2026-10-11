@@ -67,13 +67,9 @@ SQL files are applied separately from the Node start command; application startu
 | 4 | `backend/sql/card-battles.sql` | Adds versioned battles, deck snapshots, side results, duplicate ownership support and the new-write points range. |
 | 5 | `backend/sql/battle-stakes.sql` | Adds opt-in stakes, consent and settlement records. |
 | 6 | `backend/sql/profile-images.sql` | Adds player profile images and event album covers. |
-| 7 | `backend/sql/trust-moderation.sql` | Adds trust scores, temporary restrictions, behavior counters, forfeit tracking and admin moderation flags with browser-role access revoked. |
-| 8 | `backend/sql/rating-seasons.sql` | Adds player ratings, match snapshots, draw stats, seasons and archived rating history. |
-| 9, after API cutover verification | `backend/sql/disable-data-api-access.sql` | Restricts direct access to application tables and known legacy RPCs. The Supabase Data API setting is managed separately; Auth remains enabled. |
+| 7, after API cutover verification | `backend/sql/disable-data-api-access.sql` | Restricts direct access to baseline tables and known legacy RPCs. The Supabase Data API setting is managed separately; Auth remains enabled. |
 
 The feature migrations precede deployment of code that queries their tables and columns. The access-restriction migration follows verification of the Express access path so that the older browser data path is not removed prematurely.
-
-For an existing database, run `backend/sql/backfill-ratings.sql` once after `rating-seasons.sql` to replay completed human matches and legacy rounds chronologically from 1200. CPU and cancelled games are excluded. The script moves the active season start back to the earliest replayed result and aborts if non-default ratings already exist, preventing an accidental double-count.
 
 ### Existing-database compatibility
 

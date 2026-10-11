@@ -3,7 +3,6 @@ import { database } from "../../services/database";
 import { id, number } from "../../services/validation";
 import { verifyPlayerLocation, checkMovementPlausibility } from "../../services/locationService";
 import { requireAuth } from "../../middleware/requireAuth";
-import { recordTrustEvent } from "../../services/moderationService";
 
 const router = Router();
 
@@ -117,11 +116,6 @@ router.post("/:eventId/verify-location", requireAuth, async (req, res) => {
       VALUES ($1,$2,$3,$4,$5,true,$6,$7)`,
       [playerId, eventId, result.distanceMeters, latitude, longitude,
        `Implied speed ${movement.impliedSpeedMetersPerSecond?.toFixed(1)} m/s exceeds plausible limit`, verifiedAt]);
-    await recordTrustEvent(playerId,"location_anomaly",{
-      eventId,
-      impliedSpeedMetersPerSecond: movement.impliedSpeedMetersPerSecond,
-      distanceMeters: result.distanceMeters,
-    });
 
     return res.status(403).json({
       message: "This location doesn't match your recent movement. If you believe this is a mistake, try again in a moment.",
