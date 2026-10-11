@@ -21,5 +21,5 @@ export default function CollectibleCard({ card, questTitle = "", selected = fals
       </div>
     </div>
   </div>;
-  return onClick ? <button type="button" className={className} disabled={disabled} onClick={onClick} aria-label={inspect ? `Inspect ${card.title}` : undefined} aria-pressed={inspect ? undefined : selected}>{content}</button> : <article className={className}>{content}</article>;
+  return onClick ? <button data-card-rarity={card.rarity} type="button" className={className} disabled={disabled} onClick={onClick} aria-label={inspect ? `Inspect ${card.title}` : undefined} aria-pressed={inspect ? undefined : selected}>{content}</button> : <article data-card-rarity={card.rarity} className={className}>{content}</article>;
 }

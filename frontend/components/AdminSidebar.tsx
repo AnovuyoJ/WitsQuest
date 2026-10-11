@@ -5,8 +5,8 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
 
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_GOLD = "var(--accent)";
 
 type NavItem = {
   label: string;
@@ -66,6 +66,7 @@ export default function AdminSidebar({
   onToggleDarkMode: () => void;
 }) {
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const pathname = usePathname();
 
   function isActive(href: string) {
@@ -79,10 +80,11 @@ export default function AdminSidebar({
   }
 
   return (
+    <>
+    <button type="button" onClick={() => { setCollapsed(false); setMobileOpen(true); }} aria-label="Open admin menu" className="fixed left-5 top-6 z-30 flex h-9 w-9 items-center justify-center rounded-xl bg-[#043673] text-white md:hidden"><MenuIcon /></button>
+    {mobileOpen && <button type="button" aria-label="Close admin menu" onClick={() => setMobileOpen(false)} className="fixed inset-0 z-40 bg-black/50 md:hidden" />}
     <aside
-      className={`sticky top-0 flex h-screen shrink-0 flex-col justify-between py-6 transition-all duration-200 border-r border-[#021833] ${
-        collapsed ? "w-[76px]" : "w-[240px]"
-      }`}
+      className={`app-navigation fixed inset-y-0 left-0 z-50 flex w-[240px] shrink-0 flex-col justify-between py-6 transition-all duration-200 md:sticky md:top-5 md:z-auto md:translate-x-0 ${collapsed ? "md:w-[76px]" : "md:w-[240px]"} ${mobileOpen ? "translate-x-0" : "-translate-x-full"}`}
       style={{
         background: `linear-gradient(180deg, ${WITS_BLUE} 0%, #02234A 100%)`,
         boxShadow:
@@ -90,7 +92,9 @@ export default function AdminSidebar({
       }}
     >
       {/* TOP */}
-      <div className="flex flex-col gap-4 px-4">
+      <div className="flex flex-1 flex-col gap-2 px-4">
+        <Link href="/dashboard/admin" className="app-brand" aria-label="WitsQuest admin dashboard"><span className="app-brand-mark">WQ</span>{!collapsed && <span>WitsQuest</span>}</Link>
+        <button type="button" onClick={() => setMobileOpen(false)} aria-label="Close admin menu" className="self-end px-3 py-1 text-white md:hidden">Close</button>
         {/* COLLAPSE BUTTON */}
         <button
           onClick={() => setCollapsed((current) => !current)}
@@ -99,7 +103,7 @@ export default function AdminSidebar({
               ? "Expand admin sidebar"
               : "Collapse admin sidebar"
           }
-          className="flex h-9 w-9 items-center justify-center rounded-lg text-white/80 transition-all hover:bg-white/10 hover:text-white hover:shadow-[0_2px_6px_rgba(0,0,0,0.3)] active:scale-95"
+          className="hidden h-9 w-9 items-center justify-center rounded-lg text-white/80 transition-all hover:bg-white/10 hover:text-white active:scale-95 md:flex"
         >
           <MenuIcon />
         </button>
@@ -114,7 +118,7 @@ export default function AdminSidebar({
         )}
 
         {/* NAVIGATION */}
-        <nav className="flex flex-col gap-1.5">
+        <nav className="flex flex-1 flex-col gap-1" aria-label="Admin navigation">
           {navItems.map((item) => {
             const active = isActive(item.href);
 
@@ -122,7 +126,10 @@ export default function AdminSidebar({
               <Link
                 key={item.href}
                 href={item.href}
+                aria-current={active ? "page" : undefined}
+                onClick={() => setMobileOpen(false)}
                 title={collapsed ? item.label : undefined}
+                aria-label={collapsed ? item.label : undefined}
                 className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                   active
                     ? "text-white"
@@ -196,6 +203,8 @@ export default function AdminSidebar({
         {collapsed ? (
           <button
             onClick={onToggleDarkMode}
+            role="switch"
+            aria-checked={darkMode}
             aria-label={
               darkMode
                 ? "Switch to light mode"
@@ -235,6 +244,8 @@ export default function AdminSidebar({
 
             <button
               onClick={onToggleDarkMode}
+              role="switch"
+              aria-checked={darkMode}
               aria-label={
                 darkMode
                   ? "Switch to light mode"
@@ -260,6 +271,7 @@ export default function AdminSidebar({
         )}
       </div>
     </aside>
+    </>
   );
 }
 

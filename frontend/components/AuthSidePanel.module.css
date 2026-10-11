@@ -1,0 +1,12 @@
+.panel { display: none; position: relative; isolation: isolate; overflow: hidden; background: radial-gradient(ellipse at top right, var(--brand-bright), var(--brand-dark) 70%); color: white; }
+.animation { position: absolute; inset: 0; z-index: -2; pointer-events: none; }
+.panel::after { content: ""; position: absolute; inset: 0; z-index: -1; background: linear-gradient(180deg, #00000015, #00000038); pointer-events: none; }
+.content { display: flex; flex-direction: column; justify-content: space-between; gap: 48px; min-height: 100dvh; padding: 48px; }
+.content > span { align-self: flex-start; padding: 8px 12px; border-radius: 10px; background: #043673; color: #e2c66f !important; border: 1px solid #c9a24b80; }
+.content h2 { text-wrap: balance; text-shadow: 0 2px 16px #00000030; }
+.content > p { color: #ffffffb3; }
+.content > div { text-align: center; margin-block: auto; }
+@media (min-width: 1024px) {
+  .panel { display: block; border-radius: 0 32px 32px 0; box-shadow: 0 12px 32px #00000014; }
+  .content { min-height: 100dvh; height: 100%; }
+}

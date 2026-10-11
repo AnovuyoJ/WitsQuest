@@ -1,4 +1,5 @@
 "use client";
+import AdminPageHeader from "@/components/AdminPageHeader";
 
 import { useEffect, useState } from "react";
 import { createClient } from "@supabase/supabase-js";
@@ -66,10 +67,7 @@ export default function ModerationConsolePage() {
 
   return (
     <div className="p-6 space-y-6">
-      <div>
-        <h1 className="text-2xl font-black text-[#043673]">Trust & Moderation Desk</h1>
-        <p className="mt-1 text-sm text-slate-600">Review flagged player accounts and enforce safety restrictions.</p>
-      </div>
+      <AdminPageHeader title="Trust & Moderation Desk" description="Review flagged player accounts and enforce safety restrictions." />
 
       {loading ? (
         <p className="text-sm text-slate-500">Loading safety flags...</p>

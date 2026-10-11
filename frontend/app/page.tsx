@@ -1,173 +1,86 @@
-"use client";
-
+﻿"use client";
+import Image from "next/image";
 import Link from "next/link";
+import Stepper, { Step } from "@/components/Stepper";
+import JellyRadio from "@/components/JellyRadio";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabaseClient";
+import styles from "./landing.module.css";
 
 export default function Home() {
   const router = useRouter();
   const [checkingSession, setCheckingSession] = useState(true);
-
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession()
-      .then(({ data: { session } }) => {
-        if (!mounted) return;
-        if (session) router.replace("/dashboard"); else setCheckingSession(false);
-      })
-      .catch(() => {
-        if (mounted) setCheckingSession(false);
-      });
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!mounted) return;
+      if (session) router.replace("/dashboard"); else setCheckingSession(false);
+    }).catch(() => { if (mounted) setCheckingSession(false); });
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => { if (session) router.replace("/dashboard"); });
     return () => { mounted = false; subscription.unsubscribe(); };
   }, [router]);
-
-  if (checkingSession) return <LandingSkeleton />;
-
+  if (checkingSession) return <main className={styles.page} aria-busy="true"><div className={styles.skeleton} role="status">Getting your next adventure ready…</div></main>;
   return (
-    <main className="min-h-[100dvh] campus-background text-[#10233D]">
-      {/* Navigation */}
-      <nav className="mx-auto flex max-w-7xl items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
-        <Link
-          href="/"
-          className="flex items-center gap-3 font-black tracking-tight text-[#043673] skeuo-text-emboss"
-        >
-          <span className="grid h-10 w-10 place-items-center rounded-xl bg-gradient-to-br from-[#0a4d9b] to-[#043673] text-xs font-black text-[#E2C66F] shadow-[inset_0_1px_1px_rgba(255,255,255,0.4),0_2px_5px_rgba(0,0,0,0.25)] border border-[#021e42]">
-            WQ
-          </span>
-          WitsQuest
-        </Link>
-        <Link
-          href="/Login"
-          className="skeuo-btn-secondary px-5 py-2.5 text-sm font-bold"
-        >
-          Sign in
-        </Link>
+    <main className={styles.page}><div className={styles.shell}>
+      <header className={styles.header}>
+        <Link href="/" className={styles.logo}><span className={styles.mark}>WQ</span>WitsQuest</Link>
+        <nav className={styles.navigation} aria-label="Main navigation">
+          <JellyRadio items={[{ value: "campus", label: "Explore campus" }, { value: "how-it-works", label: "How it works" }, { value: "collection", label: "Your collection" }]} defaultValue="campus" ariaLabel="Landing page sections" size="lg" swell={0.08} barge={2} gap={6} chipColor="var(--surface-soft)" activeColor="var(--brand)" textColor="var(--heading)" activeTextColor="#ffffff" onChange={(section) => {
+            const target = document.getElementById(section);
+            if (!target) return;
+            window.history.replaceState(null, "", `#${section}`);
+            target.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "start" });
+          }} />
+        </nav>
+        <Link href="/Login" className={styles.outlineButton}>Sign in</Link>
+      </header>
+      <section className={styles.hero} aria-labelledby="hero-title">
+        <div className={styles.heroCopy}><p className={styles.eyebrow}>Your campus. Your quest.</p><h1 id="hero-title">There’s more<br />to Wits.<br /><span>Go find it.</span></h1><p className={styles.description}>Discover the stories between your lectures. Explore campus landmarks, take on local trivia and collect a little piece of Wits.</p><div className={styles.actions}><Link href="/signup" className={styles.primaryButton}>Start your first quest</Link><a href="#how-it-works" className={styles.textLink}>See how it works <span aria-hidden="true">↗</span></a></div></div>
+        <div className={styles.journeyMap}>
+          <p className={styles.mapCaption}>Your route to discovery</p>
+          <ol className={styles.mapStops}>
+            <li><a href="#campus"><span className={styles.stopPin}>01</span><div><span className={styles.stopLabel}>Start here</span><strong>Explore the campus</strong><p>Find a place with a story to tell.</p></div></a></li>
+            <li><a href="#how-it-works"><span className={styles.stopPin}>02</span><div><span className={styles.stopLabel}>Follow your curiosity</span><strong>Take on a quest</strong><p>Reach the landmark. Put yourself to the test.</p></div></a></li>
+            <li><a href="#collection"><span className={styles.stopPin}>03</span><div><span className={styles.stopLabel}>Bring the story home</span><strong>Collect your discovery</strong><p>A new card. Another piece of Wits.</p></div></a></li>
+          </ol>
+          <span className={styles.mapDestination}>Your next adventure starts with a step.</span>
+        </div>
+      </section>
+      <nav className={styles.shortcuts} aria-label="Discover WitsQuest">
+        <div className={styles.shortcutIntro}><strong>A walk with a purpose.</strong><p>Make your everyday campus feel new again.</p></div>
+        <a href="#campus"><span className={styles.number}>01</span><strong>Find your next stop</strong><span>Explore the campus <b aria-hidden="true">↗</b></span></a>
+        <a href="#how-it-works"><span className={styles.number}>02</span><strong>Put your knowledge to work</strong><span>Take on a quest <b aria-hidden="true">↗</b></span></a>
+        <a href="#collection"><span className={styles.number}>03</span><strong>Keep the discovery</strong><span>Build your collection <b aria-hidden="true">↗</b></span></a>
       </nav>
-
-      {/* Hero & Live Field Note */}
-      <section className="mx-auto grid max-w-7xl gap-6 px-5 pb-8 pt-3 sm:px-8 lg:grid-cols-[1.18fr_.82fr] lg:px-12">
-        {/* Navy Passport / Folio Plate */}
-        <div className="skeuo-plate-navy px-6 py-12 text-white sm:px-10 sm:py-16 lg:px-14 lg:py-20 overflow-hidden">
-          <div className="absolute -right-20 -top-28 h-72 w-72 rounded-full border-[40px] border-white/5 shadow-[inset_0_0_20px_rgba(0,0,0,0.2)]" />
-          <p className="relative inline-flex items-center gap-2 text-[11px] font-extrabold uppercase tracking-[0.28em] text-[#E2C66F] skeuo-text-deboss">
-            <span className="h-2 w-2 rounded-full bg-[#E2C66F] shadow-[0_0_8px_#E2C66F]" />
-            Your campus. Your quest.
-          </p>
-          <h1 className="relative mt-5 max-w-3xl text-[clamp(2.8rem,8vw,5.7rem)] font-black leading-[.92] tracking-[-0.065em] [text-shadow:0_3px_12px_rgba(0,0,0,0.5)]">
-            Know Wits.<br />Own the map.
-          </h1>
-          <p className="relative mt-7 max-w-xl text-base leading-7 text-white/85 sm:text-lg font-medium">
-            Walk to campus landmarks, crack local trivia and build a card collection that proves how well you know Wits.
-          </p>
-          <div className="relative mt-8 flex flex-col gap-3.5 sm:flex-row">
-            <Link
-              href="/signup"
-              className="skeuo-btn-gold px-7 py-3.5 text-center text-sm font-black"
-            >
-              Start your first quest
-            </Link>
-            <Link
-              href="/Login"
-              className="skeuo-btn-secondary bg-white/10 text-white border-white/25 px-7 py-3.5 text-center text-sm font-bold hover:bg-white/15"
-              style={{
-                background: "linear-gradient(180deg, rgba(255,255,255,0.18) 0%, rgba(255,255,255,0.06) 100%)",
-                color: "#ffffff",
-                textShadow: "0 -1px 0 rgba(0,0,0,0.4)",
-              }}
-            >
-              I already play
-            </Link>
-          </div>
-        </div>
-
-        {/* Live Field Note / Compass Box */}
-        <aside className="skeuo-card flex min-h-72 flex-col justify-between p-6 sm:p-8 border-[#043673]/18">
-          <div className="flex items-center justify-between text-[11px] font-extrabold uppercase tracking-[0.24em] text-[#043673]/70 skeuo-text-emboss">
-            <span>Live field note</span>
-            <span className="skeuo-badge-gold">Wits Campus</span>
-          </div>
-
-          <div className="my-8 grid place-items-center">
-            {/* Skeuomorphic compass dial */}
-            <div className="relative grid h-44 w-44 place-items-center rounded-full border-2 border-[#043673]/20 bg-gradient-to-b from-[#edf2f8] to-[#e1e9f4] shadow-[inset_0_2px_4px_rgba(0,0,0,0.12),0_4px_12px_rgba(4,54,115,0.1)] sm:h-52 sm:w-52">
-              <div className="absolute h-32 w-32 rounded-full border border-dashed border-[#C9A24B]/70 shadow-[inset_0_1px_2px_rgba(0,0,0,0.05)]" />
-              <div className="h-6 w-6 rounded-full border-4 border-white bg-gradient-to-b from-[#094a94] to-[#043673] shadow-[0_0_0_8px_rgba(201,162,75,.3),0_2px_6px_rgba(0,0,0,0.25)]" />
-              <span className="skeuo-badge-gold absolute right-1 top-8 shadow-[0_2px_6px_rgba(184,140,44,0.35)]">
-                QUEST NEARBY
-              </span>
-            </div>
-          </div>
-
-          <p className="max-w-sm text-sm leading-6 text-slate-600 font-medium">
-            Every location opens a new piece of Wits history, culture or student lore.
-          </p>
-        </aside>
+      <div className={styles.roadmap}>
+      <section id="campus" className={styles.editorial}>
+        <span className={styles.milestone} aria-label="Journey stop 1">01</span>
+        <div className={styles.campusPhoto}><Image src="/wits pictures/TW Khambule building @Wits University.jpg" alt="The TW Kambule Mathematical Sciences Building and its courtyard at Wits" fill sizes="(max-width: 767px) 100vw, 45vw" /><span className={styles.photoLabel}>TW Kambule Mathematical Sciences Building</span></div>
+        <div className={styles.sectionCopy}><p className={styles.eyebrow}>First stop · Explore</p><h2>The places you pass.<br />The stories you haven’t heard.</h2><p>From well-known landmarks to the corners you usually walk past, every quest gives you a reason to look a little closer.</p><p>Use the campus map to find an active challenge. Head to its location, answer its questions and discover what makes that place part of Wits.</p><a href="#how-it-works" className={styles.outlineButton}>Next stop: your quest <span aria-hidden="true">↗</span></a></div>
       </section>
-
-      {/* How it works */}
-      <section className="mx-auto max-w-7xl px-5 py-16 sm:px-8 lg:px-12 lg:py-20">
-        <div className="skeuo-card p-8 sm:p-12 border-[#043673]/15">
-          <div className="grid gap-10 lg:grid-cols-[.7fr_1.3fr]">
-            <div>
-              <p className="text-[11px] font-extrabold uppercase tracking-[0.28em] text-[#9A741E] skeuo-text-emboss">
-                How it works
-              </p>
-              <h2 className="mt-3 text-3xl font-black tracking-[-0.045em] text-[#043673] skeuo-text-emboss sm:text-4xl">
-                Three moves.<br />One growing legacy.
-              </h2>
-            </div>
-            <ol className="divide-y divide-[#043673]/12 border-t border-[#043673]/12">
-              {[
-                ["01", "Find", "Use the live campus map to spot an active challenge."],
-                ["02", "Answer", "Reach the landmark, verify your location and take the trivia challenge."],
-                ["03", "Collect", "Win a WitsQuest card and build a deck that is uniquely yours."],
-              ].map(([n, t, d]) => (
-                <li
-                  key={n}
-                  className="grid grid-cols-[3rem_1fr] gap-4 py-6 sm:grid-cols-[4rem_10rem_1fr] sm:items-baseline"
-                >
-                  <span className="grid h-9 w-9 place-items-center rounded-full bg-gradient-to-b from-[#fae08f] to-[#c9a24b] text-xs font-black text-[#082c58] shadow-[inset_0_1px_1px_#ffffff,0_2px_4px_rgba(0,0,0,0.15)] font-mono border border-[#967425]">
-                    {n}
-                  </span>
-                  <strong className="text-lg font-black text-[#043673] skeuo-text-emboss">{t}</strong>
-                  <p className="col-start-2 text-sm leading-6 text-slate-600 font-medium sm:col-start-3">{d}</p>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
+      <section id="how-it-works" className={styles.guide}>
+        <span className={styles.milestone} aria-label="Journey stop 2">02</span>
+        <div className={styles.sectionCopy}><p className={styles.eyebrow}>Second stop · Challenge</p><h2>A little curiosity.<br />A whole new campus.</h2><p>Your first discovery is three steps away. Start with a place, take on a challenge and bring the story home.</p></div>
+        <Stepper initialStep={1} stepLabels={["Find", "Answer", "Collect"]} backButtonText="Previous" nextButtonText="Next" finalButtonText="Create my account" onFinalStepCompleted={() => router.push("/signup")}>
+          <Step><h3>Find</h3><Image className={styles.findImage} src="/art/quest-route-map.jpg" alt="A map with a blue route connecting green and red location pins" width={734} height={258} sizes="(max-width: 767px) 85vw, 40vw" /><p>Use the live campus map to spot an active challenge.</p></Step>
+          <Step><h3>Answer</h3><p>Reach the landmark, verify your location and take the trivia challenge.</p></Step>
+          <Step><h3>Collect</h3><p>Win a WitsQuest card and build a deck that is uniquely yours.</p></Step>
+        </Stepper>
       </section>
-
-      {/* Bottom CTA Plaque */}
-      <section className="mx-auto max-w-7xl px-5 pb-16 sm:px-8 lg:px-12">
-        <div className="skeuo-plate-gold px-6 py-14 text-center sm:px-12">
-          <h2 className="text-3xl font-black tracking-[-0.04em] text-[#082C58] skeuo-text-emboss sm:text-4xl">
-            Campus is already in play.
-          </h2>
-          <p className="mx-auto mt-3 max-w-xl text-sm leading-6 text-[#082C58]/80 font-semibold">
-            Create your student profile and turn the walk between lectures into something worth collecting.
-          </p>
-          <Link
-            href="/signup"
-            className="skeuo-btn-primary mt-8 px-8 py-4 text-sm font-black"
-          >
-            Create my account
-          </Link>
-        </div>
+      <section id="collection" className={styles.collection}>
+        <span className={styles.milestone} aria-label="Journey stop 3">03</span>
+        <div className={styles.sectionCopy}><p className={styles.eyebrow}>Third stop · Collect</p><h2>Every discovery<br />becomes part of your story.</h2><p>Your collection grows with the places you explore. Earn Blue, Black and Gold cards, revisit your discoveries and put your deck to the test in a card battle.</p><Link href="/signup" className={styles.primaryButton}>Begin your collection</Link></div>
+        <div className={styles.collectionPhoto}><Image src="/art/wits-great-hall.jpg" alt="Wits Great Hall above the fountain, framed by flowering purple jacaranda trees" fill sizes="(max-width: 767px) 100vw, 45vw" /><span className={styles.photoLabel}>Great Hall · Wits University</span></div>
       </section>
-    </main>
-  );
-}
-
-function LandingSkeleton() {
-  return (
-    <main className="min-h-[100dvh] campus-background p-5">
-      <div className="mx-auto max-w-7xl animate-pulse">
-        <div className="skeuo-card h-14" />
-        <div className="skeuo-card mt-5 h-[70vh] border-[#043673]/10" />
       </div>
-    </main>
+      <footer className={styles.footer}>
+        <div className={styles.resources}>
+          <h2>Resources</h2>
+          <ul><li>Return Policy</li><li>FAQs</li><li>Privacy Policy</li><li>Customer Support</li></ul>
+        </div>
+        <p className={styles.copyright}>© {new Date().getUTCFullYear()} WitsQuest. All rights reserved.</p>
+      </footer>
+    </div></main>
   );
 }

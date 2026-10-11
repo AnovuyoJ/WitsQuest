@@ -3,12 +3,13 @@
 import { useAdminAccess } from "@/lib/useAdminAccess";
 
 import { useState } from "react";
+import { useTheme } from "@/components/ThemeProvider";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import LogoutButton from "@/components/LogoutButton";
-const WITS_BLUE = "#043673";
-const WITS_BLUE_DARK = "#02234A";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_BLUE_DARK = "var(--brand-dark)";
+const WITS_GOLD = "var(--accent)";
 
 type NavItem = {
   label: string;
@@ -39,11 +40,6 @@ const navItems: NavItem[] = [
     href: "/dashboard/map",
   },
   {
-    label: "Notifications",
-    icon: <BellIcon />,
-    href: "/dashboard/notifications",
-  },
-  {
     label: "Admin",
     icon: <AdminIcon />,
     href: "/dashboard/admin",
@@ -63,8 +59,7 @@ const navItems: NavItem[] = [
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [darkMode, setDarkMode] = useState(false);
-  const [query, setQuery] = useState("");
+  const { darkMode, toggleDarkMode } = useTheme();
   const { isAdmin } = useAdminAccess();
 
   const pathname = usePathname();
@@ -81,13 +76,6 @@ export default function Sidebar() {
     (item) => item.label !== "Admin" || isAdmin
   );
 
-  /*
-   * Optional sidebar search.
-   */
-  const filteredNavItems = visibleNavItems.filter((item) =>
-    item.label.toLowerCase().includes(query.toLowerCase())
-  );
-
   return (
     <>
       {/* ===================================================== */}
@@ -95,7 +83,7 @@ export default function Sidebar() {
       {/* ===================================================== */}
 
       <button
-        onClick={() => setMobileOpen(true)}
+        onClick={() => { setCollapsed(false); setMobileOpen(true); }}
         aria-label="Open menu"
         className="fixed left-4 top-4 z-30 flex h-10 w-10 items-center justify-center rounded-lg text-white transition-transform active:scale-95 md:hidden"
         style={{
@@ -123,7 +111,7 @@ export default function Sidebar() {
       {/* ===================================================== */}
 
       <aside
-        className={`fixed inset-y-0 left-0 z-50 flex w-[240px] flex-col justify-between py-6 transition-all duration-200 md:sticky md:top-0 md:z-auto md:h-screen md:translate-x-0 ${
+        className={`app-navigation fixed inset-y-0 left-0 z-50 flex w-[240px] shrink-0 flex-col justify-between py-6 transition-all duration-200 md:sticky md:top-5 md:z-auto md:translate-x-0 ${
           mobileOpen ? "translate-x-0" : "-translate-x-full"
         } ${collapsed ? "md:w-[76px]" : "md:w-[240px]"}`}
         style={{
@@ -136,7 +124,10 @@ export default function Sidebar() {
         {/* TOP */}
         {/* ================================================= */}
 
-        <div className="flex min-h-0 flex-1 flex-col gap-4 px-4">
+        <div className="flex flex-1 flex-col gap-2 px-4">
+          <Link href="/dashboard" className="app-brand" aria-label="WitsQuest dashboard">
+            <span className="app-brand-mark">WQ</span>{!collapsed && <span>WitsQuest</span>}
+          </Link>
           {/* Desktop collapse button */}
 
           <button
@@ -165,46 +156,23 @@ export default function Sidebar() {
           {/* SEARCH */}
           {/* ================================================= */}
 
-          {collapsed ? (
-            <button
-              onClick={() => setCollapsed(false)}
-              aria-label="Expand sidebar to search"
-              className="hidden h-9 w-9 items-center justify-center rounded-lg text-white/70 transition-colors hover:bg-white/10 hover:text-white md:flex"
-            >
-              <SearchIcon />
-            </button>
-          ) : (
-            <div className="relative">
-              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-white/50">
-                <SearchIcon />
-              </span>
-
-              <input
-                type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder="Search..."
-                className="w-full rounded-lg border border-black/20 py-2 pl-9 pr-3 text-sm text-white placeholder-white/50 outline-none transition-all focus:border-white/30 focus:shadow-[inset_0_1px_4px_rgba(0,0,0,0.35),0_0_0_2px_rgba(255,255,255,0.08)]"
-                style={{
-                  background: "rgba(0,0,0,0.18)",
-                  boxShadow: "inset 0 1px 3px rgba(0,0,0,0.3)",
-                }}
-              />
-            </div>
-          )}
+          {!collapsed && <p className="app-nav-label">Explore</p>}
 
           {/* ================================================= */}
           {/* NAVIGATION */}
           {/* ================================================= */}
 
-          <nav className="scroll-thin mt-2 flex min-h-0 flex-1 flex-col gap-1.5 overflow-y-auto">
-            {filteredNavItems.map((item) => {
-              const isActive = pathname === item.href;
+          <nav className="mt-2 flex flex-1 flex-col gap-1" aria-label="Main navigation">
+            {visibleNavItems.map((item) => {
+              const isActive = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(`${item.href}/`));
 
               return (
                 <Link
                   key={item.href}
                   href={item.href}
+                  aria-current={isActive ? "page" : undefined}
+                  title={collapsed ? item.label : undefined}
+                  aria-label={collapsed ? item.label : undefined}
                   onClick={() => setMobileOpen(false)}
                   className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-all ${
                     isActive
@@ -236,7 +204,7 @@ export default function Sidebar() {
 
                   {/* Active gold dot */}
 
-                  {isActive && (
+                  {isActive && !collapsed && (
                     <span
                       className="ml-auto h-1.5 w-1.5 shrink-0 rounded-full"
                       style={{
@@ -265,7 +233,9 @@ export default function Sidebar() {
 
           {collapsed ? (
             <button
-              onClick={() => setDarkMode((current) => !current)}
+              onClick={toggleDarkMode}
+              role="switch"
+              aria-checked={darkMode}
               aria-label={
                 darkMode
                   ? "Switch to light mode"
@@ -305,7 +275,9 @@ export default function Sidebar() {
               </span>
 
               <button
-                onClick={() => setDarkMode((current) => !current)}
+                onClick={toggleDarkMode}
+                role="switch"
+                aria-checked={darkMode}
                 aria-label={
                   darkMode
                     ? "Switch to light mode"
@@ -379,7 +351,7 @@ function CloseIcon() {
   );
 }
 
-function SearchIcon() {
+export function SearchIcon() {
   return (
     <svg
       width="16"
@@ -416,7 +388,7 @@ function HomeIcon() {
   );
 }
 
-function CardIcon() {
+export function CardIcon() {
   return (
     <svg
       width="18"
@@ -486,7 +458,7 @@ function MapIcon() {
   );
 }
 
-function BellIcon() {
+export function BellIcon() {
   return (
     <svg
       width="18"
@@ -546,7 +518,7 @@ function GameIcon() {
   );
 }
 
-function SunIcon() {
+export function SunIcon() {
   return (
     <svg
       width="16"

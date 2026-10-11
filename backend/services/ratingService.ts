@@ -1,9 +1,4 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+import { getSupabaseDataClient } from "./supabaseDataClient";
 
 const K_FACTOR = 32;
 
@@ -11,14 +6,14 @@ const K_FACTOR = 32;
  * Fetches or initializes a player's competitive rating.
  */
 export async function getPlayerRating(playerId: string): Promise<number> {
-  const { data } = await supabase
+  const { data } = await getSupabaseDataClient()
     .from("player_ratings")
     .select("rating")
     .eq("player_id", playerId)
     .maybeSingle();
 
   if (!data) {
-    await supabase.from("player_ratings").insert({
+    await getSupabaseDataClient().from("player_ratings").insert({
       player_id: playerId,
       rating: 1200,
       games_played: 0,
@@ -46,12 +41,12 @@ export async function updateMatchRatings(winnerId: string, loserId: string) {
   const newRatingB = Math.max(0, Math.round(ratingB + K_FACTOR * (0 - expectedB)));
 
   await Promise.all([
-    supabase.rpc("increment_player_stats", {
+    getSupabaseDataClient().rpc("increment_player_stats", {
       p_id: winnerId,
       p_rating_delta: newRatingA - ratingA,
       p_is_win: true,
     }),
-    supabase.rpc("increment_player_stats", {
+    getSupabaseDataClient().rpc("increment_player_stats", {
       p_id: loserId,
       p_rating_delta: newRatingB - ratingB,
       p_is_win: false,

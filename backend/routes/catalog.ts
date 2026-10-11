@@ -8,6 +8,8 @@ import { deleteAccount } from "../services/accountService";
 import { rotateProceduralEvents } from "../services/proceduralEventService";
 import { imageValue } from "../services/imageValidation";
 import { buildAchievements, calculateCurrentStreak, type ProgressStats } from "../services/progressService";
+import { getPlayerRating } from "../services/ratingService";
+import { getPlayerTrustStatus } from "../services/moderationService";
 
 const router = Router();
 router.use(requireAuth);
@@ -67,6 +69,15 @@ router.get("/me/progress", async (req, res) => {
     currentStreak,
     achievements: buildAchievements(stats, currentStreak),
   });
+});
+
+router.get("/me/stats", async (req, res) => {
+  const userId = req.user!.id;
+  const [rating, trust] = await Promise.all([
+    getPlayerRating(userId),
+    getPlayerTrustStatus(userId),
+  ]);
+  res.json({ rating, trustScore: trust.score, trustStatus: trust.status });
 });
 
 router.get("/leaderboard", async (req, res) => {

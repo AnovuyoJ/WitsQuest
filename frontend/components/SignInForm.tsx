@@ -1,5 +1,9 @@
 "use client";
 
+import AuthBrandBadge from "./AuthBrandBadge";
+import StarBorder from "./StarBorder";
+import Link from "next/link";
+
 import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 // 1. Importing OAuth and password reset functions alongside signIn
@@ -15,8 +19,8 @@ type FormErrors = {
   password?: string;
 };
 
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_GOLD = "var(--accent)";
 
 export default function SignInForm() {
   const router = useRouter();
@@ -126,7 +130,7 @@ export default function SignInForm() {
 
       <div className="px-9 pb-9 pt-8">
         <div className="mb-7 flex flex-col items-center text-center">
-          <Monogram />
+          <AuthBrandBadge />
           <h1 className="mt-4 text-[28px] font-black leading-tight tracking-[-.04em] text-[#043673] skeuo-text-emboss">
             Welcome back
           </h1>
@@ -213,42 +217,32 @@ export default function SignInForm() {
           {errors.password && <p className="mt-1 text-xs text-red-600">{errors.password}</p>}
         </div>
 
-        <button
+        <StarBorder
           type="submit"
           disabled={isSubmitting}
-          style={{ background: WITS_BLUE }}
-          className="mt-1 w-full rounded-xl py-3.5 text-sm font-bold text-white transition hover:brightness-110 active:scale-[.99] disabled:cursor-wait disabled:opacity-60"
+          aria-busy={isSubmitting}
+          color="var(--accent-light)"
+          speed="5s"
+          thickness={2}
+          backgroundColor={WITS_BLUE}
+          textColor="#ffffff"
+          borderColor="var(--brand-dark)"
+          className="mt-1 w-full text-sm font-bold text-white transition hover:brightness-110 active:scale-[.99] disabled:cursor-wait disabled:opacity-60"
         >
           {isSubmitting ? "Signing in…" : "Sign in"}
-        </button>
+        </StarBorder>
 
         <p className="mt-5 text-center text-sm text-gray-500">
           No account?{" "}
-          <a href="/signup" className="font-medium" style={{ color: WITS_BLUE }}>
+          <Link href="/signup" className="font-medium" style={{ color: WITS_BLUE }}>
             Sign up
-          </a>
+          </Link>
         </p>
       </div>
     </form>
   );
 }
 
-// --- Monogram badge ---
-function Monogram() {
-  return (
-    <div
-      className="flex h-14 w-14 items-center justify-center rounded-2xl"
-      style={{
-        background: `linear-gradient(155deg, ${WITS_BLUE} 0%, #0A1F3D 100%)`,
-        boxShadow: `0 0 0 3px ${WITS_GOLD}33`,
-      }}
-    >
-      <span className="text-lg font-black tracking-wide" style={{ color: WITS_GOLD }}>
-        WQ
-      </span>
-    </div>
-  );
-}
 
 function Field({
   id,

@@ -1,9 +1,34 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
 :root {
+  --brand: #043673;
+  --brand-dark: #02234a;
+  --brand-bright: #094794;
+  --accent: #c9a24b;
+  --accent-light: #e2c66f;
   --background: #f4f6f9;
   --foreground: #10233d;
   color-scheme: light;
+  --surface: #ffffff;
+  --surface-soft: #f7f9fc;
+  --surface-muted: #edf2f8;
+  --heading: var(--brand);
+  --muted: #475569;
+  --line: #cbd5e1;
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --background: #0b1220;
+  --foreground: #e2e8f0;
+  --surface: #182538;
+  --surface-soft: #142033;
+  --surface-muted: #223249;
+  --heading: #a8ccff;
+  --muted: #b1bfd1;
+  --line: #3a4c64;
 }
 
 :root {
@@ -24,19 +49,19 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 
 /* Fade the artwork independently, keeping text and panels fully opaque. */
 .campus-background {
-  background-color: #f7f9fc;
-  background-image: linear-gradient(#f7f9fcc4, #f7f9fcc4), url("/art/campus-map.webp");
+  background-color: var(--forest-tone-10, #f7f9fc);
+  background-image: linear-gradient(color-mix(in srgb, var(--forest-tone-10, #f7f9fc) 76.86%, transparent), color-mix(in srgb, var(--forest-tone-10, #f7f9fc) 76.86%, transparent)), url("/art/campus-map.webp");
   background-repeat: repeat;
   background-position: center top;
   background-size: auto, 1050px auto;
 }
 
 .campus-background-dark {
-  background-color: #0b1220;
-  background-image: linear-gradient(#0b1220f4, #0b1220f4), url("/art/campus-map.webp");
+  background-color: var(--forest-tone-1, #0b1220);
+  background-image: linear-gradient(color-mix(in srgb, var(--forest-tone-1, #0b1220) 95.69%, transparent), color-mix(in srgb, var(--forest-tone-1, #0b1220) 95.69%, transparent)), url("/art/campus-map.webp");
 }
 
-:focus-visible { outline: 3px solid rgba(201, 162, 75, 0.7); outline-offset: 3px; }
+:focus-visible { outline: 3px solid color-mix(in srgb, var(--forest-tone-5, #c9a24b) 70%, transparent); outline-offset: 3px; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; transition-duration: 0.01ms !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; }
@@ -55,12 +80,12 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #043673;
+  background: var(--brand);
   border-radius: 9999px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #c9a24b;
+  background: var(--accent);
 }
 
 /* Used on the sidebar's nav list so it scrolls with a thinner,
@@ -84,52 +109,52 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 /* --- Tactile Cards & Plates --- */
 .skeuo-card {
   position: relative;
-  background: linear-gradient(180deg, #ffffff 0%, #f7f9fc 100%);
-  border: 1px solid rgba(4, 54, 115, 0.16);
+  background: linear-gradient(180deg, #ffffff 0%, var(--forest-tone-10, #f7f9fc) 100%);
+  border: 1px solid color-mix(in srgb, var(--forest-tone-2, #043673) 16%, transparent);
   border-radius: 1.25rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 rgba(4, 54, 115, 0.05),
-    0 2px 4px rgba(4, 54, 115, 0.04),
-    0 10px 28px -6px rgba(4, 54, 115, 0.14);
+    inset 0 -1px 0 color-mix(in srgb, var(--forest-tone-2, #043673) 5%, transparent),
+    0 2px 4px color-mix(in srgb, var(--forest-tone-2, #043673) 4%, transparent),
+    0 10px 28px -6px color-mix(in srgb, var(--forest-tone-2, #043673) 14.000000000000002%, transparent);
 }
 
 .skeuo-card-interactive {
   position: relative;
-  background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
-  border: 1px solid rgba(4, 54, 115, 0.16);
+  background: linear-gradient(180deg, #ffffff 0%, var(--forest-tone-10, #f8fafc) 100%);
+  border: 1px solid color-mix(in srgb, var(--forest-tone-2, #043673) 16%, transparent);
   border-radius: 1.25rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.95),
-    inset 0 -1px 0 rgba(4, 54, 115, 0.05),
-    0 3px 6px rgba(4, 54, 115, 0.05),
-    0 12px 28px -8px rgba(4, 54, 115, 0.16);
+    inset 0 -1px 0 color-mix(in srgb, var(--forest-tone-2, #043673) 5%, transparent),
+    0 3px 6px color-mix(in srgb, var(--forest-tone-2, #043673) 5%, transparent),
+    0 12px 28px -8px color-mix(in srgb, var(--forest-tone-2, #043673) 16%, transparent);
   transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.15s cubic-bezier(0.2, 0, 0, 1), border-color 0.15s ease;
 }
 
 .skeuo-card-interactive:hover {
   transform: translateY(-2px);
-  border-color: rgba(201, 162, 75, 0.4);
+  border-color: color-mix(in srgb, var(--forest-tone-5, #c9a24b) 40%, transparent);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 1),
-    0 6px 12px rgba(4, 54, 115, 0.08),
-    0 20px 36px -12px rgba(4, 54, 115, 0.22);
+    0 6px 12px color-mix(in srgb, var(--forest-tone-2, #043673) 8%, transparent),
+    0 20px 36px -12px color-mix(in srgb, var(--forest-tone-2, #043673) 22%, transparent);
 }
 
 .skeuo-card-interactive:active {
   transform: translateY(1px);
   box-shadow:
-    inset 0 1px 3px rgba(4, 54, 115, 0.1),
-    0 2px 4px rgba(4, 54, 115, 0.06);
+    inset 0 1px 3px color-mix(in srgb, var(--forest-tone-2, #043673) 10%, transparent),
+    0 2px 4px color-mix(in srgb, var(--forest-tone-2, #043673) 6%, transparent);
 }
 
 /* --- Sunken Wells & Recessed Areas --- */
 .skeuo-well {
-  background: linear-gradient(180deg, #edf2f8 0%, #f5f8fc 100%);
-  border: 1px solid rgba(4, 54, 115, 0.12);
+  background: linear-gradient(180deg, var(--forest-tone-10, #edf2f8) 0%, var(--forest-tone-10, #f5f8fc) 100%);
+  border: 1px solid color-mix(in srgb, var(--forest-tone-2, #043673) 12%, transparent);
   border-radius: 1rem;
   box-shadow:
-    inset 0 2px 5px rgba(4, 54, 115, 0.12),
+    inset 0 2px 5px color-mix(in srgb, var(--forest-tone-2, #043673) 12%, transparent),
     inset 0 1px 2px rgba(0, 0, 0, 0.06),
     0 1px 0 rgba(255, 255, 255, 0.85);
 }
@@ -140,16 +165,16 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #0a4d9b 0%, #043673 52%, #022652 100%);
+  background: linear-gradient(180deg, var(--forest-tone-3, #0a4d9b) 0%, var(--brand) 52%, var(--forest-tone-2, #022652) 100%);
   color: #ffffff !important;
   font-weight: 700;
-  border: 1px solid #021e42;
+  border: 1px solid var(--forest-tone-1, #021e42);
   border-radius: 0.875rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.38),
     inset 0 -2px 0 rgba(0, 0, 0, 0.25),
-    0 3px 0 #021a38,
-    0 6px 14px -2px rgba(4, 54, 115, 0.45);
+    0 3px 0 var(--forest-tone-1, #021a38),
+    0 6px 14px -2px color-mix(in srgb, var(--forest-tone-2, #043673) 45%, transparent);
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.5);
   transition: filter 0.15s ease, transform 0.1s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.1s cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
@@ -163,16 +188,16 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.45),
     inset 0 -2px 0 rgba(0, 0, 0, 0.25),
-    0 4px 0 #021a38,
-    0 8px 18px -2px rgba(4, 54, 115, 0.55);
+    0 4px 0 var(--forest-tone-1, #021a38),
+    0 8px 18px -2px color-mix(in srgb, var(--forest-tone-2, #043673) 55.00000000000001%, transparent);
 }
 
 .skeuo-btn-primary:active:not(:disabled) {
   transform: translateY(2px);
   box-shadow:
     inset 0 2px 5px rgba(0, 0, 0, 0.55),
-    0 1px 0 #021a38,
-    0 2px 4px rgba(4, 54, 115, 0.2);
+    0 1px 0 var(--forest-tone-1, #021a38),
+    0 2px 4px color-mix(in srgb, var(--forest-tone-2, #043673) 20%, transparent);
 }
 
 .skeuo-btn-gold {
@@ -180,16 +205,16 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #fae08f 0%, #c9a24b 55%, #ad8530 100%);
-  color: #07264d !important;
+  background: linear-gradient(180deg, var(--forest-tone-8, #fae08f) 0%, var(--accent) 55%, var(--forest-tone-4, #ad8530) 100%);
+  color: var(--forest-tone-2, #07264d) !important;
   font-weight: 800;
-  border: 1px solid #856118;
+  border: 1px solid var(--forest-tone-3, #856118);
   border-radius: 0.875rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.75),
     inset 0 -2px 0 rgba(0, 0, 0, 0.15),
-    0 3px 0 #6e4f10,
-    0 6px 16px -2px rgba(184, 140, 44, 0.45);
+    0 3px 0 var(--forest-tone-2, #6e4f10),
+    0 6px 16px -2px color-mix(in srgb, var(--forest-tone-4, #b88c2c) 45%, transparent);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.5);
   transition: filter 0.15s ease, transform 0.1s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.1s cubic-bezier(0.2, 0, 0, 1);
   cursor: pointer;
@@ -202,16 +227,16 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.85),
     inset 0 -2px 0 rgba(0, 0, 0, 0.15),
-    0 4px 0 #6e4f10,
-    0 8px 20px -2px rgba(184, 140, 44, 0.55);
+    0 4px 0 var(--forest-tone-2, #6e4f10),
+    0 8px 20px -2px color-mix(in srgb, var(--forest-tone-4, #b88c2c) 55.00000000000001%, transparent);
 }
 
 .skeuo-btn-gold:active:not(:disabled) {
   transform: translateY(2px);
   box-shadow:
     inset 0 2px 5px rgba(0, 0, 0, 0.4),
-    0 1px 0 #6e4f10,
-    0 2px 4px rgba(184, 140, 44, 0.25);
+    0 1px 0 var(--forest-tone-2, #6e4f10),
+    0 2px 4px color-mix(in srgb, var(--forest-tone-4, #b88c2c) 25%, transparent);
 }
 
 .skeuo-btn-secondary {
@@ -219,16 +244,16 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(180deg, #ffffff 0%, #f2f5f9 60%, #e2e8f1 100%);
-  color: #043673 !important;
+  background: linear-gradient(180deg, #ffffff 0%, var(--forest-tone-10, #f2f5f9) 60%, var(--forest-tone-9, #e2e8f1) 100%);
+  color: var(--brand) !important;
   font-weight: 700;
-  border: 1px solid #c4d0df;
+  border: 1px solid var(--forest-tone-8, #c4d0df);
   border-radius: 0.875rem;
   box-shadow:
     inset 0 1px 0 #ffffff,
-    inset 0 -1px 0 rgba(4, 54, 115, 0.08),
-    0 2px 0 #b3c2d4,
-    0 4px 10px -2px rgba(4, 54, 115, 0.12);
+    inset 0 -1px 0 color-mix(in srgb, var(--forest-tone-2, #043673) 8%, transparent),
+    0 2px 0 var(--forest-tone-8, #b3c2d4),
+    0 4px 10px -2px color-mix(in srgb, var(--forest-tone-2, #043673) 12%, transparent);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.8);
   transition: filter 0.15s ease, transform 0.1s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.1s cubic-bezier(0.2, 0, 0, 1);
   
@@ -242,37 +267,37 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   filter: brightness(1.03);
   box-shadow:
     inset 0 1px 0 #ffffff,
-    0 3px 0 #b3c2d4,
-    0 6px 14px -2px rgba(4, 54, 115, 0.18);
+    0 3px 0 var(--forest-tone-8, #b3c2d4),
+    0 6px 14px -2px color-mix(in srgb, var(--forest-tone-2, #043673) 18%, transparent);
 }
 
 .skeuo-btn-secondary:active:not(:disabled) {
   transform: translateY(2px);
   box-shadow:
-    inset 0 2px 4px rgba(4, 54, 115, 0.15),
-    0 0 0 #b3c2d4,
+    inset 0 2px 4px color-mix(in srgb, var(--forest-tone-2, #043673) 15%, transparent),
+    0 0 0 var(--forest-tone-8, #b3c2d4),
     0 1px 2px rgba(0, 0, 0, 0.05);
 }
 
 /* --- Sunken Debossed Input Well --- */
 .skeuo-input {
-  background: linear-gradient(180deg, #f5f8fc 0%, #ffffff 32%);
-  border: 1px solid #c5d3e3;
+  background: linear-gradient(180deg, var(--forest-tone-10, #f5f8fc) 0%, #ffffff 32%);
+  border: 1px solid var(--forest-tone-8, #c5d3e3);
   border-radius: 0.875rem;
   box-shadow:
-    inset 0 2px 4px rgba(4, 54, 115, 0.09),
+    inset 0 2px 4px color-mix(in srgb, var(--forest-tone-2, #043673) 9%, transparent),
     inset 0 1px 2px rgba(0, 0, 0, 0.06),
     0 1px 0 #ffffff;
-  color: #0a1f3d;
+  color: var(--forest-tone-1, #0a1f3d);
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .skeuo-input:focus {
   outline: none;
-  border-color: #043673;
+  border-color: var(--brand);
   box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.06),
-    0 0 0 3px rgba(201, 162, 75, 0.35),
+    0 0 0 3px color-mix(in srgb, var(--forest-tone-5, #c9a24b) 35%, transparent),
     0 1px 0 #ffffff;
 }
 
@@ -283,17 +308,17 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   gap: 0.35rem;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
-  background: linear-gradient(180deg, #fef4d8 0%, #f7e4b2 60%, #eed28a 100%);
-  border: 1px solid #d4b568;
-  color: #6a4c0d;
+  background: linear-gradient(180deg, var(--forest-tone-9, #fef4d8) 0%, var(--forest-tone-8, #f7e4b2) 60%, var(--forest-tone-7, #eed28a) 100%);
+  border: 1px solid var(--forest-tone-6, #d4b568);
+  color: var(--forest-tone-2, #6a4c0d);
   font-weight: 800;
   font-size: 0.6875rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.8),
-    inset 0 -1px 0 rgba(106, 76, 13, 0.15),
-    0 1px 3px rgba(106, 76, 13, 0.2);
+    inset 0 -1px 0 color-mix(in srgb, var(--forest-tone-2, #6a4c0d) 15%, transparent),
+    0 1px 3px color-mix(in srgb, var(--forest-tone-2, #6a4c0d) 20%, transparent);
   text-shadow: 0 1px 0 rgba(255, 255, 255, 0.6);
 }
 
@@ -303,16 +328,16 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   gap: 0.35rem;
   padding: 0.25rem 0.75rem;
   border-radius: 9999px;
-  background: linear-gradient(180deg, #0d54a5 0%, #043673 100%);
-  border: 1px solid #032752;
-  color: #e2c66f;
+  background: linear-gradient(180deg, var(--forest-tone-3, #0d54a5) 0%, var(--brand) 100%);
+  border: 1px solid var(--forest-tone-2, #032752);
+  color: var(--accent-light);
   font-weight: 800;
   font-size: 0.6875rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.3),
-    0 1px 3px rgba(4, 54, 115, 0.3);
+    0 1px 3px color-mix(in srgb, var(--forest-tone-2, #043673) 30%, transparent);
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.4);
 }
 
@@ -339,8 +364,8 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
   height: 0.625rem;
   width: 100%;
   border-radius: 9999px;
-  background: #e2e9f3;
-  border: 1px solid #c5d3e3;
+  background: var(--forest-tone-9, #e2e9f3);
+  border: 1px solid var(--forest-tone-8, #c5d3e3);
   box-shadow:
     inset 0 2px 3px rgba(0, 0, 0, 0.15),
     0 1px 0 rgba(255, 255, 255, 0.7);
@@ -348,13 +373,13 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 }
 
 .skeuo-progress::-webkit-progress-bar {
-  background: #e2e9f3;
+  background: var(--forest-tone-9, #e2e9f3);
   box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.15);
   border-radius: 9999px;
 }
 
 .skeuo-progress::-webkit-progress-value {
-  background: linear-gradient(180deg, #fbe8a6 0%, #c9a24b 45%, #9e7520 100%);
+  background: linear-gradient(180deg, var(--forest-tone-8, #fbe8a6) 0%, var(--accent) 45%, var(--forest-tone-4, #9e7520) 100%);
   border-radius: 9999px;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5), 0 1px 2px rgba(0, 0, 0, 0.15);
 }
@@ -362,26 +387,26 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 /* --- Leather / Folio Plates --- */
 .skeuo-plate-navy {
   position: relative;
-  background: linear-gradient(170deg, #094794 0%, #043673 40%, #02234a 100%);
-  border: 1px solid #082d5a;
+  background: linear-gradient(170deg, var(--brand-bright) 0%, var(--brand) 40%, var(--brand-dark) 100%);
+  border: 1px solid var(--forest-tone-2, #082d5a);
   border-radius: 1.5rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.2),
-    inset 0 0 0 1px rgba(201, 162, 75, 0.25),
-    0 4px 10px rgba(4, 54, 115, 0.15),
-    0 18px 40px -10px rgba(4, 54, 115, 0.45);
+    inset 0 0 0 1px color-mix(in srgb, var(--forest-tone-5, #c9a24b) 25%, transparent),
+    0 4px 10px color-mix(in srgb, var(--forest-tone-2, #043673) 15%, transparent),
+    0 18px 40px -10px color-mix(in srgb, var(--forest-tone-2, #043673) 45%, transparent);
 }
 
 .skeuo-plate-gold {
   position: relative;
-  background: linear-gradient(160deg, #fff7e0 0%, #f6e8c4 50%, #edd8a4 100%);
-  border: 1px solid #dfc78f;
+  background: linear-gradient(160deg, var(--forest-tone-9, #fff7e0) 0%, var(--forest-tone-9, #f6e8c4) 50%, var(--forest-tone-8, #edd8a4) 100%);
+  border: 1px solid var(--forest-tone-7, #dfc78f);
   border-radius: 1.5rem;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.9),
-    inset 0 0 0 1px rgba(184, 140, 44, 0.2),
-    0 4px 8px rgba(118, 88, 22, 0.08),
-    0 16px 36px -10px rgba(118, 88, 22, 0.25);
+    inset 0 0 0 1px color-mix(in srgb, var(--forest-tone-4, #b88c2c) 20%, transparent),
+    0 4px 8px color-mix(in srgb, var(--forest-tone-3, #765816) 8%, transparent),
+    0 16px 36px -10px color-mix(in srgb, var(--forest-tone-3, #765816) 25%, transparent);
 }
 
 /* --- Text Emboss / Deboss Effects --- */
@@ -392,3 +417,587 @@ button, a, input { -webkit-tap-highlight-color: transparent; }
 .skeuo-text-deboss {
   text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.45);
 }
+
+/* Shared theme adapters for the existing utility-based screens. */
+:root[data-theme="dark"] .campus-background {
+  background-color: var(--background);
+  background-image: linear-gradient(color-mix(in srgb, var(--forest-tone-1, #0b1220) 92.94%, transparent), color-mix(in srgb, var(--forest-tone-1, #0b1220) 92.94%, transparent)), url("/art/campus-map.webp");
+}
+
+:root[data-theme="dark"] :is(.skeuo-card, .skeuo-card-interactive) {
+  background: linear-gradient(180deg, var(--surface), var(--surface-soft));
+  border-color: var(--line);
+  box-shadow: inset 0 1px 0 #ffffff0d, 0 8px 24px #00000040;
+}
+
+:root[data-theme="dark"] :is(.skeuo-well, .skeuo-input) {
+  background: var(--surface-soft);
+  color: var(--foreground);
+  border-color: var(--line);
+  box-shadow: inset 0 2px 5px #00000040;
+}
+
+:root[data-theme="dark"] .skeuo-btn-secondary {
+  background: linear-gradient(var(--surface-muted), var(--surface));
+  color: var(--heading) !important;
+  border-color: var(--line);
+  text-shadow: none;
+  box-shadow: inset 0 1px 0 #ffffff0d, 0 2px 0 var(--forest-tone-1, #080e18), 0 4px 10px #00000040;
+}
+
+:root[data-theme="dark"] :is(.skeuo-text-emboss, .skeuo-card h1, .skeuo-card h2) { text-shadow: none; }
+:root[data-theme="dark"] .skeuo-progress { background: var(--surface-muted); border-color: var(--line); }
+:root[data-theme="dark"] .skeuo-progress::-webkit-progress-bar { background: var(--surface-muted); }
+:root[data-theme="dark"] ::-webkit-scrollbar-track { background: var(--background); }
+
+/* Rounded application frame, retaining the Wits navy and gold palette. */
+.app-refresh .app-navigation {
+  border: 0;
+  border-radius: 24px;
+  background: linear-gradient(160deg, var(--brand-bright) 0%, var(--brand) 42%, var(--brand-dark) 100%) !important;
+  box-shadow: inset 0 1px 0 #ffffff35, inset -1px 0 0 #ffffff0d, 0 8px 24px color-mix(in srgb, var(--forest-tone-1, #02234a) 14.90%, transparent) !important;
+  height: auto;
+  min-height: calc(100dvh - 40px);
+  padding-block: 20px 16px;
+}
+.app-brand { display: flex; align-items: center; gap: 10px; min-height: 40px; margin-bottom: 8px; color: white; font-size: 19px; font-weight: 750; letter-spacing: -.04em; }
+.app-brand-mark { display: grid; place-items: center; flex-shrink: 0; width: 38px; height: 38px; border: 1px solid #c9a24b80; border-radius: 13px; background: #043673; color: #e2c66f; font-size: 12px; font-weight: 900; letter-spacing: -.03em; }
+.app-nav-label { padding: 8px 12px 0; color: #ffffff80; font-size: 10px; font-weight: 600; letter-spacing: .12em; text-transform: uppercase; }
+.app-refresh .app-navigation nav a { position: relative; min-height: 40px; border-radius: 13px; transition: background .15s, color .15s; }
+.app-refresh .app-navigation nav a:hover { transform: none; background: #ffffff0d; }
+.app-refresh .app-navigation nav a[aria-current="page"] { background: linear-gradient(135deg, #ffffff26, #ffffff0d) !important; box-shadow: inset 0 1px 0 #ffffff26, 0 2px 6px #00000020 !important; font-weight: 700; }
+.app-refresh .app-navigation nav a[aria-current="page"]::before { content: ""; position: absolute; left: -9px; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: var(--accent); }
+.app-settings { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 12px; color: #ffffffb3; font-size: 13px; }
+.app-settings:hover { background: #ffffff0d; color: white; }
+.app-refresh :is(.skeuo-card, .skeuo-card-interactive) { border-radius: 22px; border-color: var(--line); background: var(--surface); box-shadow: 0 3px 14px color-mix(in srgb, var(--forest-tone-2, #043673) 2.35%, transparent); }
+.app-refresh .skeuo-card-interactive:hover { transform: translateY(-2px); box-shadow: 0 6px 20px color-mix(in srgb, var(--forest-tone-2, #043673) 7.06%, transparent); }
+.app-refresh .skeuo-well { background: var(--surface-soft); border-color: var(--line); box-shadow: none; }
+.app-refresh :is(.skeuo-btn-primary, .skeuo-btn-secondary, .skeuo-btn-gold) { border-radius: 999px; box-shadow: none; text-shadow: none; }
+.app-refresh .skeuo-btn-primary { background: var(--brand); border-color: var(--brand); }
+.app-refresh .skeuo-btn-gold { background: var(--accent); border-color: var(--forest-tone-4, #ad8530); }
+.app-refresh .skeuo-btn-secondary { background: var(--surface); border-color: var(--line); color: var(--heading) !important; }
+.app-refresh :is(.skeuo-plate-navy, .skeuo-plate-gold) { border-radius: 24px; box-shadow: inset 0 1px 0 #ffffff35, 0 4px 16px color-mix(in srgb, var(--forest-tone-2, #043673) 3.92%, transparent); }
+.app-refresh .skeuo-text-emboss { text-shadow: none; }
+.app-refresh .skeuo-input { background: var(--surface); border-color: var(--line); box-shadow: none; }
+:root[data-theme="dark"] .app-refresh :is(.skeuo-card, .skeuo-card-interactive) { background: var(--surface); box-shadow: 0 4px 16px #00000012; }
+:root[data-theme="dark"] .app-refresh .skeuo-btn-secondary { background: var(--surface-muted); box-shadow: none; text-shadow: none; }
+@media (max-width: 767px) {
+  .app-refresh .app-navigation { position: absolute; bottom: auto; height: auto; min-height: 100dvh; border-radius: 0 24px 24px 0; }
+}
+
+:root[data-palette="forest"] {
+  --brand: #164b36;
+  --brand-dark: #103c2b;
+  --brand-bright: #25815b;
+  --accent: #25815b;
+  --accent-light: #b4dfc5;
+  --background: #edf1ee;
+  --foreground: #172b22;
+  --surface: #ffffff;
+  --surface-soft: #f5f7f5;
+  --surface-muted: #e6eee8;
+  --heading: #164b36;
+  --muted: #52665b;
+  --line: #d4dfd7;
+}
+:root[data-palette="forest"][data-theme="dark"] {
+  --background: #0c1712;
+  --foreground: #e6f1e9;
+  --surface: #182b21;
+  --surface-soft: #13231b;
+  --surface-muted: #233b2d;
+  --heading: #b4dfc5;
+  --muted: #b4c7ba;
+  --line: #3a5645;
+}
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .campus-background {
+  background-color: var(--background);
+  background-image: linear-gradient(color-mix(in srgb, var(--surface-soft) 90%, transparent), color-mix(in srgb, var(--surface-soft) 90%, transparent)), url("/art/campus-map.webp");
+}
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"])[data-theme="dark"] .campus-background {
+  background-image: linear-gradient(color-mix(in srgb, var(--background) 92.94%, transparent), color-mix(in srgb, var(--background) 92.94%, transparent)), url("/art/campus-map.webp");
+}
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .skeuo-plate-navy { background: linear-gradient(145deg, var(--brand-dark), var(--brand-bright)); border-color: var(--brand-dark); }
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .skeuo-plate-gold { background: linear-gradient(145deg, var(--surface-soft), var(--accent-light)); border-color: var(--line); }
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .skeuo-plate-gold :is(h2, p, a, span) { color: var(--brand-dark); text-shadow: none; }
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) :is(.skeuo-btn-primary, .skeuo-badge-blue) { background: var(--brand); border-color: var(--brand-dark); }
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .skeuo-btn-gold { background: var(--accent); border-color: var(--brand); color: #ffffff !important; }
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) :is(.skeuo-badge-gold, .skeuo-badge-emerald) { background: var(--surface-muted); border-color: var(--line); color: var(--heading); text-shadow: none; box-shadow: none; }
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .skeuo-progress::-webkit-progress-value { background: var(--accent); }
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .skeuo-progress::-moz-progress-bar { background: var(--accent); }
+
+@layer utilities {
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#043673\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) :is(.text-\[\#9A741E\], .text-\[\#C9A24B\], .text-\[\#E2C66F\]):where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--accent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#043673\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--brand); }
+  :root[data-theme="dark"] :is(.bg-white, .bg-white\/90, .bg-white\/95) { background-color: var(--surface); }
+  :root[data-theme="dark"] :is(.bg-slate-50, .bg-slate-100, .bg-gray-50, .bg-gray-100, .bg-\[\#f5f7fb\]) { background-color: var(--surface-soft); }
+  :root[data-theme="dark"] :is(.bg-slate-200, .bg-slate-200\/80, .bg-gray-200) { background-color: var(--surface-muted); }
+  :root[data-theme="dark"] :is(.text-slate-900, .text-slate-800, .text-slate-700, .text-gray-900, .text-gray-800, .text-gray-700, .text-\[\#10233d\], .text-\[\#10233D\]) { color: var(--foreground); }
+  :root[data-theme="dark"] :is(.text-slate-600, .text-slate-500, .text-gray-600, .text-gray-500) { color: var(--muted); }
+  :root[data-theme="dark"] .text-\[\#043673\] { color: var(--heading); }
+  :root[data-theme="dark"] :is(.text-\[\#9A741E\], .text-\[\#806021\]) { color: var(--accent-light); }
+  :root[data-theme="dark"] :is(.border-slate-200, .border-slate-300, .border-gray-200, .border-gray-300) { border-color: var(--line); }
+  :root[data-theme="dark"] :is(.hover\:bg-slate-50, .hover\:bg-slate-100, .hover\:bg-gray-100):hover { background-color: var(--surface-muted); }
+}
+
+/* Forest tones also cover legacy gradients and component accents.
+   Fallback colours preserve the Wits palette. */
+:root[data-palette="forest"] {
+  --forest-tone-0: hsl(148 0% 0%);
+  --forest-tone-1: hsl(148 23% 10%);
+  --forest-tone-2: hsl(148 26% 20%);
+  --forest-tone-3: hsl(148 29% 30%);
+  --forest-tone-4: hsl(148 32% 40%);
+  --forest-tone-5: hsl(148 35% 50%);
+  --forest-tone-6: hsl(148 38% 60%);
+  --forest-tone-7: hsl(148 41% 70%);
+  --forest-tone-8: hsl(148 44% 80%);
+  --forest-tone-9: hsl(148 47% 90%);
+  --forest-tone-10: hsl(148 0% 100%);
+}
+
+@layer utilities {
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .active\:bg-\[\#EEF2F7\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-10); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#043673\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#043673\]\/10:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-2) 10%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#043673\]\/5:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-2) 5%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#153963\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#174e76\]\/10:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-3) 10%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#29364a\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#29364a\]\/10:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-2) 10%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#9A741E\]\/10:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-4) 10%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#C9A24B\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-5); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#C9A24B\]\/10:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-5) 10%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#C9A24B\]\/15:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-5) 15%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#C9A24B\]\/25:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-5) 25%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#E2C66F\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-7); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#E8EDF4\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#EDF3FA\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-10); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#EEF2FA\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-10); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#F4D36D\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-7); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#FAF8F3\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-10); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#FBF5E8\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#FCF8ED\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-10); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#FFF2DC\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#FFF7E8\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-10); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#FFF8E5\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#dcecf8\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-\[\#f6e8c2\]:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-amber-100:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-amber-50:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-amber-500:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--accent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-amber-500\/10:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--accent) 10%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-slate-100:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-slate-200:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-slate-200\/80:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--surface-muted) 80%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-slate-400:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--accent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-slate-50:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-slate-500\/10:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--accent) 10%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .bg-slate-800:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--brand); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#021e42\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-1); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#043673\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#043673\]\/10:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-2) 10%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#043673\]\/12:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-2) 12%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#043673\]\/15:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-2) 15%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#043673\]\/18:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-2) 18%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#043673\]\/20:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-2) 20%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#061D3A\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-1); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#0B294F\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#174e76\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-3); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#29364a\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#546378\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-4); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#799ABD\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-6); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#8A6A25\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-3); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#967425\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-4); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#9A741E\]\/20:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-4) 20%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#C9A24B\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-5); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#C9A24B\]\/25:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-5) 25%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#C9A24B\]\/30:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-5) 30%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#C9A24B\]\/40:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-5) 40%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#C9A24B\]\/60:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-5) 60%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#C9A24B\]\/70:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-5) 70%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#CFD8EB\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#E8D9B6\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-8); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#EBD2A4\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-8); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#afcee5\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-8); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#cad5e2\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-8); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-\[\#ddbc68\]:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-6); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-amber-200:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--line); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-amber-300:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--line); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-amber-300\/50:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--line) 50%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-amber-500\/30:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--line) 30%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-slate-100:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--line); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-slate-200:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--line); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-slate-200\/80:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--line) 80%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-slate-300:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--line); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-slate-500:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--line); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-slate-500\/30:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--line) 30%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .border-slate-600:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--line); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"])[data-theme="dark"] .dark\:border-slate-700:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--line); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"])[data-theme="dark"] .dark\:text-slate-100:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"])[data-theme="dark"] .dark\:text-slate-300:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"])[data-theme="dark"] .dark\:text-slate-400:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .focus-visible\:outline-\[\#082C58\]:focus-visible:where(:not([data-card-rarity], [data-card-rarity] *)) { outline-color: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .focus-visible\:outline-\[\#2989c4\]:focus-visible:where(:not([data-card-rarity], [data-card-rarity] *)) { outline-color: var(--forest-tone-5); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .focus-visible\:outline-\[\#76561C\]:focus-visible:where(:not([data-card-rarity], [data-card-rarity] *)) { outline-color: var(--forest-tone-3); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .focus-visible\:outline-\[\#775718\]:focus-visible:where(:not([data-card-rarity], [data-card-rarity] *)) { outline-color: var(--forest-tone-3); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .focus-visible\:outline-\[\#C9A24B\]:focus-visible:where(:not([data-card-rarity], [data-card-rarity] *)) { outline-color: var(--forest-tone-5); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .focus\:border-\[\#043673\]:focus:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .focus\:ring-\[\#043673\]\/10:focus:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-ring-color: color-mix(in srgb, var(--forest-tone-2) 10%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#043673\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#094794\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-3); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#094a94\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-3); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#0a4d9b\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-3); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#8B98AA\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-6); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#C9A24B\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-5); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#DFEAF5\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#FAF4E7\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#FFE8A3\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-8); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#e5c36e\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-7); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#edf2f8\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-10); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-\[\#fae08f\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--forest-tone-8); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-amber-400:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--accent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .from-slate-50:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-from: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:bg-\[\#032b5c\]:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:bg-\[\#043673\]:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:bg-\[\#043673\]\/5:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-2) 5%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:bg-\[\#C9A24B\]\/10:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-5) 10%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:bg-\[\#C9A24B\]\/5:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: color-mix(in srgb, var(--forest-tone-5) 5%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:bg-\[\#F7F9FC\]:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--forest-tone-10); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:bg-amber-50:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:bg-slate-100:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:bg-slate-200:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:bg-slate-50:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { background-color: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:border-\[\#043673\]\/25:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-2) 25%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:border-\[\#043673\]\/30:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: color-mix(in srgb, var(--forest-tone-2) 30%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:border-\[\#C9A24B\]:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-5); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:border-\[\#c9a24b\]:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { border-color: var(--forest-tone-5); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:text-\[\#043673\]:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .hover\:text-slate-600:hover:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#043673\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#043673\]\/65:where(:not([data-card-rarity], [data-card-rarity] *)) { color: color-mix(in srgb, var(--forest-tone-2) 65%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#043673\]\/70:where(:not([data-card-rarity], [data-card-rarity] *)) { color: color-mix(in srgb, var(--forest-tone-2) 70%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#082C58\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#082C58\]\/60:where(:not([data-card-rarity], [data-card-rarity] *)) { color: color-mix(in srgb, var(--forest-tone-2) 60%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#082C58\]\/75:where(:not([data-card-rarity], [data-card-rarity] *)) { color: color-mix(in srgb, var(--forest-tone-2) 75%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#082C58\]\/80:where(:not([data-card-rarity], [data-card-rarity] *)) { color: color-mix(in srgb, var(--forest-tone-2) 80%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#082c58\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#0A1F3D\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#10233D\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#10233d\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#174e76\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#29364a\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#4B3D20\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#604713\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#604916\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#644613\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#76561C\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#76561C\]\/80:where(:not([data-card-rarity], [data-card-rarity] *)) { color: color-mix(in srgb, var(--forest-tone-3) 80%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#775718\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#7a5c1e\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#806021\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#8A6518\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#8a7658\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#9A741E\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#9A7A36\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#C9A24B\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#E2C66F\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--accent-light); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#E2C66F\]\/80:where(:not([data-card-rarity], [data-card-rarity] *)) { color: color-mix(in srgb, var(--forest-tone-7) 80%, transparent); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#F5CF68\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--accent-light); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-\[\#f0f3f7\]:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--accent-light); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-amber-400:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-amber-700:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-amber-800:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-amber-900:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-slate-400:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-slate-500:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-slate-600:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-slate-700:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-slate-800:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .text-slate-900:where(:not([data-card-rarity], [data-card-rarity] *)) { color: var(--heading); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-\[\#043673\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-\[\#111D2B\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--forest-tone-1); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-\[\#173E65\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-\[\#C9A24B\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--forest-tone-5); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-\[\#F0D286\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--forest-tone-7); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-\[\#F5EAD3\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-\[\#a37c28\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--forest-tone-4); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-\[\#c9a24b\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--forest-tone-5); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-\[\#e1e9f4\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--forest-tone-9); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-\[\#f2f6fa\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--forest-tone-10); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-amber-600:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--brand); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .to-slate-100:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-to: var(--surface-muted); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .via-\[\#29313E\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-via: var(--forest-tone-2); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .via-\[\#2976B4\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-via: var(--forest-tone-4); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .via-\[\#AE802D\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-via: var(--forest-tone-4); }
+  :root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .via-\[\#c9a24b\]:where(:not([data-card-rarity], [data-card-rarity] *)) { --tw-gradient-via: var(--forest-tone-5); }
+}
+
+:root:is([data-palette="wits"], :not([data-palette])) .dashboard-standing-panel {
+  background: linear-gradient(110deg, var(--surface), var(--surface-soft));
+  border-color: var(--line);
+  box-shadow: inset 0 2px 0 #c9a24b, 0 4px 0 var(--line), 0 12px 24px rgb(4 54 115 / 8%);
+}
+:root:is([data-palette="wits"], :not([data-palette])) .dashboard-standing-copy h2 {
+  color: var(--heading);
+}
+:root:is([data-palette="wits"], :not([data-palette])) .dashboard-standing-copy p {
+  color: var(--muted);
+}
+:root:is([data-palette="wits"], :not([data-palette])) .dashboard-standing-current {
+  background: #eaf1fa;
+  color: #082c58;
+  box-shadow: inset 3px 0 0 #c9a24b;
+}
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .dashboard-standing-panel {
+  background: linear-gradient(110deg, var(--surface-soft), var(--surface-muted));
+  border-color: var(--line);
+  box-shadow: inset 0 1px 0 #ffffff40, 0 4px 0 var(--line), 0 14px 28px color-mix(in srgb, var(--brand-dark) 7.84%, transparent);
+}
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .dashboard-standing-pin {
+  background: radial-gradient(circle at 35% 30%, var(--surface-soft), var(--brand-bright) 65%);
+}
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .dashboard-standing-rank {
+  background: radial-gradient(circle at 35% 28%, var(--brand-bright), var(--brand-dark) 65%);
+  border-color: var(--brand-dark);
+  box-shadow: inset 0 2px 2px #ffffff38, inset 0 -3px 4px #00000040, 0 4px 7px color-mix(in srgb, var(--brand-dark) 18.82%, transparent);
+}
+:root:is([data-palette="forest"], [data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .dashboard-standing-link {
+  background: linear-gradient(var(--brand-bright), var(--brand-dark));
+  border-color: var(--brand-dark);
+  box-shadow: inset 0 1px 0 #ffffff38, 0 3px 0 var(--brand-dark);
+}
+
+:root[data-palette="ocean"] {
+  --brand: #003153;
+  --brand-dark: #003153;
+  --brand-bright: #3b8ab1;
+  --accent: #003153;
+  --accent-light: #bed6e0;
+  --background: #f3f5f7;
+  --foreground: #003153;
+  --surface: #ffffff;
+  --surface-soft: #f7f9fb;
+  --surface-muted: #bed6e0;
+  --heading: #003153;
+  --muted: #326680;
+  --line: #3b8ab1;
+  --forest-tone-0: #003153;
+  --forest-tone-1: #003153;
+  --forest-tone-2: #003153;
+  --forest-tone-3: #326680;
+  --forest-tone-4: #326680;
+  --forest-tone-5: #3b8ab1;
+  --forest-tone-6: #3b8ab1;
+  --forest-tone-7: #3b8ab1;
+  --forest-tone-8: #bed6e0;
+  --forest-tone-9: #f4f8fa;
+  --forest-tone-10: #ffffff;
+}
+:root[data-palette="ocean"][data-theme="dark"] {
+  --background: #003153;
+  --foreground: #f4f8fa;
+  --surface: color-mix(in srgb, #003153 80%, #326680);
+  --surface-soft: #003153;
+  --surface-muted: #326680;
+  --heading: #bed6e0;
+  --muted: #bed6e0;
+  --line: #3b8ab1;
+}
+:root:is([data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .skeuo-plate-gold {
+  background: linear-gradient(145deg, var(--surface-soft), var(--surface-muted));
+  border-color: var(--line);
+}
+:root:is([data-palette="ocean"], [data-palette="plum"], [data-palette="blush"], [data-palette="buttermilk"], [data-palette="graphite"]) .skeuo-plate-gold :is(h2, p, a, span) { color: var(--heading); }
+
+:root[data-palette="plum"] {
+  --brand: #69306d;
+  --brand-dark: #0e103d;
+  --brand-bright: #69306d;
+  --accent: #a5668b;
+  --accent-light: #f2d7ee;
+  --background: #f6f4f6;
+  --foreground: #0e103d;
+  --surface: #ffffff;
+  --surface-soft: #faf8fa;
+  --surface-muted: #f2d7ee;
+  --heading: #69306d;
+  --muted: #69306d;
+  --line: #d3bcc0;
+  --forest-tone-0: #0e103d;
+  --forest-tone-1: #0e103d;
+  --forest-tone-2: #69306d;
+  --forest-tone-3: #69306d;
+  --forest-tone-4: #69306d;
+  --forest-tone-5: #a5668b;
+  --forest-tone-6: #a5668b;
+  --forest-tone-7: #d3bcc0;
+  --forest-tone-8: #f2d7ee;
+  --forest-tone-9: #faf8fa;
+  --forest-tone-10: #ffffff;
+}
+:root[data-palette="plum"][data-theme="dark"] {
+  --background: #0e103d;
+  --foreground: #f2d7ee;
+  --surface: color-mix(in srgb, #0e103d 85%, #69306d);
+  --surface-soft: #0e103d;
+  --surface-muted: color-mix(in srgb, #0e103d 65%, #69306d);
+  --heading: #f2d7ee;
+  --muted: #d3bcc0;
+  --line: #a5668b;
+}
+
+:root[data-palette="blush"] {
+  --brand: #70494e;
+  --brand-dark: #54363c;
+  --brand-bright: #8b5d63;
+  --accent: #ffb3b3;
+  --accent-light: #ffb3b3;
+  --background: #fff8f8;
+  --foreground: #70494e;
+  --surface: #ffffff;
+  --surface-soft: #fff8f8;
+  --surface-muted: #ffd9d9;
+  --heading: #70494e;
+  --muted: #8b5d63;
+  --line: #ffe3e3;
+  --forest-tone-0: #70494e;
+  --forest-tone-1: #70494e;
+  --forest-tone-2: #70494e;
+  --forest-tone-3: #8b5d63;
+  --forest-tone-4: #ffe3e3;
+  --forest-tone-5: #8b5d63;
+  --forest-tone-6: #ffc6c6;
+  --forest-tone-7: #ffb3b3;
+  --forest-tone-8: #ffb3b3;
+  --forest-tone-9: #fff8f8;
+  --forest-tone-10: #ffffff;
+}
+:root[data-palette="blush"][data-theme="dark"] {
+  --background: #251d20;
+  --foreground: #fff8f8;
+  --surface: #35282d;
+  --surface-soft: #2e2327;
+  --surface-muted: #49343a;
+  --heading: #ffb3b3;
+  --muted: #e2cacc;
+  --line: #ffe3e3;
+}
+:root[data-palette="blush"] .skeuo-btn-gold { color: #54363c !important; }
+:root[data-palette="blush"] .skeuo-plate-gold :is(h2, p, a, span) { color: var(--heading); }
+
+:root[data-palette="buttermilk"] {
+  --brand: #43302e;
+  --brand-dark: #332321;
+  --brand-bright: #70514d;
+  --accent: #fff1b5;
+  --accent-light: #fff7d7;
+  --background: #faf9f5;
+  --foreground: #43302e;
+  --surface: #ffffff;
+  --surface-soft: #f5f8fa;
+  --surface-muted: #e4eff4;
+  --heading: #43302e;
+  --muted: #6f5d59;
+  --line: #c1dbe8;
+  --forest-tone-0: #332321;
+  --forest-tone-1: #43302e;
+  --forest-tone-2: #43302e;
+  --forest-tone-3: #70514d;
+  --forest-tone-4: #c1dbe8;
+  --forest-tone-5: #70514d;
+  --forest-tone-6: #fff1b5;
+  --forest-tone-7: #fff1b5;
+  --forest-tone-8: #e4eff4;
+  --forest-tone-9: #faf9f5;
+  --forest-tone-10: #ffffff;
+}
+:root[data-palette="buttermilk"][data-theme="dark"] {
+  --background: #211c1b;
+  --foreground: #f8f1e5;
+  --surface: #302725;
+  --surface-soft: #292321;
+  --surface-muted: #403633;
+  --heading: #fff1b5;
+  --muted: #c1dbe8;
+  --line: #5d4d48;
+}
+:root[data-palette="buttermilk"] .skeuo-btn-gold { color: #43302e !important; }
+
+/* Graphite follows the reference's visible neutral swatches. */
+:root[data-palette="graphite"] {
+  --brand: #303030;
+  --brand-dark: #101010;
+  --brand-bright: #606060;
+  --accent: #b4b4b4;
+  --accent-light: #eeeeee;
+  --background: #f5f5f5;
+  --foreground: #303030;
+  --surface: #ffffff;
+  --surface-soft: #f3f3f3;
+  --surface-muted: #e5e5e5;
+  --heading: #101010;
+  --muted: #606060;
+  --line: #c4c4c4;
+  --forest-tone-0: #101010;
+  --forest-tone-1: #303030;
+  --forest-tone-2: #303030;
+  --forest-tone-3: #606060;
+  --forest-tone-4: #b4b4b4;
+  --forest-tone-5: #606060;
+  --forest-tone-6: #c4c4c4;
+  --forest-tone-7: #eeeeee;
+  --forest-tone-8: #e5e5e5;
+  --forest-tone-9: #f5f5f5;
+  --forest-tone-10: #ffffff;
+}
+:root[data-palette="graphite"][data-theme="dark"] {
+  --background: #101010;
+  --foreground: #eeeeee;
+  --surface: #202020;
+  --surface-soft: #191919;
+  --surface-muted: #303030;
+  --heading: #eeeeee;
+  --muted: #c4c4c4;
+  --line: #505050;
+}
+:root[data-palette="graphite"] .skeuo-btn-gold { color: #101010 !important; }
+
+/* Forest uses a quiet sidebar that follows the surrounding page surface. */
+:root[data-palette="forest"] .app-refresh .app-navigation {
+  background: var(--background) !important;
+  box-shadow: inset 0 1px 0 #ffffff20, 0 6px 20px #00000010 !important;
+}
+:root[data-palette="forest"] .app-navigation :is(a, button, p),
+:root[data-palette="forest"] .app-navigation span[class*="text-white"] { color: var(--muted) !important; }
+:root[data-palette="forest"] .app-navigation .app-brand { color: var(--foreground) !important; }
+:root[data-palette="forest"] .app-navigation nav a[aria-current="page"] {
+  background: var(--surface-muted) !important;
+  color: var(--heading) !important;
+  box-shadow: inset 0 1px 0 #ffffff20, 0 2px 6px #00000010 !important;
+}
+:root[data-palette="forest"] .app-navigation :is(a, button):hover { background-color: var(--surface-muted); color: var(--heading) !important; }
+:root[data-palette="forest"] .app-navigation .app-nav-label { color: var(--muted); }
+
+/* Rarity colours belong to the cards, independently of the app palette. */
+
+[data-card-rarity] {
+  --forest-tone-0: initial;
+  --forest-tone-1: initial;
+  --forest-tone-2: initial;
+  --forest-tone-3: initial;
+  --forest-tone-4: initial;
+  --forest-tone-5: initial;
+  --forest-tone-6: initial;
+  --forest-tone-7: initial;
+  --forest-tone-8: initial;
+  --forest-tone-9: initial;
+  --forest-tone-10: initial;
+}
+
+.mobile-auth-section { min-height: 100dvh; }
+.mobile-auth-section > form { position: relative; margin-top: -20px; border-radius: 24px; z-index: 1; }
+
+@media (min-width: 1024px) { .mobile-auth-section > form { margin-top: 0; } }
+

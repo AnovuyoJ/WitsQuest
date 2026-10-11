@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabaseClient";
 import ProfileMenu from "../app/dashboard/ProfileMenu";
 import { apiRequest } from "@/lib/api";
 
-export default function ProfileMenuContainer() {
+export default function ProfileMenuContainer({ showDetails = false }: { showDetails?: boolean }) {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(true);
@@ -52,5 +52,5 @@ export default function ProfileMenuContainer() {
     return <div className="h-10 w-10 animate-pulse rounded-full bg-gray-200" />;
   }
 
-  return <ProfileMenu name={name} email={email} avatar={avatar} />;
+  return <ProfileMenu name={name} email={email} avatar={avatar} showDetails={showDetails} />;
 }

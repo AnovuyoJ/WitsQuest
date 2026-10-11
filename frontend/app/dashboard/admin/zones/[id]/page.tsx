@@ -1,4 +1,5 @@
 "use client";
+import AdminPageHeader from "@/components/AdminPageHeader";
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -6,8 +7,7 @@ import { useParams } from "next/navigation";
 import { useAdminAccess } from "@/lib/useAdminAccess";
 import { apiRequest } from "@/lib/api";
 
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
 
 type ZoneLocation = {
   id: string;
@@ -213,36 +213,12 @@ export default function AdminZoneDetailPage() {
 
   return (
     <div className="space-y-8 px-5 py-6 sm:px-8 lg:px-10 lg:py-9">
-      <header className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p
-            className="text-xs font-semibold uppercase tracking-[0.28em]"
-            style={{ color: WITS_GOLD }}
-          >
-            Zone management
-          </p>
-
-          <h1
-            className="mt-2 break-words text-4xl font-black tracking-[-0.045em]"
-            style={{ color: WITS_BLUE }}
-          >
-            {zone.name}
-          </h1>
-
-          {zone.description && (
-            <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">
-              {zone.description}
-            </p>
-          )}
-        </div>
-
-        <Link
+      <AdminPageHeader title={zone.name} description={zone.description} action={<Link
           href="/dashboard/admin/zones"
           className="inline-flex w-fit items-center rounded-xl border border-[#043673]/15 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700 transition hover:border-[#043673]/30 hover:bg-slate-50"
         >
           ← Back to zones
-        </Link>
-      </header>
+        </Link>} />
 
       {error && (
         <p

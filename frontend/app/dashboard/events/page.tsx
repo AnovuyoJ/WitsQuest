@@ -11,7 +11,7 @@ import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScree
 
 import styles from "./events.module.css";
 
-const WITS_BLUE = "#043673";
+const WITS_BLUE = "var(--brand)";
 
 type Event = {
   id: string;
