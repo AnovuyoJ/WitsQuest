@@ -1,11 +1,12 @@
 import { Router } from "express";
 import { requireLandmark } from "../services/landmarkService";
 import { generateProceduralEvents } from "../services/proceduralEventService";
-import { database } from "../services/database";
+import { database, transaction } from "../services/database";
 import { requireAuth } from "../middleware/requireAuth";
 import { requireAdmin } from "../middleware/requireAdmin";
 import { id, text, number, optionalText, HttpError } from "../services/validation";
 import { imageValue } from "../services/imageValidation";
+import { resetRatingSeason } from "../services/ratingService";
 
 function revision(value: unknown) {
   const result = number(value, "Revision", 1, 2147483647);
@@ -15,6 +16,35 @@ function revision(value: unknown) {
 
 const router = Router();
 router.use(requireAuth, requireAdmin);
+
+router.post("/ratings/seasons/reset", async (req, res) => {
+  res.json(await resetRatingSeason(text(req.body.name, "Season name", 80)));
+});
+
+router.get("/moderation/flags", async (_req, res) => {
+  const { rows } = await database.query(`SELECT id,player_id,reviewer_id,reason,status,action_taken,created_at,resolved_at
+    FROM public.moderation_flags ORDER BY created_at DESC`);
+  res.json(rows);
+});
+
+router.post("/moderation/flags/:flagId/action", async (req, res) => {
+  const action = req.body.action;
+  if (!(["none","warning","throttle","restricted","banned"] as unknown[]).includes(action)) {
+    throw new HttpError(400, "Choose a valid moderation action.");
+  }
+  const flagId = id(req.params.flagId);
+  await transaction(async client => {
+    const flag = (await client.query(`UPDATE public.moderation_flags SET status='resolved',action_taken=$2,
+      reviewer_id=$3,resolved_at=now() WHERE id=$1 RETURNING player_id`, [flagId,action,req.user!.id])).rows[0];
+    if (!flag) throw new HttpError(404, "Moderation flag not found.");
+    if (action === "restricted" || action === "banned") {
+      await client.query(`INSERT INTO public.player_trust_score (player_id,status,last_updated_at)
+        VALUES ($1,$2,now()) ON CONFLICT (player_id) DO UPDATE SET status=EXCLUDED.status,last_updated_at=now()`,
+      [flag.player_id,action]);
+    }
+  });
+  res.json({ success: true });
+});
 
 router.get("/events/:id/album-cover", async (req, res) => {
   const row = (await database.query("SELECT image FROM public.album_covers WHERE event_id=$1", [id(req.params.id)])).rows[0];
