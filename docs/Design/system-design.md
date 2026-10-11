@@ -127,14 +127,49 @@ The frontend uses the **Next.js App Router**.
 
 Important application routes include:
 
+Top-level routes:
+
+```text
+/Login
+/signup
+/reset-password
+/account/delete
+/map
+/profile
+/settings
+```
+
+Authenticated player routes:
+
 ```text
 /dashboard
 /dashboard/events
+/dashboard/map
+/dashboard/cards
+/dashboard/games
+/dashboard/games/[gameId]
+/dashboard/games/spectate/[gameId]
+/dashboard/trails
+/dashboard/triviaquestions
+/dashboard/leaderboard
+/dashboard/notifications
+/dashboard/settings
+/dashboard/settings/rulebook
+```
+
+Administrator routes:
+
+```text
+/dashboard/admin
 /dashboard/admin/events
 /dashboard/admin/challenges
 /dashboard/admin/cards
-/map
-/notifications
+/dashboard/admin/campaigns
+/dashboard/admin/trails
+/dashboard/admin/stats
+/dashboard/admin/moderation
+/dashboard/admin/zones
+/dashboard/admin/zones/[id]
 ```
 
 ### 4.1 Player Dashboard
@@ -368,15 +403,28 @@ The main administrative routes are:
 /dashboard/admin/events
 /dashboard/admin/challenges
 /dashboard/admin/cards
+/dashboard/admin/campaigns
+/dashboard/admin/trails
+/dashboard/admin/stats
+/dashboard/admin/moderation
+/dashboard/admin/zones
 ```
 
-Admin pages perform an additional authorisation check. If a user does not have administrator access, they are redirected to the normal dashboard.
+Admin pages perform an additional authorisation check. If a user does not have administrator access, they are redirected to the normal dashboard. Moderator pages use the same authorisation path.
 
 Administrators can manage:
 
 - Events
 - Challenges
 - Cards
+- Campaigns and schedule windows
+- Trails and ordered routes
+- Analytics on question difficulty and engagement
+
+Moderators can additionally:
+
+- Review flagged players through the moderation console
+- Apply proportionate actions (warning, throttle, restrict, ban)
 
 ---
 
@@ -494,9 +542,9 @@ Cards provide a reward and progression mechanism for players participating in Wi
 
 ## 12. Database Design
 
-The current checked-in schema defines 15 application tables and two published-content views in Supabase-hosted PostgreSQL. Supabase manages the separate Auth identity tables.
+The current checked-in schema defines 23 application tables and two published-content views in Supabase-hosted PostgreSQL. Supabase manages the separate Auth identity tables.
 
-The [full database reference](database-schema.md) lists every application column, type, default, constraint and relationship, including trails, notifications, deck snapshots, duel stakes, profile images and album covers. It includes the ER diagram, indexes, deletion behaviour and reasons for the design choices.
+The [full database reference](database-schema.md) lists every application column, type, default, constraint and relationship, including trails, notifications, deck snapshots, duel stakes, profile images, album covers, campaigns, offline attempt sessions, zones, zone claims, card trades, trust scores, trust events, moderation flags and player ratings. It includes the ER diagram, indexes, deletion behaviour and reasons for the design choices.
 
 Application data is accessed through authenticated Express routes and parameterized SQL. The backend verifies administrator UUIDs and player ownership; direct browser table access is restricted by the SQL access-control migrations. Draft content and live snapshots are separate, and critical ownership operations use transactions.
 
@@ -530,6 +578,66 @@ The profile menu displays information about the authenticated user and provides 
 
 The `CampusMap` component displays game events geographically using React Leaflet. It retrieves event information and displays event markers on the campus map.
 
+### Backend route and service structure
+
+The backend exposes 8 route files and 18 service modules:
+
+```text
+backend/routes/
+├── admin.ts
+├── catalog.ts
+├── games.ts
+├── trails.ts
+├── trades.ts
+├── zones.ts
+└── events/
+    ├── submitAnswer.ts
+    └── verifyLocation.ts
+
+backend/services/
+├── accountService.ts
+├── authClient.ts
+├── battleService.ts
+├── challengeService.ts
+├── database.ts
+├── eventPlacementService.ts
+├── exchangeService.ts
+├── gameService.ts
+├── imageValidation.ts
+├── landmarkService.ts
+├── locationService.ts
+├── moderationService.ts
+├── notifications.ts
+├── proceduralEventService.ts
+├── progressService.ts
+├── ratingService.ts
+├── stakeService.ts
+└── validation.ts
+```
+
+The frontend service layer in `frontend/lib/` contains 17 modules:
+
+```text
+frontend/lib/
+├── adminChallenges.ts
+├── api.ts
+├── authService.ts
+├── battle.ts
+├── distance.ts
+├── eventsService.ts
+├── geo.ts
+├── offlineDb.ts
+├── offlineSync.ts
+├── photo.ts
+├── supabaseClient.ts
+├── trails.ts
+├── trivia.ts
+├── useAdminAccess.ts
+├── useChallenge.ts
+├── useLocationVerification.ts
+└── useOfflineSync.ts
+```
+
 ## Component diagram
 
 The following diagram shows the frontend and backend components, and how they depend on each other. It complements the deployment view (which services run where) and the database schema (which tables exist) by showing the **module structure** of the codebase.
@@ -537,28 +645,43 @@ The following diagram shows the frontend and backend components, and how they de
 ```mermaid
 graph TB
     subgraph FE["Frontend — Next.js App Router"]
-        subgraph PAGES_PLAYER["Player pages"]
-            P_DASH["dashboard/page.tsx"]
-            P_EVENTS["dashboard/events/page.tsx"]
-            P_MAP["dashboard/map/page.tsx"]
-            P_CARDS["dashboard/cards/page.tsx"]
-            P_GAMES["dashboard/games/page.tsx"]
-            P_GAME["dashboard/games/[gameId]/page.tsx"]
-            P_TRAILS["dashboard/trails/page.tsx"]
-            P_NOTIF["dashboard/notifications/page.tsx"]
-            P_SETTINGS["dashboard/settings/page.tsx"]
-            P_RULEBOOK["dashboard/settings/rulebook/page.tsx"]
-            P_TRIVIA["dashboard/triviaquestions/page.tsx"]
+        subgraph PAGES_TOP["Top-level pages"]
+            P_LOGIN["/Login"]
+            P_SIGNUP["/signup"]
+            P_RESET["/reset-password"]
+            P_DELACC["/account/delete"]
+            P_TOPMAP["/map"]
+            P_PROFILE["/profile"]
+            P_TOPSET["/settings"]
+        end
+
+        subgraph PAGES_PLAYER["Player dashboard"]
+            P_DASH["/dashboard"]
+            P_EVENTS["/dashboard/events"]
+            P_MAP["/dashboard/map"]
+            P_CARDS["/dashboard/cards"]
+            P_GAMES["/dashboard/games"]
+            P_GAME["/dashboard/games/[gameId]"]
+            P_SPEC["/dashboard/games/spectate/[gameId]"]
+            P_TRAILS["/dashboard/trails"]
+            P_TRIVIA["/dashboard/triviaquestions"]
+            P_LB["/dashboard/leaderboard"]
+            P_NOTIF["/dashboard/notifications"]
+            P_SETTINGS["/dashboard/settings"]
+            P_RULEBOOK["/dashboard/settings/rulebook"]
         end
 
         subgraph PAGES_ADMIN["Admin pages"]
-            A_HOME["dashboard/admin/page.tsx"]
-            A_EVENTS["dashboard/admin/events/page.tsx"]
-            A_CHAL["dashboard/admin/challenges/page.tsx"]
-            A_CARDS["dashboard/admin/cards/page.tsx"]
-            A_CAMP["dashboard/admin/campaigns/page.tsx"]
-            A_TRAILS["dashboard/admin/trails/page.tsx"]
-            A_STATS["dashboard/admin/stats/page.tsx"]
+            A_HOME["/dashboard/admin"]
+            A_EVENTS["admin/events"]
+            A_CHAL["admin/challenges"]
+            A_CARDS["admin/cards"]
+            A_CAMP["admin/campaigns"]
+            A_TRAILS["admin/trails"]
+            A_STATS["admin/stats"]
+            A_MOD["admin/moderation"]
+            A_ZONES["admin/zones"]
+            A_ZONE["admin/zones/[id]"]
         end
 
         subgraph LAYOUT["Layout & navigation"]
@@ -579,6 +702,7 @@ graph TB
             C_TRIVIA["TriviaDeck"]
             C_REWARD["RewardReveal"]
             C_WITS["WitsScreen"]
+            C_TRUST["TrustAndRatingBadge"]
         end
 
         subgraph COMP_BATTLE["Battle & cards"]
@@ -596,6 +720,7 @@ graph TB
             C_CREV["ContentReview"]
             C_PHOTO["PhotoEditor"]
             C_ALBUM["AlbumCoverEditor"]
+            C_FWD["ForwardArrowIcon"]
         end
 
         subgraph COMP_OFFLINE["Offline support"]
@@ -629,19 +754,21 @@ graph TB
     end
 
     subgraph BE["Backend — Express"]
-        subgraph ROUTES["Routes"]
+        subgraph ROUTES["Routes (8)"]
             R_ADMIN["routes/admin.ts"]
             R_CATALOG["routes/catalog.ts"]
             R_GAMES["routes/games.ts"]
             R_TRAILS["routes/trails.ts"]
-            R_VERIFY["routes/events/verifyLocation.ts"]
-            R_ANSWER["routes/events/submitAnswer.ts"]
+            R_TRADES["routes/trades.ts"]
+            R_ZONES["routes/zones.ts"]
+            R_VERIFY["events/verifyLocation.ts"]
+            R_ANSWER["events/submitAnswer.ts"]
         end
         subgraph MW["Middleware"]
             M_AUTH["requireAuth.ts"]
             M_ADMIN["requireAdmin.ts"]
         end
-        subgraph SVC["Services"]
+        subgraph SVC["Services (18)"]
             S_DB["database.ts"]
             S_AUTHCLIENT["authClient.ts"]
             S_LOC["locationService.ts"]
@@ -655,11 +782,16 @@ graph TB
             S_VAL["validation.ts"]
             S_IMG["imageValidation.ts"]
             S_ACCT["accountService.ts"]
+            S_MOD["moderationService.ts"]
+            S_RATE["ratingService.ts"]
+            S_PROG["progressService.ts"]
+            S_PLACE["eventPlacementService.ts"]
+            S_PROC["proceduralEventService.ts"]
         end
     end
 
     subgraph DATA["Supabase PostgreSQL"]
-        DB["15 tables + 2 views"]
+        DB["23 tables + 2 views"]
         V_LIVE["live_events / live_challenges"]
     end
 
@@ -688,6 +820,8 @@ graph TB
     P_TRAILS --> C_QUESTS
     P_TRIVIA --> C_TRIVIA
     P_DASH --> C_WITS
+    P_DASH --> C_TRUST
+    P_LB --> C_TRUST
     C_EVLOC --> C_QR
     C_CHAL --> C_REWARD
 
@@ -740,6 +874,8 @@ graph TB
     L_API --> R_CATALOG
     L_API --> R_GAMES
     L_API --> R_TRAILS
+    L_API --> R_TRADES
+    L_API --> R_ZONES
     L_API --> R_VERIFY
     L_API --> R_ANSWER
     L_SUPA --> AUTH_SUP
@@ -749,6 +885,8 @@ graph TB
     R_CATALOG --> M_AUTH
     R_GAMES --> M_AUTH
     R_TRAILS --> M_AUTH
+    R_TRADES --> M_AUTH
+    R_ZONES --> M_AUTH
     R_VERIFY --> M_AUTH
     R_ANSWER --> M_AUTH
 
@@ -758,15 +896,22 @@ graph TB
     R_ADMIN --> S_VAL
     R_ADMIN --> S_IMG
     R_ADMIN --> S_LAND
+    R_ADMIN --> S_MOD
+    R_ADMIN --> S_PLACE
+    R_ADMIN --> S_PROC
     R_CATALOG --> S_DB
     R_GAMES --> S_GAME
     R_GAMES --> S_BATTLE
     R_GAMES --> S_STAKE
+    R_GAMES --> S_RATE
     R_TRAILS --> S_DB
+    R_TRADES --> S_DB
+    R_ZONES --> S_DB
     R_VERIFY --> S_LOC
     R_VERIFY --> S_DB
     R_ANSWER --> S_CHAL
     R_ANSWER --> S_DB
+    R_ANSWER --> S_PROG
 
     S_CHAL --> S_DB
     S_GAME --> S_BATTLE
@@ -777,6 +922,12 @@ graph TB
     S_ACCT --> S_DB
     S_LOC --> S_DB
     S_LAND --> OSMP
+    S_MOD --> S_DB
+    S_RATE --> S_DB
+    S_PROG --> S_DB
+    S_PLACE --> S_DB
+    S_PROC --> S_DB
+    S_PROC --> S_PLACE
 
     S_DB --> DB
     S_DB --> V_LIVE
@@ -826,6 +977,14 @@ Admin functionality performs additional checks to prevent normal players from ac
 
 The player's reported location is compared with the stored event location before the challenge is made available. The application can reject location readings when the reported GPS accuracy is too poor.
 
+### Offline replay protection
+
+Offline attempts are only accepted when the player holds a valid server-issued lease. The lease expires, has a sync deadline, and can only be consumed once, preventing unbounded replay.
+
+### Anti-cheat enforcement
+
+Each player has a trust score derived from movement plausibility, submission patterns and match behaviour. Low trust triggers proportionate responses: increased verification strictness, throttling, or moderator review. Automatic bans are not applied.
+
 ### Server-Side Validation
 
 Important game rules are validated by backend/API logic rather than relying only on frontend validation. This reduces the possibility of users bypassing game restrictions by modifying frontend behaviour.
@@ -847,6 +1006,10 @@ Possible errors include:
 - Event is inactive
 - Challenge information is invalid
 - Database operation fails
+- Implausible movement detected
+- Offline attempt lease expired or already consumed
+- Trade cannot be completed (card no longer owned)
+- Rating or matchmaking lookup fails
 
 The application also displays confirmation messages when administrative operations are successful, for example:
 
@@ -866,13 +1029,17 @@ flowchart TD
     B --> C[Player Dashboard]
     C --> D[Events]
     C --> E[Campus Map]
-    D --> F[Select Event]
-    E --> F
-    F --> G[Verify Location]
-    G --> H[Attempt Challenge]
-    H --> I[Submit Answer]
-    I -->|Correct| J[Earn Card]
-    I -->|Incorrect| K[Show Result]
+    C --> F[Card Battles]
+    C --> G[Trails]
+    C --> H[Collection & Profile]
+    D --> I[Select Event]
+    E --> I
+    I --> J[Verify Location]
+    J --> K[Attempt Challenge]
+    K --> L[Submit Answer]
+    L -->|Correct| M[Earn Card]
+    L -->|Incorrect| N[Show Result]
+    M --> H
 ```
 ---
 
@@ -891,4 +1058,6 @@ The core game flow consists of:
 5. The application validating the submitted answer.
 6. The player receiving a card after successfully completing the challenge.
 
-This structure allows Wits Quest to combine location-based gameplay, campus exploration, challenges, and collectible rewards in a single web application.
+Advanced features extend this core loop with real-time and asynchronous PvP, competitive ratings, zone control, trading, procedural event placement, and a trust and moderation system that responds proportionately to suspected cheating.
+
+This structure allows Wits Quest to combine location-based gameplay, campus exploration, challenges, collectible rewards, competitive play and anti-cheat enforcement in a single web application.
