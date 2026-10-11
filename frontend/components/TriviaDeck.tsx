@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { awardCollectedCardForChallenge, loadSavedChallenges } from "@/lib/adminChallenges";
 import { eventCatalog, type Difficulty, type TriviaQuestion } from "@/lib/trivia";
 
-const WITS_BLUE = "#043673";
+const WITS_BLUE = "var(--brand)";
 
 const difficultyColors: Record<Difficulty, string> = {
   Easy: "bg-emerald-100 text-emerald-700",

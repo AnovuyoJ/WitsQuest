@@ -1,4 +1,5 @@
 "use client";
+import AdminPageHeader from "@/components/AdminPageHeader";
 
 import ContentReview from "@/components/ContentReview";
 import { useAdminAccess } from "@/lib/useAdminAccess";
@@ -6,8 +7,8 @@ import { useAdminAccess } from "@/lib/useAdminAccess";
 import { apiRequest, type EventRecord, type CardRecord } from "@/lib/api";
 import { FormEvent, Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_GOLD = "var(--accent)";
 
 type QuestionType =
   | "multiple_choice"
@@ -489,29 +490,7 @@ useEffect(() => {
 
       {/* HEADER */}
 
-      <header>
-        <p
-          className="text-xs font-semibold uppercase tracking-[0.28em]"
-          style={{
-            color: WITS_GOLD,
-          }}
-        >
-          Admin console
-        </p>
-
-        <h1
-          className="mt-2 text-4xl font-black tracking-[-0.045em]"
-          style={{
-            color: WITS_BLUE,
-          }}
-        >
-          Challenges
-        </h1>
-
-        <p className="mt-2 text-sm text-slate-500">
-          Add and manage questions for each event.
-        </p>
-      </header>
+      <AdminPageHeader title={"Challenges"} description="Add and manage questions for each event." />
 
       {/* MESSAGES */}
 

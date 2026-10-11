@@ -1,9 +1,4 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+import { getSupabaseDataClient } from "./supabaseDataClient";
 
 export type EventType =
   | 'location_anomaly'
@@ -31,7 +26,7 @@ export async function recordTrustEvent(
   const severity = EVENT_SEVERITY[eventType] || 1;
 
   // 1. Log event
-  await supabase.from('trust_events').insert({
+  await getSupabaseDataClient().from('trust_events').insert({
     player_id: playerId,
     event_type: eventType,
     severity,
@@ -39,7 +34,7 @@ export async function recordTrustEvent(
   });
 
   // 2. Fetch or initialize current trust score
-  const { data: existing } = await supabase
+  const { data: existing } = await getSupabaseDataClient()
     .from('player_trust_score')
     .select('score, status')
     .eq('player_id', playerId)
@@ -55,7 +50,7 @@ export async function recordTrustEvent(
   else if (newScore < 70) status = 'watched';
 
   // 3. Upsert new score
-  await supabase.from('player_trust_score').upsert({
+  await getSupabaseDataClient().from('player_trust_score').upsert({
     player_id: playerId,
     score: newScore,
     status,
@@ -64,7 +59,7 @@ export async function recordTrustEvent(
 
   // 4. Create an open flag for admin review if trust drops below critical threshold
   if (newScore < 60) {
-    const { data: existingFlag } = await supabase
+    const { data: existingFlag } = await getSupabaseDataClient()
       .from('moderation_flags')
       .select('id')
       .eq('player_id', playerId)
@@ -72,7 +67,7 @@ export async function recordTrustEvent(
       .maybeSingle();
 
     if (!existingFlag) {
-      await supabase.from('moderation_flags').insert({
+      await getSupabaseDataClient().from('moderation_flags').insert({
         player_id: playerId,
         reason: `Automated System Flag: Trust score fell to ${newScore} after ${eventType}.`,
         status: 'open',
@@ -88,7 +83,7 @@ export async function recordTrustEvent(
  * Checks if a player is allowed to engage in competitive matchmaking or events.
  */
 export async function getPlayerTrustStatus(playerId: string) {
-  const { data } = await supabase
+  const { data } = await getSupabaseDataClient()
     .from('player_trust_score')
     .select('score, status')
     .eq('player_id', playerId)

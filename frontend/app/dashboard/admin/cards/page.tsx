@@ -5,8 +5,8 @@ import AlbumCoverEditor from "@/components/AlbumCoverEditor";
 
 import { apiRequest, type EventRecord, type CardRecord } from "@/lib/api";
 import { FormEvent, useEffect, useMemo, useState } from "react";
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_GOLD = "var(--accent)";
 
 
 type CardRarity = "Blue" | "Black" | "Gold";

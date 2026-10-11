@@ -3,7 +3,8 @@
 import { apiRequest, type PlayerCardRecord, type EventRecord } from "@/lib/api";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
+import RulebookButton from "@/components/RulebookButton";
+import { ScreenHeader, ScreenSkeleton, StatePanel } from "@/components/WitsScreen";
 import CampusArtwork from "@/components/collection/CampusArtwork";
 import CollectibleCard from "@/components/collection/CollectibleCard";
 import CardInspector from "@/components/collection/CardInspector";
@@ -79,28 +80,14 @@ export default function CardsPage() {
   return (
     <div className={`${styles.album} px-5 pb-7 pt-20 sm:px-8 md:pt-7 lg:px-10`}>
       <div className="mx-auto max-w-6xl">
-        <header className="mb-8 flex flex-wrap items-start justify-between gap-5">
-          <div>
-            <p className="relative inline-block pb-2 text-xs font-bold uppercase tracking-[0.22em] text-[#C9A24B]">
-              Your campus, collected
-              <span className="absolute bottom-0 left-0 h-[2px] w-10 rounded-full bg-gradient-to-r from-[#C9A24B] to-[#C9A24B]/10" />
-            </p>
-            <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">
-              <span className="text-[#043673]">My</span>{" "}
-              <span className="text-[#043673] [text-shadow:0_2px_10px_rgba(4,54,115,0.15)]">cards</span>
-            </h1>
-            <p className="mt-3 max-w-lg text-sm leading-6 text-[#8a7658]">
-              Every quest has a story. Open a collection and take a closer look at your discoveries.
-            </p>
-          </div>
-          <Link
-            href="/dashboard/settings/rulebook"
-            className="skeuo-btn-secondary px-4 py-2 text-sm font-bold gap-2"
-          >
-            <BookIcon />
-            Rulebook
-          </Link>
-        </header>
+        <ScreenHeader
+          eyebrow="Your campus, collected"
+          title="My cards"
+          description="Every quest has a story. Open a collection and take a closer look at your discoveries."
+          action={
+            <RulebookButton />
+          }
+        />
 
         {!loading && (
           <div className="skeuo-well mb-8 flex flex-wrap items-center gap-x-8 gap-y-3 p-5 text-sm border-[#C9A24B]/30 text-[#7a5c1e]">
@@ -188,6 +175,7 @@ export default function CardsPage() {
                         count > 0 && (
                           <span
                             key={rarity}
+                            data-card-rarity={rarity}
                             className={`rounded-md border px-2 py-1 text-[10px] font-bold uppercase tracking-wider ${
                               rarity === "Gold"
                                 ? "border-[#ddbc68] bg-[#f6e8c2] text-[#644613]"
@@ -239,6 +227,7 @@ export default function CardsPage() {
                 return (
                   <section key={rarity} aria-label={`${rarity} cards`}>
                     <h3
+                      data-card-rarity={rarity}
                       className={`mb-4 flex items-center gap-2 rounded-lg border-l-4 px-4 py-3 text-sm font-bold uppercase tracking-[0.15em] shadow-sm ${
                         rarity === "Gold"
                           ? "border-[#C9A24B] bg-[#C9A24B]/15 text-[#7a5c1e]"
@@ -304,24 +293,6 @@ export default function CardsPage() {
   );
 }
 
-function BookIcon() {
-  return (
-    <svg
-      width="14"
-      height="14"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="2"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      aria-hidden="true"
-    >
-      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-      <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2Z" />
-    </svg>
-  );
-}
 
 function TrophyIcon() {
   return (

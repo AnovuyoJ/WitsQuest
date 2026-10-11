@@ -48,14 +48,10 @@ export default function LogoutButton({ collapsed }: LogoutButtonProps) {
           : "w-full gap-3 px-3"
       }`}
       style={{
-        background: collapsed
-          ? "transparent"
-          : "linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%)",
+        background: "transparent",
         color: "rgba(255,255,255,0.65)",
-        boxShadow: collapsed
-          ? "none"
-          : "0 1px 4px rgba(0,0,0,0.25), inset 0 1px 0 rgba(255,255,255,0.12), inset 0 -1px 0 rgba(0,0,0,0.2)",
-        border: collapsed ? "none" : "1px solid rgba(255,255,255,0.10)",
+        boxShadow: "none",
+        border: "none",
       }}
       onMouseEnter={(e) => {
         (e.currentTarget as HTMLButtonElement).style.color = "rgba(255,255,255,0.9)";

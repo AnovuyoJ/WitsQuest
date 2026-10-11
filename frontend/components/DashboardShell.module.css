@@ -1,0 +1,20 @@
+.shell { padding: 12px; min-height: 100dvh; color: var(--foreground); background: var(--background); }
+.frame { display: flex; align-items: flex-start; gap: 12px; min-height: calc(100dvh - 24px); padding: 8px; border: 1px solid var(--line); border-radius: 32px; background: var(--surface); }
+.workspace { min-width: 0; flex: 1; }
+.topbar { display: flex; align-items: center; justify-content: space-between; gap: 20px; position: relative; z-index: 20; min-height: 76px; padding: 16px 22px; margin-bottom: 10px; border-radius: 22px; }
+.search { position: relative; display: flex; align-items: center; gap: 10px; width: min(420px, 48%); padding: 10px 14px; border: 1px solid transparent; border-radius: 999px; background: var(--surface); }
+.search:focus-within { border-color: var(--accent); }
+.searchMark { font-size: 24px; line-height: 1; color: var(--heading); }
+.search input { width: 100%; min-width: 0; background: transparent; color: var(--foreground); font-size: 13px; outline: none; }
+.search input::placeholder { color: var(--muted); }
+.results { position: absolute; top: calc(100% + 8px); left: 0; width: 100%; min-width: 180px; padding: 6px; border: 1px solid var(--line); border-radius: 16px; background: var(--surface); box-shadow: 0 12px 28px #00000020; }
+.results a { display: flex; justify-content: space-between; padding: 10px 12px; border-radius: 10px; font-size: 13px; }
+.results a:hover { background: var(--surface-muted); }
+.results p { padding: 12px; color: var(--muted); font-size: 13px; }
+.topbarActions { display: flex; align-items: center; gap: 14px; }
+.notification { flex-shrink: 0; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; background: var(--surface); color: var(--heading); font-size: 23px; }
+.content { min-height: calc(100dvh - 128px); border-radius: 24px; overflow: clip; }
+@media (max-width: 767px) { .shell { padding: 6px; } .frame { padding: 4px; border-radius: 22px; } .topbar { padding: 12px 12px 12px 54px; min-height: 64px; gap: 8px; } .search { width: 100%; padding: 8px 10px; } .topbarActions { gap: 8px; } .notification { width: 34px; height: 34px; flex-shrink: 0; } .content { border-radius: 18px; } }
+
+.notification:hover, .notification[aria-current="page"] { background: var(--surface-muted); }
+.notification:focus-visible { outline: 2px solid var(--heading); outline-offset: 3px; }

@@ -1,9 +1,4 @@
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || process.env.SUPABASE_URL || "";
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-export const supabase: SupabaseClient = createClient(supabaseUrl, supabaseKey);
+import { getSupabaseDataClient } from "./supabaseDataClient";
 
 type Point = { latitude: number; longitude: number };
 
@@ -11,7 +6,7 @@ export async function autoGenerateCampusEvent(
   campaignId: string,
   candidateLocations: Point[]
 ) {
-  const { data: existingEvents } = await supabase
+  const { data: existingEvents } = await getSupabaseDataClient()
     .from("events")
     .select("latitude, longitude")
     .is("retired_at", null);
@@ -48,7 +43,7 @@ export async function autoGenerateCampusEvent(
   const now = new Date();
   const endsAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000); // 7 day active window
 
-  const { data: event, error } = await supabase
+  const { data: event, error } = await getSupabaseDataClient()
     .from("events")
     .insert({
       title: "Auto-Generated Campus Quest",

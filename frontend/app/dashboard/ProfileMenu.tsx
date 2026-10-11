@@ -1,18 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import styles from "./ProfileMenu.module.css";
 
 
-const WITS_BLUE = "#043673";
-const WITS_GOLD = "#C9A24B";
+const WITS_BLUE = "var(--brand)";
+const WITS_GOLD = "var(--accent)";
 
 type ProfileMenuProps = {
   name: string;
   email: string;
   avatar?: string | null;
+  showDetails?: boolean;
 };
 
-export default function ProfileMenu({ name, email, avatar }: ProfileMenuProps) {
+export default function ProfileMenu({ name, email, avatar, showDetails = false }: ProfileMenuProps) {
   const [open, setOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -24,8 +26,15 @@ export default function ProfileMenu({ name, email, avatar }: ProfileMenuProps) {
         setOpen(false);
       }
     }
+    function handleEscape(e: KeyboardEvent) {
+      if (e.key === "Escape") setOpen(false);
+    }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
   }, []);
 
   return (
@@ -34,22 +43,24 @@ export default function ProfileMenu({ name, email, avatar }: ProfileMenuProps) {
         onClick={() => setOpen((o) => !o)}
         aria-label="Open profile menu"
         aria-expanded={open}
-        className="flex h-10 w-10 items-center justify-center rounded-full text-sm font-semibold text-white shadow-sm transition-transform hover:scale-105"
-        style={{ background: `linear-gradient(155deg, ${WITS_BLUE} 0%, #0A1F3D 100%)` }}
+        className="flex items-center gap-3 rounded-2xl text-left text-sm font-semibold transition-opacity hover:opacity-80"
       >
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full text-white" style={{ background: WITS_BLUE }}>
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {avatar ? <img src={avatar} alt="" className="h-full w-full rounded-full object-cover" /> : initial}
+        </span>
+        {showDetails && <span className="hidden max-w-44 sm:block"><span className="block truncate text-[var(--foreground)]">{name || "Your profile"}</span><span className="mt-0.5 block truncate text-xs font-normal text-[var(--muted)]">{email}</span></span>}
       </button>
 
       {open && (
-        <div className="skeuo-card absolute right-0 z-20 mt-2 w-64 overflow-hidden border-[#043673]/20 shadow-[0_16px_40px_-10px_rgba(4,54,115,0.35)]">
+        <div className={styles.panel}>
           <div
             className="h-1"
             style={{ background: `linear-gradient(90deg, ${WITS_BLUE}, ${WITS_GOLD})` }}
           />
 
           <div className="px-4 py-3.5">
-            <p className="truncate text-sm font-semibold text-[#0A1F3D]">{name}</p>
+            <p className="truncate text-sm font-semibold text-[var(--foreground)]">{name}</p>
             <p className="truncate text-xs text-gray-500">{email}</p>
           </div>
 
@@ -102,7 +113,7 @@ function MenuLink({
 }
 
 
-function UserIcon() {
+export function UserIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="8" r="4" />
@@ -111,7 +122,7 @@ function UserIcon() {
   );
 }
 
-function SettingsIcon() {
+export function SettingsIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <circle cx="12" cy="12" r="3" />
@@ -120,7 +131,7 @@ function SettingsIcon() {
   );
 }
 
-function TrashIcon() {
+export function TrashIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M3 6h18" />
@@ -128,16 +139,4 @@ function TrashIcon() {
       <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
     </svg>
   );
-}
-
-function LogoutIcon() {
-  return (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
-      <path d="M16 17l5-5-5-5" />
-      <path d="M21 12H9" />
-    </svg>
-  );
-
-
 }
