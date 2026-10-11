@@ -39,4 +39,3 @@
 * Review performance of procedural event generation.
 * Update documentation with implementation and testing details.
 
-![alt text](<WhatsApp Image 2026-09-15 at 14.42.02.jpeg>)

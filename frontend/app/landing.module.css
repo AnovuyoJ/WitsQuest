@@ -80,3 +80,16 @@
 @media (max-width: 1050px) { .header { flex-wrap: wrap; } .navigation { order: 3; flex-basis: 100%; justify-content: center; display: flex; } }
 @media (max-width: 767px) { .header { padding: 18px 12px; } .navigation :global(.jelly-radio) { --jr-font: 10px !important; --jr-px: 7px !important; --jr-gap: 4px !important; } }
 
+.helpContent { display: grid; gap: 2rem; margin-top: 1.5rem; max-width: 760px; }
+.helpContent[hidden] { display: none; }
+.resources ul button, .closeResource { border: 0; padding: 0; background: transparent; color: var(--brand); font: inherit; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+.closeResource { justify-self: start; }
+.resources button:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+.helpContent section { scroll-margin-top: 2rem; }
+.helpContent h3 { margin: 0 0 1rem; color: var(--heading); font-size: 1.2rem; }
+.helpContent p { line-height: 1.7; margin: .75rem 0; }
+.helpContent details { border-bottom: 1px solid var(--line); padding: .85rem 0; }
+.helpContent summary { cursor: pointer; font-weight: 600; color: var(--heading); }
+.resources a { color: var(--brand); text-decoration: underline; text-underline-offset: 3px; }
+.resources a:focus-visible, .helpContent summary:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; }
+

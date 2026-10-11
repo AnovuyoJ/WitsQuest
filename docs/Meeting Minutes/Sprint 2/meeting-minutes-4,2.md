@@ -16,7 +16,7 @@
 * The meeting had to be cut short after we couldn't share our screen and show the Client our current progress.
 * A solution to the issue was to send a clip of the app,and ask to be advised on said clip.
 
-![](Google.png)
+![Email correspondence with the client about app progress and sprint requirements](meeting-4-email-feedback.png)
 
 
 

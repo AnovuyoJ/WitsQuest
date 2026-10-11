@@ -18,3 +18,5 @@ THabo Maleke
 
 - We would like to have completed the remaining basic features, and do the intermediate features by the second sprints' marking.
 - Will dicuss more after marking.
+
+![Sprint 1 meeting 3 screenshot](sprint-meeting.jpeg)
