@@ -27,6 +27,8 @@ export default function TrustAndRatingBadge() {
 
   if (loading || !stats) return null;
 
+  const ratingHistory = Array.isArray(stats.ratingHistory) ? stats.ratingHistory : [];
+
   const getStatusBadge = () => {
     switch (stats.trustStatus) {
       case "normal":
@@ -57,9 +59,9 @@ export default function TrustAndRatingBadge() {
           <p className="text-xs font-bold text-[#E2C66F]">{stats.season}</p>
           <p className="mt-1 text-sm font-semibold">Current rating: {stats.rating}</p>
           <p className="mt-3 border-t border-white/15 pt-2 text-[11px] font-bold uppercase text-white/65">Previous seasons</p>
-          {stats.ratingHistory.length ? (
+          {ratingHistory.length ? (
             <ul className="mt-1 divide-y divide-white/10">
-              {stats.ratingHistory.map((season) => (
+              {ratingHistory.map((season) => (
                 <li key={season.season_name} className="flex items-center justify-between gap-3 py-2 text-xs">
                   <span>{season.season_name}</span>
                   <span className="text-right text-white/75">{season.rating} ELO · {season.wins}W {season.losses}L {season.draws}D</span>
