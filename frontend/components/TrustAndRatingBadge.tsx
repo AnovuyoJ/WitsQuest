@@ -5,6 +5,8 @@ import { apiRequest } from "@/lib/api";
 
 type PlayerStats = {
   rating: number;
+  season: string;
+  ratingHistory: { season_name: string; rating: number; games_played: number; wins: number; losses: number; draws: number }[];
   trustScore: number;
   trustStatus: "normal" | "watched" | "restricted" | "banned";
 };
@@ -43,13 +45,30 @@ export default function TrustAndRatingBadge() {
 
   return (
     <div className="flex items-center gap-2.5">
-      <div
-        className="flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-[#C9A24B]/30 bg-[#C9A24B]/10 text-[#E2C66F] text-xs font-bold shadow-sm"
-        title={`Rating: ${stats.rating} ELO`}
-      >
-        <span className="text-sm">⚡</span>
-        <span>{stats.rating} ELO</span>
-      </div>
+      <details className="group relative">
+        <summary
+          className="flex cursor-pointer list-none items-center gap-1.5 rounded-full border border-[#C9A24B]/30 bg-[#C9A24B]/10 px-3 py-1.5 text-xs font-bold text-[#E2C66F] shadow-sm"
+          title={`${stats.season} rating: ${stats.rating} ELO. Open season history.`}
+        >
+          <span className="text-sm">⚡</span>
+          <span>{stats.rating} ELO</span>
+        </summary>
+        <div className="absolute right-0 top-full z-30 mt-2 w-64 rounded-lg border border-[#C9A24B]/30 bg-[#071D38] p-3 text-white shadow-xl">
+          <p className="text-xs font-bold text-[#E2C66F]">{stats.season}</p>
+          <p className="mt-1 text-sm font-semibold">Current rating: {stats.rating}</p>
+          <p className="mt-3 border-t border-white/15 pt-2 text-[11px] font-bold uppercase text-white/65">Previous seasons</p>
+          {stats.ratingHistory.length ? (
+            <ul className="mt-1 divide-y divide-white/10">
+              {stats.ratingHistory.map((season) => (
+                <li key={season.season_name} className="flex items-center justify-between gap-3 py-2 text-xs">
+                  <span>{season.season_name}</span>
+                  <span className="text-right text-white/75">{season.rating} ELO · {season.wins}W {season.losses}L {season.draws}D</span>
+                </li>
+              ))}
+            </ul>
+          ) : <p className="mt-2 text-xs text-white/65">No completed seasons yet.</p>}
+        </div>
+      </details>
       <div
         className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold shadow-sm ${status.bg}`}
         title={`Trust Score: ${stats.trustScore}/100 (${status.label})`}
