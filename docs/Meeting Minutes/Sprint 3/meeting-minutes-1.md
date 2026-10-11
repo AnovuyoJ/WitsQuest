@@ -58,4 +58,4 @@
 * Record bugs and improvements in Gitea Issues.
 Begin updating technical and project documentation.
 
-![alt text](<WhatsApp Image 2026-09-15 at 14.42.02.jpeg>)
+![Sprint 3 meeting 1 evidence](<../Sprint 2/WhatsApp Image 2026-09-15 at 14.42.02.jpeg>)

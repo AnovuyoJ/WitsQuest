@@ -11,6 +11,7 @@ import styles from "./landing.module.css";
 export default function Home() {
   const router = useRouter();
   const [checkingSession, setCheckingSession] = useState(true);
+  const [resource, setResource] = useState<"faq" | "privacy" | "report-problem" | null>(null);
   useEffect(() => {
     let mounted = true;
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -77,7 +78,35 @@ export default function Home() {
       <footer className={styles.footer}>
         <div className={styles.resources}>
           <h2>Resources</h2>
-          <ul><li>Return Policy</li><li>FAQs</li><li>Privacy Policy</li><li>Customer Support</li></ul>
+          <ul>
+            <li><button type="button" aria-expanded={resource === "faq"} aria-controls="faq" onClick={() => setResource(resource === "faq" ? null : "faq")}>FAQs</button></li>
+            <li><button type="button" aria-expanded={resource === "privacy"} aria-controls="privacy" onClick={() => setResource(resource === "privacy" ? null : "privacy")}>Privacy Policy</button></li>
+            <li><button type="button" aria-expanded={resource === "report-problem"} aria-controls="report-problem" onClick={() => setResource(resource === "report-problem" ? null : "report-problem")}>Report a problem</button></li>
+          </ul>
+          <div className={styles.helpContent} hidden={resource === null}>
+            {resource !== null && <button type="button" className={styles.closeResource} onClick={() => setResource(null)}>Close section</button>}
+            <section id="faq" hidden={resource !== "faq"} aria-labelledby="faq-title">
+              <h3 id="faq-title">Frequently asked questions</h3>
+              <details><summary>How do I start playing?</summary><p>Create an account, sign in, and use the campus map to find an active event. Walk to the event, verify your location, and answer its trivia questions to earn collectible cards.</p></details>
+              <details><summary>Why does the game need my location?</summary><p>Your location is used to show nearby events and check that you have reached a challenge. Allow location access in your browser. If verification is slow, check your connection and try again when your device has a clear location signal.</p></details>
+              <details><summary>Can I play offline?</summary><p>Some previously loaded events and challenges are available offline. Verify your location while connected first. Offline challenge answers must be saved within the 15-minute answer window and synced when you reconnect. Live battles need an internet connection.</p></details>
+              <details><summary>How do card battles work?</summary><p>Build a deck of five different owned cards: one Gold, two Black, and two Blue. Each card can be played once in a five-round match. Higher card points win the round, and the player with the most round wins wins the match.</p></details>
+              <details><summary>Can I change the appearance?</summary><p>Yes. Open Settings to choose a theme if you prefer a different look to Wits Classic.</p></details>
+            </section>
+            <section id="privacy" hidden={resource !== "privacy"} aria-labelledby="privacy-title">
+              <h3 id="privacy-title">Privacy Policy</h3>
+              <p>WitsQuest uses your account details to sign you in and stores your quest progress, collected cards, and match activity so you can continue playing.</p>
+              <p>With your permission, the app uses your device location to display your position and verify campus challenges. Verification records may include coordinates. Gameplay and verification activity are also used for fair-play checks and moderator review. Your password is handled by the authentication service.</p>
+              <p>The app stores cached events, challenges, and pending offline answers on your device to support offline play. Use the app’s Logout button when sharing a device to clear your account’s offline challenge and answer data.</p>
+              <p>You can manage location and camera permissions in your browser settings. Signed-in users can delete their account through <Link href="/account/delete">Delete account</Link>; read the confirmation screen before continuing.</p>
+            </section>
+            <section id="report-problem" hidden={resource !== "report-problem"} aria-labelledby="report-title">
+              <h3 id="report-title">Report a problem</h3>
+              <p>Found a bug or something confusing? Include the page or feature, what you tried, what you expected, and what happened. Add your browser, device, and a screenshot if helpful. Do not include passwords, access tokens, or private account details.</p>
+              <p><a href="https://sdp.ms.wits.ac.za/bugs-bunnies/WitsQuest/issues/new" target="_blank" rel="noopener noreferrer">Report an issue on Gitea ↗</a></p>
+              <p>You need a Gitea account with access to the repository. If you cannot access the issue tracker, share the details with the project team during a user-feedback session.</p>
+            </section>
+          </div>
         </div>
         <p className={styles.copyright}>© {new Date().getUTCFullYear()} WitsQuest. All rights reserved.</p>
       </footer>

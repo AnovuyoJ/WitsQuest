@@ -34,4 +34,4 @@
 * Consider frontend, backend, API, database, and testing requirements for each user story.
 * Continue tracking progress and tasks using the team's existing project-management workflow.
 
-![alt text](<IMG_0638.PNG>)
+![Sprint 3 meeting evidence](IMG_0638.PNG)

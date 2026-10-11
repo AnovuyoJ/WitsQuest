@@ -1,6 +1,6 @@
 /// <reference types="jest" />
 
-import { render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen, waitFor } from "@testing-library/react";
 import CampusMap from "../components/CampusMap";
 
 import { apiRequest, getZones } from "../lib/api";
@@ -118,6 +118,45 @@ describe("CampusMap", () => {
         }),
       ])
     );
+  });
+
+  it("loads cached events offline without calling the network", async () => {
+    Object.defineProperty(navigator, "onLine", { configurable: true, value: false });
+    (getCachedEvents as jest.Mock).mockResolvedValue([{ id: 'cached', title: 'Cached campus quest', latitude: -26.19, longitude: 28.03, radius_meters: 30, starts_at: '2000-01-01', ends_at: '2099-01-01' }]);
+    render(<CampusMap />);
+    expect(await screen.findByText('Cached campus quest')).toBeInTheDocument();
+    expect(screen.getByText("You're offline")).toBeInTheDocument();
+    expect(apiRequest).not.toHaveBeenCalled();
+    expect(getZones).not.toHaveBeenCalled();
+    act(() => window.dispatchEvent(new Event('online')));
+    expect(screen.queryByText("You're offline")).not.toBeInTheDocument();
+    act(() => window.dispatchEvent(new Event('offline')));
+    expect(screen.getByText("You're offline")).toBeInTheDocument();
+  });
+
+  it("explains when the browser cannot provide geolocation", async () => {
+    Object.defineProperty(navigator, 'geolocation', { configurable: true, value: undefined });
+    render(<CampusMap />);
+    expect(await screen.findByText('Geolocation is not supported by your browser.')).toBeInTheDocument();
+  });
+
+  it.each([1, 2])('shows actionable feedback for location failure code %s', async (code) => {
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    (navigator.geolocation.watchPosition as jest.Mock).mockImplementation((_success, failure) => {
+      failure({ code, PERMISSION_DENIED: 1 }); return 1;
+    });
+    const { unmount } = render(<CampusMap />);
+    expect(await screen.findByText(code === 1 ? /Location permission is off/ : /We could not find your location/)).toBeInTheDocument();
+    unmount(); expect(navigator.geolocation.clearWatch).toHaveBeenCalledWith(1);
+    log.mockRestore();
+  });
+
+  it('reports an event loading failure when no cached events exist', async () => {
+    const log = jest.spyOn(console, 'error').mockImplementation(() => {});
+    (apiRequest as jest.Mock).mockResolvedValue({ error: { message: 'Unavailable' } });
+    render(<CampusMap />);
+    expect(await screen.findByText('Unable to load campus events.')).toBeInTheDocument();
+    log.mockRestore();
   });
 });
 

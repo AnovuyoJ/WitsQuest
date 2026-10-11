@@ -545,6 +545,89 @@ PUT requires the **complete write body**, just like POST; it is not a partial up
 
 404 messages use the shared JSON format, for example `{"message":"Card not found."}`. Delete behavior follows database foreign-key constraints; dependent records can prevent deletion.
 
+#### Analytics
+
+##### GET /api/admin/analytics
+
+Administrator. No parameters. Returns three parallel datasets used by the admin stats page:
+
+- `locations` — per-event verification counts and distinct players
+- `questions` — per-challenge attempt counts, distinct players, correct/wrong totals, and success percentage
+- `cards` — per-card award counts, distinct players, and each card's share of total awards as `award_percentage`
+
+```json
+{
+  "locations": [
+    { "id": "<event uuid>", "title": "Great Hall", "total_verifications": 42, "unique_players": 17 }
+  ],
+  "questions": [
+    { "id": "<challenge uuid>", "question_text": "Which building...", "event_id": "<event uuid>",
+      "total_attempts": 30, "unique_players": 12, "correct_attempts": 8, "wrong_attempts": 22, "success_percentage": 26.7 }
+  ],
+  "cards": [
+    { "id": "<card uuid>", "title": "Library Explorer", "rarity": "Blue", "event_id": "<event uuid>",
+      "total_awards": 14, "unique_players": 11, "award_percentage": 8.3 }
+  ]
+}
+```
+
+No filtering is supported. Rows with zero activity are included. Errors: 500 `{"message":"Analytics query failed."}` if any of the three queries fails.
+
+##### POST /api/admin/events/procedural
+
+Administrator. Body:
+
+| Field | Required | Type / constraints |
+| --- | --- | --- |
+| count | Yes | Integer, 1 to 100 |
+
+```json
+{ "count": 5 }
+```
+
+Generates and persists procedural events via `generateProceduralEvents`. Returns **201** with the array of created event rows. The rotation logic that keeps active procedural events fresh runs automatically as a side effect of `GET /api/events`.
+
+##### Zones
+
+Administrator zone management. All endpoints require administrator access.
+
+| Method and path | Body / query | Success |
+| --- | --- | --- |
+| `GET /api/admin/zones` | None | 200 array of zones with `location_count`, newest first |
+| `GET /api/admin/zones/:id` | None | 200 zone with `locations` array |
+| `POST /api/admin/zones` | `{ "name": "East Campus", "description": "..." }` | 201 created zone; name required, max 200 chars, description optional |
+| `POST /api/admin/zones/:id/locations` | `{ "event_id": "<uuid>" }` | 201 `{"success": true}` |
+| `DELETE /api/admin/zones/:id/locations/:eventId` | None | 200 `{"success": true}` |
+| `DELETE /api/admin/zones/:id` | None | 200 `{"success": true}` |
+
+Errors:
+
+- 400 invalid name, description, or UUID
+- 404 zone or event not found
+- 409 `{"message":"Location is already part of this zone."}`
+
+##### Campaigns
+
+Administrator campaign management. All endpoints require administrator access.
+
+| Method and path | Body | Success |
+| --- | --- | --- |
+| `GET /api/admin/campaigns` | None | 200 array of campaigns ordered by `starts_at` |
+| `POST /api/admin/campaigns` | `{ "name": "...", "starts_at": "...", "ends_at": "..." }` | 201 created campaign |
+| `PUT /api/admin/campaigns/:id` | Same body as creation | 200 updated campaign |
+| `DELETE /api/admin/campaigns/:id` | None | 200 `{"success": true}` |
+
+`starts_at` and `ends_at` must be parseable date/time strings, and `ends_at` must be strictly after `starts_at`. Name is required and max 200 characters. Errors: 400 invalid dates/order; 404 campaign not found.
+
+##### Event retirement
+
+| Method and path | Body | Success |
+| --- | --- | --- |
+| `POST /api/admin/events/:id/retire` | None | 200 event row with `retired_at` set |
+| `POST /api/admin/events/:id/unretire` | None | 200 event row with `retired_at` cleared |
+
+Retire returns 404 if the event is missing or already retired; unretire returns 404 if the event is missing or not currently retired. Retired events are excluded from player-facing views but remain visible to administrators.
+
 ### Games
 
 All game endpoints require a signed-in user. Except listing and matchmaking, requests are restricted to the game's participants. Missing/inaccessible games return 404 `{"message":"Game not found."}`, with the cancellation exception below.
@@ -663,6 +746,248 @@ Active participant only; `roundId` identifies the finished previous round. No bo
 ```
 
 Creates the next numbered round with no cards selected, or returns its ID if it already exists. Errors: 404 game inaccessible/missing; 409 `{"message":"Game is not active."}` or `{"message":"Finish the current round first."}` (including missing/wrong-game previous rounds).
+
+### Progress and leaderboard
+
+#### GET /api/me/progress
+
+Signed-in user. No parameters. Returns aggregate progress for the current player, plus a computed current streak and achievement list.
+
+```json
+{
+  "points": 340,
+  "correctAnswers": 12,
+  "attempts": 18,
+  "cardsOwned": 9,
+  "battlesCompleted": 3,
+  "battlesWon": 2,
+  "currentStreak": 4,
+  "achievements": [
+    { "id": "first_card", "label": "First Card", "earned": true },
+    { "id": "streak_3", "label": "Three-day streak", "earned": true }
+  ]
+}
+```
+
+Points are summed from the `points` value of reward cards attached to correctly answered challenges. The streak is calculated from consecutive days with at least one correct answer. Achievements are derived server-side; clients display them, not compute them.
+
+#### GET /api/leaderboard
+
+Signed-in user. No parameters. Returns a ranked slice of the top 100 players by points, plus the current player's own row even if unranked.
+
+```json
+{
+  "entries": [
+    { "playerId": "<uuid>", "playerName": "Alex", "points": 820, "currentStreak": 6, "achievementsEarned": 7, "isCurrentPlayer": false, "rank": 1 }
+  ],
+  "currentPlayer": { "playerId": "<uuid>", "playerName": "You", "points": 340, "currentStreak": 4, "achievementsEarned": 3, "isCurrentPlayer": true, "rank": 24 }
+}
+```
+
+Ties are broken by achievements earned, then streak, then player name. Players with zero points are excluded from `entries` but may still appear in `currentPlayer` with a null rank.
+
+### Live matches and spectating
+
+Version-2 matches (five-card battles) support live play with timed turns and public spectating.
+
+#### GET /api/games/live
+
+Signed-in user. No parameters. Returns a list of active version-2 matches the caller is not participating in, newest first:
+
+```json
+[
+  {
+    "id": "<game uuid>",
+    "started_at": "2026-09-15T10:00:00.000Z",
+    "is_cpu": false,
+    "player_one_name": "Alex",
+    "player_two_name": "Sam",
+    "player_one_score": 2,
+    "player_two_score": 1,
+    "round_number": 4
+  }
+]
+```
+
+Only public information is returned. Deck contents and unrevealed card choices are never exposed here.
+
+#### GET /api/games/:id/spectate
+
+Signed-in user, not a participant. `:id` identifies a version-2 match in `active` or `finished` state. Returns the public game summary plus per-round results.
+
+```json
+{
+  "game": {
+    "id": "<game uuid>",
+    "status": "active",
+    "started_at": "2026-09-15T10:00:00.000Z",
+    "winner_side": null,
+    "is_cpu": false,
+    "player_one_name": "Alex",
+    "player_two_name": "Sam"
+  },
+  "rounds": [
+    {
+      "id": "<round uuid>",
+      "round_number": 1,
+      "status": "finished",
+      "winner_side": 1,
+      "turn_deadline": "2026-09-15T10:00:30.000Z",
+      "player_one_timed_out": false,
+      "player_two_timed_out": false,
+      "player_one_submitted": true,
+      "player_two_submitted": true,
+      "player_one_card": { "id": "<card uuid>", "title": "Great Hall", "rarity": "Gold", "points": 60 },
+      "player_two_card": { "id": "<card uuid>", "title": "Library", "rarity": "Gold", "points": 40 }
+    }
+  ],
+  "scores": { "one": 1, "two": 0 }
+}
+```
+
+`player_one_card` and `player_two_card` are null for unfinished rounds. Errors: 404 `{"message":"This match is no longer available to watch."}` when the match is missing, finished and hidden, version 1, or the caller is a participant.
+
+#### Timed turns
+
+When both participants of a version-2 stakes-enabled duel have accepted, the first round's `turn_deadline` is set to **30 seconds after acceptance**. The timer is enforced server-side: a player who does not submit a card before the deadline is marked via `player_one_timed_out` or `player_two_timed_out` on the next server tick, and the round resolves as a loss for the timed-out side.
+
+### Card trades
+
+Trades exchange card *definitions* — the API moves one eligible copy from each side on acceptance. Trade policy limits are enforced by the API:
+
+- **Same rarity required.** Offered and requested cards must have the same rarity.
+- **Daily cap.** A sender can have at most 2 pending or accepted trades in a rolling 24-hour window.
+- **Cooldown on received cards.** A card received from a trade cannot be traded again for 24 hours (`acquired_at` gate).
+- **One pending trade per pair.** Enforced by a partial unique index.
+
+#### GET /api/trades
+
+Signed-in user. No parameters. Returns trades where the caller is sender or recipient, newest first. Each row includes trade fields plus `offered_title`, `offered_rarity`, `offered_points`, `requested_title`, `requested_rarity`, `requested_points`, `sender_name`, `recipient_name`.
+
+#### GET /api/trades/players/list
+
+Signed-in user. No parameters. Returns other players who can be traded with:
+
+```json
+[{ "id": "<uuid>", "name": "Alex", "email": "alex@example.com" }]
+```
+
+Sorted by display name. The caller's own row is excluded.
+
+#### GET /api/trades/players/:id/cards
+
+Signed-in user. `:id` identifies another player's UUID. Returns the distinct card definitions that player owns:
+
+```json
+[{ "id": "<card uuid>", "title": "Great Hall", "rarity": "Gold", "points": 60 }]
+```
+
+Sorted by rarity (Gold, Black, Blue) then title. Errors: 400 `{"message":"Use /me/cards for your own collection."}` if `:id` is the caller.
+
+#### POST /api/trades
+
+Signed-in user. Body:
+
+| Field | Required | Type |
+| --- | --- | --- |
+| recipientId | Yes | Recipient player UUID |
+| offeredCardId | Yes | Card UUID the caller owns |
+| requestedCardId | Yes | Card UUID the recipient owns |
+
+```json
+{ "recipientId": "<uuid>", "offeredCardId": "<uuid>", "requestedCardId": "<uuid>" }
+```
+
+Success: `200 {"success": true}`.
+
+Errors:
+
+- 400 self-trade or different rarities
+- 403 sender does not own the offered card, or recipient does not own the requested card
+- 404 one of the selected cards no longer exists
+- 409 a pending trade between the two players already exists
+- 429 daily cap reached, or the offered card is still inside its 24-hour cooldown
+
+#### POST /api/trades/:id/accept
+
+Signed-in user; must be the recipient. No body. Completes the trade atomically: one eligible copy is removed from each side and one received copy is inserted with `acquired_at = now()` so the cooldown applies. Sets the trade status to `accepted`.
+
+Success: `200 {"success": true}`.
+
+Errors: 403 caller is not the recipient; 404 trade missing or already processed; 409 either party no longer owns the required card — the trade is marked `declined` and the response explains why.
+
+#### POST /api/trades/:id/cancel
+
+Signed-in user; must be the sender or recipient. No body. Cancels a pending trade by marking it `declined`.
+
+Success: `200 {"success": true}`. Errors: 403 caller not party to the trade; 404 trade missing.
+
+#### POST /api/trades/:id/reject
+
+Signed-in user; must be the recipient. No body. Declines a pending trade by marking it `declined`.
+
+Success: `200 {"success": true}`. Errors: 403 caller is not the recipient; 404 trade missing.
+
+### Zones
+
+A zone is a named group of events. Claiming a zone requires the player to have answered every event in the zone correctly at least once.
+
+#### GET /api/zones
+
+Signed-in user. No parameters. Returns zones in reverse creation order with their current owner (if any) and location count:
+
+```json
+[
+  {
+    "id": "<zone uuid>",
+    "name": "East Campus",
+    "description": "The eastern cluster",
+    "created_at": "2026-09-10T08:00:00.000Z",
+    "location_count": 4,
+    "claimed_by": "<uuid or null>",
+    "claimed_at": "<timestamp or null>"
+  }
+]
+```
+
+#### GET /api/zones/:id
+
+Signed-in user. Returns the zone with the caller's progress toward claiming it:
+
+```json
+{
+  "id": "<zone uuid>",
+  "name": "East Campus",
+  "description": "The eastern cluster",
+  "created_at": "2026-09-10T08:00:00.000Z",
+  "claimed_by": null,
+  "claimed_at": null,
+  "location_count": 4,
+  "completed_location_count": 3,
+  "locations": [
+    { "id": "<event uuid>", "title": "Great Hall", "description": "...", "latitude": -26.19, "longitude": 28.03, "completed": true }
+  ],
+  "eligible": false,
+  "claimed_by_me": false
+}
+```
+
+A location counts as completed when the caller has at least one correct attempt against any of its challenges. `eligible` is true when every location is complete. Errors: 404 `{"message":"Zone not found."}`.
+
+#### POST /api/zones/:id/claim
+
+Signed-in user. No body. Attempts to claim the zone for the caller.
+
+The zone row is locked inside a transaction, so two simultaneous claims cannot both succeed. If the zone is already claimed:
+
+- By the caller: `200 {"success": true, "claimed": true, "alreadyClaimed": true, "claimedBy": "<uuid>", "claimedAt": "<timestamp>"}`
+- By another player: `409 {"message": "This zone has already been claimed by another player.", "claimedBy": "<uuid>", "claimedAt": "<timestamp>"}`
+
+If the zone is unclaimed and the caller has not completed every location: `409 {"message": "Complete a challenge at every location in this zone before claiming it."}`.
+
+On success: `201 {"success": true, "claimed": true, "claimedBy": "<uuid>", "claimedAt": "<timestamp>"}`.
+
+Errors: 404 zone not found.
 
 ### Typical client flows
 

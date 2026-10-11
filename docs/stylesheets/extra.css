@@ -1,3 +1,16 @@
+.rst-content img[alt="Sprint 3 meeting evidence"],
+.rst-content img[alt="Sprint 2 meeting 3 evidence"],
+.rst-content img[alt="Sprint 2 meeting 1 evidence"],
+.rst-content img[alt="Sprint 3 meeting 1 evidence"],
+.rst-content img[alt="Sprint 1 meeting 3 screenshot"],
+.rst-content img[alt="Sprint 4 meeting 1 evidence"],
+.rst-content img[alt^="User feedback survey:"],
+.rst-content img[alt^="Unit test coverage:"] {
+  width: 350px;
+  max-width: 100%;
+  height: auto;
+}
+
 /* =========================
    MAIN CONTENT AREA
    ========================= */

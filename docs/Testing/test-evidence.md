@@ -8,6 +8,29 @@ An automated run is identified by its commit, execution date and environment. It
 
 CI logs and coverage artifacts support investigation of individual failures. A subsequent run belongs to its own revision, which keeps fixes traceable to the results that verify them.
 
+### Automated unit test coverage evidence
+
+These screenshots show the local frontend and backend coverage reports generated on **11 October 2026**. Click a picture to view the full-size report.
+
+| Report | Statements | Branches | Functions | Lines |
+|---|---|---|---|---|
+| Frontend | 87.75% | 73.64% | 86.61% | 89.98% |
+| Backend | 86.84% | 78.21% | 87.85% | 88.83% |
+
+Both reports show statement, function, and line coverage above 80%. Branch coverage remains below 80%. These figures describe the captured reports; later test runs may produce different results. The screenshots show coverage rather than test pass/fail counts or a CI run.
+
+#### Frontend coverage
+
+Generated from the `frontend` directory using `npx jest --coverage`. The HTML report is available locally at `frontend/coverage/lcov-report/index.html`.
+
+[![Unit test coverage: frontend report](images/frontend-unit-test-coverage.png)](images/frontend-unit-test-coverage.png)
+
+#### Backend coverage
+
+Generated from the `backend` directory using `npm test -- --coverage --runInBand`. The HTML report is available locally at `backend/coverage/lcov-report/index.html`.
+
+[![Unit test coverage: backend report](images/backend-unit-test-coverage.png)](images/backend-unit-test-coverage.png)
+
 ## User-session evidence
 
 A session record describes the candidate build, participant roles, device/browser combination and tasks evaluated. Pseudonymous participant identifiers connect observations without exposing personal contact details.
@@ -15,6 +38,32 @@ A session record describes the candidate build, participant roles, device/browse
 Task results distinguish unassisted completion, assisted completion, failure, blocked execution and tasks not run. Completion time, assistance and ease ratings provide context alongside the final outcome. Observations describe what happened; participant comments describe the user's view; proposed improvements describe a possible response.
 
 Session summaries include participant and task counts, device coverage and limitations. This context makes differences between individual experiences and recurring usability problems visible.
+
+### User feedback survey screenshots
+
+The screenshots below show four responses to each survey question. Click a picture to view it at full size.
+
+#### Experience with similar games
+
+[![User feedback survey: experience with similar games](images/feedback-experience.jpeg)](images/feedback-experience.jpeg)
+
+#### Game enjoyment
+
+[![User feedback survey: game enjoyment](images/feedback-enjoyment.jpeg)](images/feedback-enjoyment.jpeg)
+
+#### Question difficulty
+
+[![User feedback survey: question difficulty](images/feedback-question-difficulty.jpeg)](images/feedback-question-difficulty.jpeg)
+
+#### Suggested improvements and confusing parts
+
+Users mentioned the sign-up flow, slow location verification, navigation, unclear instructions, and grouping cards for easier access. One response also suggested offline functionality.
+
+[![User feedback survey: improvements and confusing parts](images/feedback-improvements.jpeg)](images/feedback-improvements.jpeg)
+
+#### Additional comments
+
+[![User feedback survey: additional comments](images/feedback-overall-comments.jpeg)](images/feedback-overall-comments.jpeg)
 
 ## Defect and feedback reporting
 
