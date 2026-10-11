@@ -21,26 +21,45 @@ router.post("/ratings/seasons/reset", async (req, res) => {
   res.json(await resetRatingSeason(text(req.body.name, "Season name", 80)));
 });
 
-router.get("/moderation/flags", async (_req, res) => {
-  const { rows } = await database.query(`SELECT id,player_id,reviewer_id,reason,status,action_taken,created_at,resolved_at
-    FROM public.moderation_flags ORDER BY created_at DESC`);
+router.get("/moderation/flags", async (req, res) => {
+  const status = req.query.status === undefined ? "open" : text(req.query.status,"Status",20);
+  if (!(["open","reviewed","resolved","all"] as string[]).includes(status)) {
+    throw new HttpError(400,"Choose open, reviewed, resolved or all flag status.");
+  }
+  const { rows } = await database.query(`SELECT f.id,f.player_id,f.reviewer_id,f.reason,f.status,f.action_taken,f.created_at,f.resolved_at,
+      COALESCE(score.score,100)::int AS trust_score,COALESCE(signals.severity,0)::int AS severity,
+      COALESCE(signals.event_types,ARRAY[]::text[]) AS event_types
+    FROM public.moderation_flags f
+    LEFT JOIN public.player_trust_score score ON score.player_id=f.player_id
+    LEFT JOIN LATERAL (
+      SELECT max(e.severity) AS severity,array_agg(DISTINCT e.event_type ORDER BY e.event_type) AS event_types
+      FROM public.trust_events e WHERE e.player_id=f.player_id
+        AND e.created_at BETWEEN f.created_at-interval '30 days' AND f.created_at
+    ) signals ON true
+    WHERE $1='all' OR f.status=$1
+    ORDER BY (f.status='open') DESC,COALESCE(signals.severity,0) DESC,f.created_at DESC`,[status]);
   res.json(rows);
 });
 
 router.post("/moderation/flags/:flagId/action", async (req, res) => {
   const action = req.body.action;
-  if (!(["none","warning","throttle","restricted","banned"] as unknown[]).includes(action)) {
+  if (!( ["clear","warning","throttle","restricted","banned"] as unknown[]).includes(action)) {
     throw new HttpError(400, "Choose a valid moderation action.");
   }
   const flagId = id(req.params.flagId);
   await transaction(async client => {
+    const storedAction = action === "clear" ? "none" : action;
     const flag = (await client.query(`UPDATE public.moderation_flags SET status='resolved',action_taken=$2,
-      reviewer_id=$3,resolved_at=now() WHERE id=$1 RETURNING player_id`, [flagId,action,req.user!.id])).rows[0];
+      reviewer_id=$3,resolved_at=now() WHERE id=$1 RETURNING player_id`, [flagId,storedAction,req.user!.id])).rows[0];
     if (!flag) throw new HttpError(404, "Moderation flag not found.");
-    if (action === "restricted" || action === "banned") {
-      await client.query(`INSERT INTO public.player_trust_score (player_id,status,last_updated_at)
-        VALUES ($1,$2,now()) ON CONFLICT (player_id) DO UPDATE SET status=EXCLUDED.status,last_updated_at=now()`,
-      [flag.player_id,action]);
+    if (action === "clear" || action === "throttle" || action === "restricted" || action === "banned") {
+      const status = action === "clear" ? "normal" : action === "throttle" ? "watched" : action;
+      const minutes = action === "throttle" ? 15 : null;
+      await client.query(`INSERT INTO public.player_trust_score (player_id,status,restricted_until,last_updated_at)
+        VALUES ($1,$2,CASE WHEN $3::integer IS NULL THEN NULL ELSE now()+($3::text || ' minutes')::interval END,now())
+        ON CONFLICT (player_id) DO UPDATE SET status=EXCLUDED.status,
+          score=CASE WHEN $4 THEN GREATEST(public.player_trust_score.score,70) ELSE public.player_trust_score.score END,
+          restricted_until=EXCLUDED.restricted_until,last_updated_at=now()`,[flag.player_id,status,minutes,action === "clear"]);
     }
   });
   res.json({ success: true });

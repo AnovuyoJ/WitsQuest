@@ -3,25 +3,7 @@ import { transaction } from "./database";
 import { HttpError } from "./validation";
 import { notifyGamePlayers } from "./notifications";
 import { INITIAL_RATING, matchmakingTolerance, updateRatingsInTx } from "./ratingService";
-
-/**
- * Checks if a player's trust status allows them to perform competitive game actions.
- */
-async function checkPlayerTrust(client: PoolClient, playerId: string) {
-  const trust = (
-    await client.query(
-      "SELECT score, status FROM public.player_trust_score WHERE player_id=$1",
-      [playerId]
-    )
-  ).rows[0];
-
-  if (trust && (trust.status === "restricted" || trust.status === "banned")) {
-    throw new HttpError(
-      403,
-      "Your account is currently restricted from matchmaking due to safety flags."
-    );
-  }
-}
+import { enforcePlayerTrust } from "./moderationService";
 
 export async function lockGame(client: PoolClient, gameId: string, playerId: string) {
   const game = (await client.query("SELECT * FROM public.card_games WHERE id=$1 FOR UPDATE", [gameId])).rows[0];
@@ -68,7 +50,7 @@ export async function latestRound(playerId: string, gameId: string) {
 
 export async function matchmake(playerId: string, cardId: string, category: string) {
   return transaction(async client => {
-    await checkPlayerTrust(client, playerId);
+    await enforcePlayerTrust(client, playerId);
 
     // Serialize matchmaking to avoid two simultaneous requests creating separate empty lobbies.
     await client.query("SELECT pg_advisory_xact_lock(74192001)");
@@ -115,7 +97,7 @@ export async function matchmake(playerId: string, cardId: string, category: stri
 
 export async function playCard(playerId: string, gameId: string, roundId: string, cardId: string) {
   return transaction(async client => {
-    await checkPlayerTrust(client, playerId);
+    await enforcePlayerTrust(client, playerId);
 
     const game = await lockGame(client,gameId,playerId);
     if (game.rules_version === 2) throw new HttpError(409, "Use the five-card battle endpoint.");

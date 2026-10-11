@@ -457,6 +457,7 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   await mockPg.exec("TRUNCATE public.player_profiles");
+  await mockPg.exec("TRUNCATE public.player_trust_score,public.trust_events,public.moderation_flags");
   await mockPg.exec("TRUNCATE public.player_ratings, public.player_rating_history");
   await mockPg.exec("TRUNCATE public.rating_seasons RESTART IDENTITY CASCADE; INSERT INTO public.rating_seasons (name) VALUES ('Season 1')");
   await mockPg.query("INSERT INTO auth.users (id) VALUES ($1),($2),($3) ON CONFLICT DO NOTHING", [adminId,oneId,twoId]);
@@ -490,6 +491,89 @@ test("moderation flags are admin-only and restriction actions update trust statu
     .toMatchObject({ status:"resolved",action_taken:"restricted",reviewer_id:adminId });
   expect((await mockPg.query("SELECT score,status FROM public.player_trust_score WHERE player_id=$1",[oneId])).rows[0])
     .toMatchObject({ score:100,status:"restricted" });
+  expect((await request("/admin/moderation/flags?status=open","admin")).data).toEqual([]);
+  expect((await request("/admin/moderation/flags?status=all","admin")).data[0]).toMatchObject({
+    id:flag.id,status:"resolved",severity:0,event_types:[],trust_score:100,
+  });
+  await mockPg.query("UPDATE public.moderation_flags SET status='open' WHERE id=$1",[flag.id]);
+  expect((await request(route,"admin","POST",{action:"clear"})).status).toBe(200);
+  expect((await mockPg.query("SELECT score,status,restricted_until FROM public.player_trust_score WHERE player_id=$1",[oneId])).rows[0])
+    .toMatchObject({ score:100,status:"normal",restricted_until:null });
+});
+
+test("implausible verified movement lowers trust and records its evidence", async () => {
+  expect((await request(`/events/${event.id}/verify-location`,"one","POST",{
+    latitude:event.latitude,longitude:event.longitude,
+  })).status).toBe(200);
+  const distant = (await request("/admin/events","admin","POST",{
+    ...event,title:"Distant campus quest",latitude:event.latitude+0.02,longitude:event.longitude,
+  })).data;
+  await publish("events",distant);
+  expect((await request(`/events/${distant.id}/verify-location`,"one","POST",{
+    latitude:distant.latitude,longitude:distant.longitude,
+  })).status).toBe(403);
+  expect((await mockPg.query("SELECT score,status FROM public.player_trust_score WHERE player_id=$1",[oneId])).rows[0])
+    .toMatchObject({ score:85,status:"normal" });
+  expect((await mockPg.query("SELECT event_type,metadata->>'eventId' AS event_id FROM public.trust_events WHERE player_id=$1",[oneId])).rows[0])
+    .toMatchObject({ event_type:"location_anomaly",event_id:distant.id });
+});
+
+test("a repeated challenge submission is scored once per challenge", async () => {
+  await request(`/events/${event.id}/verify-location`,"one","POST",{latitude:event.latitude,longitude:event.longitude});
+  const route = `/events/${event.id}/submit-answer`;
+  expect((await request(route,"one","POST",{challengeId:challenge.id,answer:"Yes"})).status).toBe(200);
+  expect((await request(route,"one","POST",{challengeId:challenge.id,answer:"Yes"})).data.alreadyCompleted).toBe(true);
+  expect((await request(route,"one","POST",{challengeId:challenge.id,answer:"Yes"})).status).toBe(200);
+  expect((await mockPg.query("SELECT player_id FROM public.player_trust_score WHERE player_id=$1",[oneId])).rows).toHaveLength(0);
+  await request(route,"one","POST",{challengeId:challenge.id,answer:"Yes"});
+  await request(route,"one","POST",{challengeId:challenge.id,answer:"Yes"});
+  expect((await mockPg.query("SELECT score FROM public.player_trust_score WHERE player_id=$1",[oneId])).rows[0].score).toBe(90);
+  expect((await mockPg.query("SELECT count(*)::int AS count FROM public.trust_events WHERE player_id=$1 AND event_type='duplicate_submission'",[oneId])).rows[0].count).toBe(1);
+});
+
+test("repeated human pairings create a trust signal after five completed matches", async () => {
+  await mockPg.query(`INSERT INTO public.card_games
+    (player_one_id,player_two_id,category,status,rules_version,is_cpu,finished_at)
+    SELECT $1,$2,'Mixed','finished',2,false,now()-make_interval(mins=>n)
+    FROM generate_series(1,4) n`,[oneId,twoId]);
+  const {game,one,two} = await duel();
+  await request(`/games/${game.id}/battle/accept`,"one","POST");
+  await request(`/games/${game.id}/battle/accept`,"two","POST");
+  for (let index=0;index<5;index++) {
+    const round = (await request(`/games/${game.id}/battle`)).data.rounds.at(-1);
+    await request(`/games/${game.id}/battle/card`,"one","POST",{roundId:round.id,cardId:one[index].id});
+    await request(`/games/${game.id}/battle/card`,"two","POST",{roundId:round.id,cardId:two[index].id});
+    if (index<4) await request(`/games/${game.id}/battle/next`,"one","POST",{roundId:round.id});
+  }
+  const patterns = await mockPg.query(`SELECT player_id,metadata->>'opponentId' AS opponent_id
+    FROM public.trust_events WHERE event_type='suspicious_round_pattern' ORDER BY player_id`);
+  expect(patterns.rows).toEqual([{ player_id:oneId,opponent_id:twoId },{ player_id:twoId,opponent_id:oneId }]);
+}, 30000);
+
+test("watched players receive a temporary throttle that expires", async () => {
+  const deck = await makeDeck();
+  await mockPg.query("INSERT INTO public.player_trust_score (player_id,score) VALUES ($1,60)",[oneId]);
+  const flag = (await mockPg.query("INSERT INTO public.moderation_flags (player_id,reason) VALUES ($1,'Review') RETURNING id",[oneId])).rows[0];
+  expect((await request(`/admin/moderation/flags/${flag.id}/action`,"admin","POST",{action:"throttle"})).status).toBe(200);
+  expect((await request("/games/matchmake","one","POST",{cardIds:deck.map(card=>card.id)})).status).toBe(403);
+  await mockPg.query("UPDATE public.player_trust_score SET restricted_until=now()-interval '1 second' WHERE player_id=$1",[oneId]);
+  expect((await request("/games/matchmake","one","POST",{cardIds:deck.map(card=>card.id)})).status).toBe(200);
+  expect((await mockPg.query("SELECT status,restricted_until FROM public.player_trust_score WHERE player_id=$1",[oneId])).rows[0])
+    .toMatchObject({ status:"watched",restricted_until:null });
+});
+
+test("three human forfeits in a month create one trust signal", async () => {
+  await mockPg.query(`INSERT INTO public.card_games (player_one_id,player_two_id,category,status,winner_id,
+    rules_version,is_cpu,forfeit_by,finished_at)
+    VALUES ($1,$2,'Mixed','finished',$2,2,false,$1,now()-interval '2 days'),
+      ($1,$2,'Mixed','finished',$2,2,false,$1,now()-interval '1 day')`,[oneId,twoId]);
+  const one = await makeDeck(oneId), two = await makeDeck(twoId);
+  const game = (await request("/games/matchmake","one","POST",{cardIds:one.map(card=>card.id)})).data;
+  await request("/games/matchmake","two","POST",{cardIds:two.map(card=>card.id)});
+  expect((await request(`/games/${game.id}/forfeit`,"one","POST")).status).toBe(200);
+  expect((await mockPg.query("SELECT event_type,metadata->>'forfeitsInLast30Days' AS count FROM public.trust_events WHERE player_id=$1",[oneId])).rows)
+    .toEqual([{ event_type:"frequent_forfeit",count:"3" }]);
+  expect((await mockPg.query("SELECT score FROM public.player_trust_score WHERE player_id=$1",[oneId])).rows[0].score).toBe(90);
 });
 
 test("profile photos persist for the authenticated player only and are removed with the account", async () => {

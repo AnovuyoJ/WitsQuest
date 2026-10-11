@@ -37,7 +37,7 @@ describe("Trust & Moderation Backend Operations", () => {
       .mockResolvedValueOnce({ rows: [] })
       .mockResolvedValueOnce({ rows: [] });
     await expect(recordTrustEvent("player-1", "location_anomaly", { source: "test" }))
-      .resolves.toEqual({ score: 55, status: "watched" });
+      .resolves.toEqual({ score: 55, status: "watched", restrictionMinutes: 5 });
     expect(clientQuery).toHaveBeenCalledTimes(5);
     expect(clientQuery.mock.calls[0][0]).toContain("INSERT INTO public.trust_events");
     expect(clientQuery.mock.calls[4][0]).toContain("INSERT INTO public.moderation_flags");

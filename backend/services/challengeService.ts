@@ -1,6 +1,7 @@
 import { PoolClient } from "pg";
 import { transaction } from "./database";
 import { HttpError } from "./validation";
+import { enforcePlayerTrust, recordTrustEventInTx } from "./moderationService";
 
 const OFFLINE_WINDOW_MINUTES = 15;
 const SYNC_GRACE_HOURS = 24;
@@ -80,9 +81,18 @@ async function saveAttempt(
   correctAnswer: string,
   cardId: string | null,
 ) {
-  const existing = (await client.query(`SELECT correct FROM public.challenge_attempts
+  const existing = (await client.query(`SELECT correct,duplicate_count FROM public.challenge_attempts
     WHERE player_id=$1 AND challenge_id=$2`, [playerId, challengeId])).rows[0];
-  if (existing) return { correct: existing.correct, correctAnswer, alreadyCompleted: true, cardAwarded: false };
+  if (existing) {
+    const duplicate = (await client.query(`UPDATE public.challenge_attempts SET duplicate_count=duplicate_count+1
+      WHERE player_id=$1 AND challenge_id=$2 RETURNING duplicate_count`, [playerId,challengeId])).rows[0];
+    if (duplicate.duplicate_count >= 3) {
+      const signalled = (await client.query(`SELECT id FROM public.trust_events WHERE player_id=$1
+        AND event_type='duplicate_submission' AND metadata->>'challengeId'=$2 LIMIT 1`, [playerId,challengeId])).rows[0];
+      if (!signalled) await recordTrustEventInTx(client,playerId,"duplicate_submission",{ challengeId,eventId,repeatCount:duplicate.duplicate_count });
+    }
+    return { correct: existing.correct, correctAnswer, alreadyCompleted: true, cardAwarded: false };
+  }
 
   const correct = answer.trim().toLowerCase() === correctAnswer.trim().toLowerCase();
   await client.query(`INSERT INTO public.challenge_attempts (player_id,event_id,challenge_id,correct,answered_at)
@@ -113,6 +123,7 @@ export async function submitAnswer(
 
   return transaction(async (client) => {
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [playerId]);
+    await enforcePlayerTrust(client,playerId);
 
     if (isOfflineAttempt) {
       const lease = (await client.query(`SELECT * FROM public.offline_attempt_sessions

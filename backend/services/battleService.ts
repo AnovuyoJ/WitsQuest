@@ -5,6 +5,7 @@ import { id, HttpError } from "./validation";
 import { lockGame } from "./gameService";
 import { reserveStake, stakesReady, settleStakes } from "./stakeService";
 import { INITIAL_RATING, matchmakingTolerance, updateRatingsInTx } from "./ratingService";
+import { enforcePlayerTrust, recordRepeatedOpponentPatternInTx } from "./moderationService";
 
 type BattleCard = { id: string; rarity: string; points: number; [key: string]: unknown };
 const composition: Record<string, number> = { Blue: 2, Black: 2, Gold: 1 };
@@ -41,6 +42,7 @@ export async function startBattle(playerId: string, input: unknown, cpu: boolean
   if (stakeId && (cpu || !ids.includes(stakeId))) throw new HttpError(400,"Choose a stake from your deck for a player duel only.");
   if (new Set(ids).size !== 5) throw new HttpError(400, "A card can only appear once in your deck.");
   return transaction(async client => {
+    await enforcePlayerTrust(client,playerId);
     await client.query("SELECT pg_advisory_xact_lock(74192001)");
     await client.query("SELECT pg_advisory_xact_lock(hashtextextended($1, 0))", [playerId]);
     const cards: BattleCard[] = (await client.query(`SELECT c.* FROM public.cards c WHERE c.id=ANY($2::uuid[])
@@ -129,6 +131,10 @@ async function finishRound(client: PoolClient, game: any, round: any) {
     }
     await client.query(`UPDATE public.card_games SET status='finished',finished_at=now(),winner_side=$1,winner_id=$2 WHERE id=$3`,
       [matchWinner,matchWinner === 1 ? game.player_one_id : matchWinner === 2 ? game.player_two_id : null,game.id]);
+    if (!game.is_cpu) {
+      await recordRepeatedOpponentPatternInTx(client,game.player_one_id,game.player_two_id);
+      await recordRepeatedOpponentPatternInTx(client,game.player_two_id,game.player_one_id);
+    }
     game.status = "finished";
     game.winner_side = matchWinner;
     game.winner_id = matchWinner === 1 ? game.player_one_id : matchWinner === 2 ? game.player_two_id : null;
@@ -187,6 +193,7 @@ export async function battleState(playerId: string, gameId: string) {
 
 export async function battleMove(playerId: string, gameId: string, roundId: string, cardId: string) {
   return transaction(async client => {
+    await enforcePlayerTrust(client,playerId);
     const game = await lockGame(client,gameId,playerId);
     if (game.rules_version !== 2 || game.status !== "active") throw new HttpError(409, "Battle is not active.");
     if (game.stakes_enabled && !await stakesReady(client,gameId)) throw new HttpError(409,"Both players must accept the stakes first.");

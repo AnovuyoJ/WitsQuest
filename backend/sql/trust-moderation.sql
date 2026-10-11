@@ -1,12 +1,16 @@
--- Apply after schema.sql, before deploying trust and moderation API routes.
+-- Apply after schema.sql and card-battles.sql, before deploying trust and moderation API routes.
 -- Browser roles have no direct access; the Express API enforces administrator access.
 BEGIN;
+ALTER TABLE public.challenge_attempts ADD COLUMN IF NOT EXISTS duplicate_count integer NOT NULL DEFAULT 0 CHECK (duplicate_count >= 0);
+ALTER TABLE public.card_games ADD COLUMN IF NOT EXISTS forfeit_by uuid REFERENCES auth.users(id) ON DELETE SET NULL;
 CREATE TABLE IF NOT EXISTS public.player_trust_score (
   player_id uuid PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   score integer NOT NULL DEFAULT 100 CHECK (score BETWEEN 0 AND 100),
   status text NOT NULL DEFAULT 'normal' CHECK (status IN ('normal','watched','restricted','banned')),
+  restricted_until timestamptz,
   last_updated_at timestamptz DEFAULT now()
 );
+ALTER TABLE public.player_trust_score ADD COLUMN IF NOT EXISTS restricted_until timestamptz;
 CREATE TABLE IF NOT EXISTS public.trust_events (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   player_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
