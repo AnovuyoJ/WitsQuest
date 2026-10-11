@@ -1,90 +1,45 @@
-import { createClient } from "@supabase/supabase-js";
 import { describe, expect, it, jest, beforeEach } from "@jest/globals";
-import express, { Request, Response, NextFunction } from "express";
+import { database, transaction } from "../services/database";
+import { getPlayerTrustStatus, recordTrustEvent } from "../services/moderationService";
 
-// Mock Supabase client
-jest.mock("@supabase/supabase-js");
+jest.mock("../services/database", () => ({
+  database: { query: jest.fn() },
+  transaction: jest.fn(),
+}));
 
 describe("Trust & Moderation Backend Operations", () => {
-  let mockSupabase: any;
+  let clientQuery: jest.Mock;
+  const databaseQuery = database.query as unknown as jest.Mock;
+  const runTransaction = transaction as unknown as jest.Mock;
 
   beforeEach(() => {
     jest.clearAllMocks();
-
-    mockSupabase = {
-      from: jest.fn().mockReturnThis(),
-      select: jest.fn().mockReturnThis(),
-      update: jest.fn().mockReturnThis(),
-      order: jest.fn().mockReturnThis(),
-      eq: jest.fn().mockReturnThis(),
-      maybeSingle: jest.fn().mockReturnThis(),
-      auth: {
-        getUser: jest.fn(),
-      },
-    };
-
-    (createClient as jest.Mock).mockReturnValue(mockSupabase);
+    clientQuery = jest.fn();
+    runTransaction.mockImplementation((work: (client: { query: jest.Mock }) => Promise<unknown>) => work({ query: clientQuery }));
   });
 
-  it("fetches open moderation flags sorted by creation date descending", async () => {
-    const mockFlags = [
-      { id: "flag-1", player_id: "user-123", reason: "Spamming chat", status: "open" },
-    ];
-    mockSupabase.order.mockResolvedValueOnce({ data: mockFlags, error: null });
-
-    const { data, error } = await mockSupabase
-      .from("moderation_flags")
-      .select("*")
-      .order("created_at", { ascending: false });
-
-    expect(mockSupabase.from).toHaveBeenCalledWith("moderation_flags");
-    expect(mockSupabase.order).toHaveBeenCalledWith("created_at", { ascending: false });
-    expect(data).toEqual(mockFlags);
-    expect(error).toBeNull();
+  it("reads stored trust status through the backend database connection", async () => {
+    databaseQuery.mockResolvedValueOnce({ rows: [{ score: 72, status: "normal" }] });
+    await expect(getPlayerTrustStatus("player-1")).resolves.toMatchObject({ score: 72, status: "normal", isAllowed: true });
+    expect(databaseQuery).toHaveBeenCalledWith(expect.stringContaining("public.player_trust_score"), ["player-1"]);
   });
 
-  it("resolves moderation flag and updates status to resolved", async () => {
-    mockSupabase.eq.mockResolvedValueOnce({ error: null });
-
-    const flagId = "flag-1";
-    const action = "restricted";
-
-    const { error } = await mockSupabase
-      .from("moderation_flags")
-      .update({
-        status: "resolved",
-        action_taken: action,
-        resolved_at: expect.any(String),
-      })
-      .eq("id", flagId);
-
-    expect(mockSupabase.from).toHaveBeenCalledWith("moderation_flags");
-    expect(mockSupabase.update).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: "resolved",
-        action_taken: "restricted",
-      })
-    );
-    expect(mockSupabase.eq).toHaveBeenCalledWith("id", flagId);
-    expect(error).toBeNull();
+  it("falls back to a normal trust status for players without a score row", async () => {
+    databaseQuery.mockResolvedValueOnce({ rows: [] });
+    await expect(getPlayerTrustStatus("player-1")).resolves.toMatchObject({ score: 100, status: "normal", isAllowed: true });
   });
 
-  it("applies safety restriction penalty to player_trust_score when restricted", async () => {
-    mockSupabase.eq.mockResolvedValueOnce({ error: null });
-
-    const playerId = "user-123";
-    const action = "restricted";
-
-    const { error } = await mockSupabase
-      .from("player_trust_score")
-      .update({ status: action, last_updated_at: expect.any(String) })
-      .eq("player_id", playerId);
-
-    expect(mockSupabase.from).toHaveBeenCalledWith("player_trust_score");
-    expect(mockSupabase.update).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "restricted" })
-    );
-    expect(mockSupabase.eq).toHaveBeenCalledWith("player_id", playerId);
-    expect(error).toBeNull();
+  it("records trust events, applies penalties, and creates a review flag below 60", async () => {
+    clientQuery
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [{ score: 70 }] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] })
+      .mockResolvedValueOnce({ rows: [] });
+    await expect(recordTrustEvent("player-1", "location_anomaly", { source: "test" }))
+      .resolves.toEqual({ score: 55, status: "watched", restrictionMinutes: 5 });
+    expect(clientQuery).toHaveBeenCalledTimes(5);
+    expect(clientQuery.mock.calls[0][0]).toContain("INSERT INTO public.trust_events");
+    expect(clientQuery.mock.calls[4][0]).toContain("INSERT INTO public.moderation_flags");
   });
 });

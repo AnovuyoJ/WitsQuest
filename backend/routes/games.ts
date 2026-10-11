@@ -6,6 +6,8 @@ import { id, HttpError } from "../services/validation";
 import { startBattle, battleState, battleMove, advanceBattle } from "../services/battleService";
 import { notifyGamePlayers } from "../services/notifications";
 import { stakesReady, settleStakes } from "../services/stakeService";
+import { INITIAL_RATING, updateRatingsInTx } from "../services/ratingService";
+import { recordFrequentForfeitInTx } from "../services/moderationService";
 
 const router = Router();
 router.use(requireAuth);
@@ -116,7 +118,14 @@ router.post("/:id/forfeit", async (req, res) => {
     }
     const winner = game.player_one_id === req.user!.id ? game.player_two_id : game.player_one_id;
     await settleStakes(client,game,game.player_one_id === req.user!.id ? 2 : 1);
-    await client.query("UPDATE public.card_games SET status='finished',winner_id=$1,winner_side=$3,finished_at=now() WHERE id=$2", [winner,game.id,game.player_one_id === req.user!.id ? 2 : 1]);
+    if (!game.is_cpu) {
+      await updateRatingsInTx(client,game.player_one_id,game.player_two_id,
+        winner === game.player_one_id ? 1 : 0,
+        game.player_one_rating ?? INITIAL_RATING,game.player_two_rating ?? INITIAL_RATING);
+    }
+    await client.query("UPDATE public.card_games SET status='finished',winner_id=$1,winner_side=$3,forfeit_by=$4,finished_at=now() WHERE id=$2",
+      [winner,game.id,game.player_one_id === req.user!.id ? 2 : 1,req.user!.id]);
+    await recordFrequentForfeitInTx(client,req.user!.id);
     await notifyGamePlayers(client,game,"Match forfeited","A player quit this match. The opponent wins by forfeit.");
   });
   res.json({ success: true });
